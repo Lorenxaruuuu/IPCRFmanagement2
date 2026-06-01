@@ -31,11 +31,12 @@ class PerformanceController extends Controller
         $selectedSemester = $request->get('semester', 'all');
         $selectedYear = $request->get('year', '2026');
 
-        return view('performance', compact(
-            'performances', 
-            'selectedSemester', 
-            'selectedYear'
-        ));
+        return view('userDashboard', [
+            'activeTab' => 'performance',
+            'performances' => $performances, 
+            'selectedSemester' => $selectedSemester, 
+            'selectedYear' => $selectedYear
+        ]);
     }
 
     /**

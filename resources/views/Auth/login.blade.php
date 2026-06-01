@@ -16,17 +16,19 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             height: 100vh;
             overflow: hidden;
+            background: url('{{ asset("images/BG.jpg") }}') 30% center / cover no-repeat fixed;
         }
 
         .container {
             display: flex;
             height: 100vh;
+            background: rgba(0, 0, 0, 0.2);
         }
 
         /* Left Panel - Blue Section */
         .left-panel {
-            width: 45%;
-            background: linear-gradient(135deg, #0066cc 0%, #004499 100%);
+            width: 60%;
+            background: linear-gradient(135deg, rgba(0, 102, 204, 0.8) 0%, rgba(0, 68, 153, 0.9) 100%);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -53,48 +55,26 @@
             left: 60px;
             display: flex;
             align-items: center;
-            gap: 15px;
             z-index: 1;
         }
 
         .logo {
-            width: 60px;
-            height: 60px;
+            height: 75px;
+            width: auto;
             background: #fff;
             border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
+            gap: 20px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 10px 20px;
         }
 
-        .logo svg {
-            width: 45px;
-            height: 45px;
-        }
-
-        .logo-text {
-            color: white;
-        }
-
-        .logo-text .republic {
-            font-size: 11px;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            opacity: 0.9;
-        }
-
-        .logo-text .dswd {
-            font-size: 28px;
-            font-weight: bold;
-            letter-spacing: 2px;
-            line-height: 1;
-        }
-
-        .logo-text .dept {
-            font-size: 11px;
-            opacity: 0.9;
-            color: #ffd700;
+        .logo img {
+            height: 100%;
+            width: auto;
+            object-fit: contain;
         }
 
         .hero-content {
@@ -127,7 +107,8 @@
         /* Right Panel - Form Section */
         .right-panel {
             width: 55%;
-            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(10px);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -415,12 +396,9 @@
         <div class="left-panel">
             <div class="logo-section">
                 <div class="logo">
-                    <img src="{{ asset('images/logo.png') }}" alt="DSWD Logo" style="width: 100%; height: 100%; object-fit: contain;">
-                </div>
-                <div class="logo-text">
-                    <div class="republic">Republic of the Philippines</div>
-                    <div class="dswd">DSWD</div>
-                    <div class="dept">Dept. of Social Welfare and Development</div>
+                    <img src="{{ asset('images/dswd.jpg') }}" alt="DSWD Logo">
+                    <img src="{{ asset('images/pantawid.jpg') }}" alt="Pantawid Logo">
+                    <img src="{{ asset('images/bagong.jpg') }}" alt="Bagong Pilipinas Logo">
                 </div>
             </div>
             
@@ -439,12 +417,67 @@
                     <p>Sign in to your DSWD account to continue</p>
                 </div>
 
+                <!-- reCAPTCHA widget -->
+                <div class="g-recaptcha my-4" data-sitekey="{{ env('RECAPTCHA_SITE_KEY') }}"></div>
+                <input type="hidden" name="g-recaptcha-response" id="g-recaptcha-response">
+                <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+                <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                document.getElementById('loginForm').addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    // Show loading spinner
+                    document.getElementById('loadingOverlay').classList.add('active');
+                    const email = document.getElementById('email').value.trim();
+                    const password = document.getElementById('password').value;
+                    const remember = document.getElementById('remember').checked;
+                    const recaptchaResponse = grecaptcha.getResponse();
+                    const payload = { email, password, g_recaptcha_response: recaptchaResponse };
+                    try {
+                        const response = await fetch('login.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        const result = await response.json();
+                        document.getElementById('loadingOverlay').classList.remove('active');
+                        if (result.success) {
+                            // Save user data and redirect as before
+                            const userData = {
+                                employee_id: result.user.employee_id,
+                                name: result.user.name,
+                                firstname: result.user.firstname,
+                                lastname: result.user.lastname,
+                                email: result.user.email,
+                                role: result.user.role,
+                                timestamp: new Date().toISOString()
+                            };
+                            if (remember) {
+                                localStorage.setItem('user', JSON.stringify(userData));
+                                localStorage.setItem('rememberMe', 'true');
+                            } else {
+                                sessionStorage.setItem('user', JSON.stringify(userData));
+                                localStorage.removeItem('user');
+                                localStorage.removeItem('rememberMe');
+                            }
+                            setTimeout(() => { window.location.href = result.redirect; }, 500);
+                        } else {
+                            alert(result.message || 'Login failed. Please try again.');
+                        }
+                    } catch (error) {
+                        document.getElementById('loadingOverlay').classList.remove('active');
+                        alert('Connection error. Please check your internet connection.');
+                        console.error('Error:', error);
+                    }
+                });
+                }); // end DOMContentLoaded
+                </script>
+
                <form method="POST" action="{{ route('login.post') }}" id="loginForm">
                     @csrf
                     
                     <div class="form-group">
-                        <label for="employee_id">Employee ID</label>
-                        <input type="text" id="employee_id" name="employee_id" required autofocus>
+                        <label for="email">DSWD Email</label>
+                        <input type="text" id="email" name="email" placeholder="e.g. employee@dswd.gov.ph" required autofocus>
                     </div>
 
                     <div class="form-group">
@@ -492,9 +525,9 @@
         if (storedUser) {
             try {
                 const user = JSON.parse(storedUser);
-                // Auto-fill employee ID if remember me was checked
-                if (user && user.employee_id) {
-                    document.getElementById('employee_id').value = user.employee_id;
+                // Auto-fill email if remember me was checked
+                if (user && (user.email || user.employee_id)) {
+                    document.getElementById('email').value = user.email || user.employee_id;
                     document.getElementById('remember').checked = true;
                 }
             } catch (e) {
@@ -509,7 +542,7 @@
         // Show loading spinner
         document.getElementById('loadingOverlay').classList.add('active');
         
-        const employee_id = document.getElementById('employee_id').value.trim();
+        const email = document.getElementById('email').value.trim();
         const password = document.getElementById('password').value;
         const remember = document.getElementById('remember').checked;
 
@@ -520,7 +553,7 @@
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    employee_id: employee_id,
+                    email: email,
                     password: password
                 })
             });

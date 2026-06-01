@@ -12,8 +12,18 @@ class AuthController extends Controller
 {
     public function showLoginForm()
     {
-        if (Session::has('employee_id')) {
-            return view('userDashboard');
+        if (Session::has('employee_id') || Session::has('user')) {
+            $user = Session::get('user');
+            if ($user && isset($user['role'])) {
+                if ($user['role'] === 'superadmin') {
+                    return redirect()->route('superadmin.dashboard');
+                } elseif ($user['role'] === 'admin') {
+                    return redirect('/admins');
+                } elseif ($user['role'] === 'encoder') {
+                    return redirect('/encoder');
+                }
+            }
+            return redirect()->route('userDashboard');
         }
         return view('auth.login');
     }
@@ -21,14 +31,28 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $request->validate([
-            'employee_id' => 'required',
+            'email' => 'required',
             'password' => 'required',
         ]);
 
+        $email = $request->email;
+        $raw_input = $request->email;
+        if (!str_contains($email, '@')) {
+            $email .= '@dswd.gov.ph';
+        }
+
         // Check if user exists in database
-        $user = User::where('employee_id', $request->employee_id)->first();
+        $user = User::where('email', $email)
+            ->orWhere('email', $raw_input)
+            ->orWhere('employee_id', $email)
+            ->orWhere('employee_id', $raw_input)
+            ->first();
 
         if ($user && Hash::check($request->password, $user->password)) {
+            if ($user->role !== 'superadmin' && !$user->approved) {
+                return back()->withErrors(['email' => 'Your account is pending superadmin approval.']);
+            }
+
             // Successful authentication
             Session::put('user', [
                 'employee_id' => $user->employee_id,
@@ -39,11 +63,15 @@ class AuthController extends Controller
                 'lastname' => $user->lastname
             ]);
 
+            if ($user->role === 'superadmin') {
+                return redirect()->route('superadmin.dashboard');
+            }
+
             return redirect()->route('userDashboard');
         }
 
         // Failed authentication
-        return back()->withErrors(['employee_id' => 'Invalid credentials']);
+        return back()->withErrors(['email' => 'Invalid credentials']);
     }
 
     public function showRegisterForm()
@@ -59,28 +87,29 @@ class AuthController extends Controller
     $request->validate([
         'lastname' => 'required|string|max:255',
         'firstname' => 'required|string|max:255',
-        'employee_id' => 'required|unique:users,employee_id',
+        'email' => 'required|email|unique:users,email',
         'password' => 'required|confirmed|min:8',
         'role' => 'required|in:admin,staff,encoder,viewer',
     ]);
+
+    $email = $request->email;
+    if (!str_contains($email, '@')) {
+        $email .= '@dswd.gov.ph';
+    }
+
+    $employee_id = explode('@', $email)[0];
 
     $user = User::create([
         'firstname' => $request->firstname,
         'lastname' => $request->lastname,
         'name' => $request->firstname . ' ' . $request->lastname,
-        'employee_id' => $request->employee_id,
-        'email' => $request->employee_id . '@dswd.gov.ph',
+        'employee_id' => $employee_id,
+        'email' => $email,
         'password' => bcrypt($request->password),
         'role' => $request->role,
     ]);
 
-    Session::put('user', [
-        'employee_id' => $user->employee_id,
-        'name' => $user->name,
-        'role' => $user->role
-    ]);
-
-    return redirect()->back()->with('success', 'Registration successful! Welcome, ' . $user->name . '. You will be redirected shortly.');
+    return redirect()->route('login')->with('success', 'Registration successful! Your account is pending superadmin approval.');
 }
 public function store(Request $request)
 {

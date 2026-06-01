@@ -17,6 +17,17 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // 1. Seed Users
+        $superadmin = User::create([
+            'firstname' => 'Super',
+            'lastname' => 'Admin',
+            'name' => 'Super Admin',
+            'email' => 'superadmin@deped.gov.ph',
+            'employee_id' => 'SUPERADMIN-01',
+            'password' => Hash::make('password'),
+            'role' => 'superadmin',
+            'approved' => true,
+        ]);
+
         $admin = User::create([
             'firstname' => 'System',
             'lastname' => 'Administrator',
@@ -25,6 +36,7 @@ class DatabaseSeeder extends Seeder
             'employee_id' => 'ADMIN-01',
             'password' => Hash::make('password'),
             'role' => 'admin',
+            'approved' => true,
         ]);
 
         $encoder = User::create([
@@ -35,6 +47,7 @@ class DatabaseSeeder extends Seeder
             'employee_id' => 'ENCODER-01',
             'password' => Hash::make('password'),
             'role' => 'encoder',
+            'approved' => true,
         ]);
 
         $user = User::create([
@@ -45,6 +58,7 @@ class DatabaseSeeder extends Seeder
             'employee_id' => '2024-00123',
             'password' => Hash::make('password'),
             'role' => 'staff',
+            'approved' => true,
         ]);
 
         // 2. Seed Provinces & Municipalities

@@ -1,5 +1,4 @@
 @php
-    $activeTab = $activeTab ?? 'home';
     // Fetch forms
     $forms = [];
     try {
@@ -134,7 +133,7 @@
 </head>
 <body class="bg-slate-50 font-sans text-slate-900 h-screen overflow-hidden flex" 
       x-data='{ 
-          activeTab: "{{ $activeTab }}", 
+          activeTab: localStorage.getItem("userActiveTab") || "home", 
           showLogoutModal: false, 
           showNotifications: false,
           showAddEmailModal: false,
@@ -179,7 +178,7 @@
               });
           }
       }'
-      x-init="$nextTick(() => lucide.createIcons());">
+      x-init="$watch('activeTab', value => { localStorage.setItem('userActiveTab', value); $nextTick(() => lucide.createIcons()); })">
 
     <!-- SIDEBAR -->
     <aside class="fixed left-0 top-0 h-full w-64 sidebar-gradient text-white hidden md:flex flex-col shadow-xl z-20">
@@ -196,21 +195,24 @@
 
         <!-- Navigation Links -->
         <nav class="flex-1 py-6 px-0 space-y-1">
-            <a href="{{ route('userDashboard') }}" 
-                    class="w-full flex items-center gap-3 px-6 py-3.5 text-base transition-all text-left cursor-pointer border-l-4 {{ $activeTab === 'home' ? 'bg-white/10 border-blue-500 text-white font-semibold shadow-sm' : 'border-transparent text-gray-300 hover:bg-white/5 hover:text-white' }}">
+            <button @click="activeTab = 'home'" 
+                    class="w-full flex items-center gap-3 px-6 py-3.5 text-base transition-all text-left cursor-pointer border-l-4"
+                    :class="activeTab === 'home' ? 'bg-white/10 border-blue-500 text-white font-semibold shadow-sm' : 'border-transparent text-gray-300 hover:bg-white/5 hover:text-white'">
                 <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
                 Dashboard
-            </a>
-            <a href="{{ route('performance.index') }}" 
-                    class="w-full flex items-center gap-3 px-6 py-3.5 text-base transition-all text-left cursor-pointer border-l-4 {{ $activeTab === 'performance' ? 'bg-white/10 border-blue-500 text-white font-semibold shadow-sm' : 'border-transparent text-gray-300 hover:bg-white/5 hover:text-white' }}">
+            </button>
+            <button @click="activeTab = 'performance'" 
+                    class="w-full flex items-center gap-3 px-6 py-3.5 text-base transition-all text-left cursor-pointer border-l-4"
+                    :class="activeTab === 'performance' ? 'bg-white/10 border-blue-500 text-white font-semibold shadow-sm' : 'border-transparent text-gray-300 hover:bg-white/5 hover:text-white'">
                 <i data-lucide="trending-up" class="w-5 h-5"></i>
                 Performance History
-            </a>
-            <a href="{{ route('settings') }}" 
-                    class="w-full flex items-center gap-3 px-6 py-3.5 text-base transition-all text-left cursor-pointer border-l-4 {{ $activeTab === 'settings' ? 'bg-white/10 border-blue-500 text-white font-semibold shadow-sm' : 'border-transparent text-gray-300 hover:bg-white/5 hover:text-white' }}">
+            </button>
+            <button @click="activeTab = 'settings'" 
+                    class="w-full flex items-center gap-3 px-6 py-3.5 text-base transition-all text-left cursor-pointer border-l-4"
+                    :class="activeTab === 'settings' ? 'bg-white/10 border-blue-500 text-white font-semibold shadow-sm' : 'border-transparent text-gray-300 hover:bg-white/5 hover:text-white'">
                 <i data-lucide="settings" class="w-5 h-5"></i>
                 <span>Settings</span>
-            </a>
+            </button>
         </nav>
 
         <!-- User Profile info -->
@@ -529,10 +531,8 @@
 
             <!-- SETTINGS TAB -->
             <div x-show="activeTab === 'settings'" x-transition class="space-y-6 w-full" style="display: none;">
-                <!-- 2-column Settings Grid -->
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <!-- Profile Card -->
-                    <div class="lg:col-span-2 glass-panel rounded-2xl shadow-sm overflow-hidden w-full card-hover h-fit">
+                <!-- Profile Card -->
+                <div class="glass-panel rounded-2xl shadow-sm overflow-hidden w-full card-hover">
                     <!-- Header Banner -->
                     <div class="h-36 bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-900"></div>
                     
@@ -670,7 +670,7 @@
                     </div>
                 </div>
 
-                <div class="lg:col-span-1 glass-panel rounded-2xl shadow-sm p-8 card-hover flex flex-col h-fit">
+                <div class="glass-panel rounded-2xl shadow-sm p-10 card-hover">
                     <h3 class="text-2xl font-bold text-slate-800 mb-6">Account Settings</h3>
                     
                     <div class="space-y-8">
@@ -681,7 +681,7 @@
                                 <h4 class="font-bold text-slate-800 text-lg mb-2">Change Password</h4>
                                 <p class="text-slate-500 text-base mb-4">Ensure your account is using a long, random password to stay secure.</p>
                                 
-                                <div class="grid grid-cols-1 gap-6">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     <div class="flex flex-col">
                                         <label class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2.5">Current Password</label>
                                         <div class="relative flex items-center">
@@ -736,7 +736,6 @@
                             <button type="submit" form="profileForm" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-base shadow-sm transition active:scale-95 cursor-pointer">Save Changes</button>
                         </div>
                     </div>
-                </div>
                 </div>
             </div>
             

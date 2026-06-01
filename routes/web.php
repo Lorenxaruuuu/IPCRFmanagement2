@@ -9,6 +9,7 @@ use App\Http\Controllers\PerformanceController;
 use App\Http\Admin\NoticeController;
 use App\Http\Admin\FormController;
 use App\Http\Controllers\GoogleDriveAuthController;
+use App\Http\Controllers\SuperadminController;
 
 Route::get('/admins', function () {
     return redirect()->route('admin.dashboard');
@@ -25,7 +26,20 @@ Route::get('/performance', [PerformanceController::class, 'index'])->name('perfo
 // download a single form; use numeric id since we have no database
 Route::get('/forms/download/{id}', [FormController::class, 'download'])->name('forms.download');
 Route::get('/', function () {
-    return view('userDashboard');
+    if (session()->has('user') || session()->has('employee_id')) {
+        $user = session('user');
+        if ($user && isset($user['role'])) {
+            if ($user['role'] === 'superadmin') {
+                return redirect()->route('superadmin.dashboard');
+            } elseif ($user['role'] === 'admin') {
+                return redirect('/admins');
+            } elseif ($user['role'] === 'encoder') {
+                return redirect('/encoder');
+            }
+        }
+        return redirect()->route('userDashboard');
+    }
+    return redirect()->route('login');
 });
 
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
@@ -35,8 +49,12 @@ Route::post('/register', [AuthController::class, 'register'])->name('register.po
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::get('/home', function () {
-    return view('userDashboard');
+    return view('userDashboard', ['activeTab' => 'home']);
 })->name('userDashboard');
+
+Route::get('/settings', function () {
+    return view('userDashboard', ['activeTab' => 'settings']);
+})->name('settings');
 
 Route::get('/encoder', [IpcrfController::class, 'index'])->name('dashboards');
 Route::get('/list', [IpcrfController::class, 'showList'])->name('ipcrf.list');
@@ -100,7 +118,7 @@ Route::post('/profile/change-password', [AuthController::class, 'changePassword'
 Route::post('/register.php', function () {
     $data = request()->json()->all();
     
-    if (empty($data['lastname']) || empty($data['firstname']) || empty($data['employee_id']) || 
+    if (empty($data['lastname']) || empty($data['firstname']) || empty($data['email']) || 
         empty($data['password']) || empty($data['role'])) {
         return response()->json(['success' => false, 'message' => 'All fields are required']);
     }
@@ -109,40 +127,61 @@ Route::post('/register.php', function () {
         return response()->json(['success' => false, 'message' => 'Passwords do not match']);
     }
     
-    $exists = DB::table('users')->where('employee_id', $data['employee_id'])->exists();
-    if ($exists) {
-        return response()->json(['success' => false, 'message' => 'Employee ID already exists']);
+    $email = $data['email'];
+    if (!str_contains($email, '@')) {
+        $email .= '@dswd.gov.ph';
     }
+    
+    $exists = DB::table('users')->where('email', $email)->exists();
+    if ($exists) {
+        return response()->json(['success' => false, 'message' => 'Email already exists']);
+    }
+    
+    $employee_id = explode('@', $email)[0];
     
     DB::table('users')->insert([
         'lastname' => $data['lastname'],
         'firstname' => $data['firstname'],
         'name' => $data['firstname'] . ' ' . $data['lastname'],
-        'employee_id' => $data['employee_id'],
-        'email' => $data['employee_id'] . '@dswd.gov.ph',
+        'employee_id' => $employee_id,
+        'email' => $email,
         'password' => Hash::make($data['password']),
         'role' => $data['role'],
         'created_at' => now(),
         'updated_at' => now()
     ]);
     
-    return response()->json(['success' => true, 'message' => 'Registration successful! You will be redirected shortly.']);
+    return response()->json(['success' => true, 'message' => 'Registration successful! Your account is pending superadmin approval. You can log in once approved.']);
 });
 
 Route::post('/login.php', function () {
     $data = request()->json()->all();
     
-    $employee_id = $data['employee_id'] ?? '';
+    $email = $data['email'] ?? '';
     $password = $data['password'] ?? '';
     
-    if (empty($employee_id) || empty($password)) {
-        return response()->json(['success' => false, 'message' => 'Please enter both Employee ID and Password']);
+    if (empty($email) || empty($password)) {
+        return response()->json(['success' => false, 'message' => 'Please enter both Email and Password']);
     }
     
-    $user = DB::table('users')->where('employee_id', $employee_id)->first();
+    $raw_input = $data['email'] ?? '';
+    if (!str_contains($email, '@')) {
+        $email .= '@dswd.gov.ph';
+    }
+    
+    $user = DB::table('users')
+        ->where('email', $email)
+        ->orWhere('email', $raw_input)
+        ->orWhere('employee_id', $email)
+        ->orWhere('employee_id', $raw_input)
+        ->first();
     
     if (!$user || !Hash::check($password, $user->password)) {
-        return response()->json(['success' => false, 'message' => 'Invalid Employee ID or Password']);
+        return response()->json(['success' => false, 'message' => 'Invalid Email/ID or Password']);
+    }
+    
+    if ($user->role !== 'superadmin' && !$user->approved) {
+        return response()->json(['success' => false, 'message' => 'Your account is pending superadmin approval.']);
     }
     
     Session::put('user', [
@@ -161,6 +200,9 @@ Route::post('/login.php', function () {
             break;
         case 'admin':
             $redirectUrl = '/admins';
+            break;
+        case 'superadmin':
+            $redirectUrl = '/superadmin/dashboard2';
             break;
         default:
             $redirectUrl = '/home';
@@ -185,3 +227,11 @@ Route::post('/login.php', function () {
 
 
 // lightweight API endpoints (no controller)
+
+// Superadmin Routes
+Route::prefix('superadmin')->name('superadmin.')->group(function () {
+    Route::get('/dashboard2', [SuperadminController::class, 'dashboard'])->name('dashboard');
+    Route::post('/users/{id}/approve', [SuperadminController::class, 'approve'])->name('users.approve');
+    Route::delete('/users/{id}/reject', [SuperadminController::class, 'reject'])->name('users.reject');
+    Route::post('/admin/create', [SuperadminController::class, 'createAdmin'])->name('admin.create');
+});

@@ -137,14 +137,35 @@
                     <i class="fas fa-file-alt w-5"></i>
                     Manage Forms
                 </a>
+                
+                @if($userPosition === 'poo' || $userPosition === 'rpmo_poo')
+                    <hr class="my-3 border-gray-600">
+                    <div class="px-6 py-2 text-xs font-bold uppercase text-gray-400">POO Functions</div>
+                    <a href="#" onclick="showView('provincial-queue')" class="nav-item flex items-center gap-3 px-6 py-3 text-sm" id="nav-provincial-queue">
+                        <i class="fas fa-tasks w-5"></i>
+                        Provincial Queue
+                    </a>
+                    <a href="#" onclick="showView('review-forms')" class="nav-item flex items-center gap-3 px-6 py-3 text-sm" id="nav-review-forms">
+                        <i class="fas fa-glasses w-5"></i>
+                        Review Forms
+                    </a>
+                    <a href="#" onclick="showView('provincial-directory')" class="nav-item flex items-center gap-3 px-6 py-3 text-sm" id="nav-provincial-directory">
+                        <i class="fas fa-address-book w-5"></i>
+                        Staff Directory
+                    </a>
+                    <a href="#" onclick="showView('provincial-archives')" class="nav-item flex items-center gap-3 px-6 py-3 text-sm" id="nav-provincial-archives">
+                        <i class="fas fa-archive w-5"></i>
+                        Archives
+                    </a>
+                @endif
             </nav>
             
             <div class="p-4 border-t border-gray-700">
                 <div class="flex items-center gap-3 px-2">
-                    <img src="https://ui-avatars.com/api/?name=Admin+User&background=3b82f6&color=fff" class="w-10 h-10 rounded-full">
+                    <img src="https://ui-avatars.com/api/?name={{ urlencode($currentUser->name ?? 'Admin') }}&background=3b82f6&color=fff" class="w-10 h-10 rounded-full">
                     <div class="flex-1">
-                        <p class="text-sm font-medium">Administrator</p>
-                        <p class="text-xs text-gray-400">admin@deped.gov.ph</p>
+                        <p class="text-sm font-medium">{{ $currentUser->name ?? 'Administrator' }}</p>
+                        <p class="text-xs text-gray-400">{{ $currentUser->email ?? 'admin@deped.gov.ph' }}</p>
                     </div>
                 </div>
             </div>
@@ -551,16 +572,7 @@
                                 <button onclick="resetUpload()" class="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition">Upload Another</button>
                                 <button onclick="showView('records')" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">View Records</button>
                             </div>
-                            <div style="margin-bottom:20px;">
-                                <label class="form-label">Priority</label>
-                                <select name="priority" class="form-input">
-                                    <option value="Low">Low</option>
-                                    <option value="Medium" selected>Medium</option>
-                                    <option value="High">High</option>
-                                </select>
-                            </div>
-                            <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;"><i class="fas fa-paper-plane"></i> Post Announcement</button>
-                        </form>
+                        </div>
                     </div>
                 </div>
 
@@ -844,6 +856,256 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- POO: PROVINCIAL QUEUE VIEW -->
+                @if($userPosition === 'poo' || $userPosition === 'rpmo_poo')
+                <div id="view-provincial-queue" class="view-section hidden fade-in">
+                    <div class="glass-panel rounded-2xl p-6">
+                        <div class="flex justify-between items-start mb-6">
+                            <div>
+                                <h3 class="text-2xl font-bold text-gray-800">Provincial Submission Queue</h3>
+                                <p class="text-sm text-gray-600">Monitor all submitted IPCRFs from staff in your province</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-xs text-gray-500">Total Pending</p>
+                                <p class="text-3xl font-bold text-amber-600" id="queue-count">0</p>
+                            </div>
+                        </div>
+
+                        <div class="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Status</label>
+                                <select id="queue-status-filter" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm">
+                                    <option value="">All Status</option>
+                                    <option value="Submitted">Submitted</option>
+                                    <option value="In Review">In Review</option>
+                                    <option value="Approved">Approved</option>
+                                    <option value="Rejected">Rejected</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Submitted Date</label>
+                                <input type="date" id="queue-date-filter" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Priority</label>
+                                <select id="queue-priority-filter" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm">
+                                    <option value="">All Priority</option>
+                                    <option value="High">High</option>
+                                    <option value="Medium">Medium</option>
+                                    <option value="Low">Low</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="text-left border-b-2 border-gray-200">
+                                        <th class="pb-3 font-semibold text-sm text-gray-700">Employee Name</th>
+                                        <th class="pb-3 font-semibold text-sm text-gray-700">School</th>
+                                        <th class="pb-3 font-semibold text-sm text-gray-700">Submitted</th>
+                                        <th class="pb-3 font-semibold text-sm text-gray-700">Status</th>
+                                        <th class="pb-3 font-semibold text-sm text-gray-700">Priority</th>
+                                        <th class="pb-3 font-semibold text-sm text-gray-700">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="provincial-queue-table" class="text-sm">
+                                    <tr><td colspan="6" class="text-center py-4 text-gray-500">Loading submissions...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- POO: REVIEW FORMS VIEW -->
+                <div id="view-review-forms" class="view-section hidden fade-in">
+                    <div class="glass-panel rounded-2xl p-6">
+                        <div class="mb-6">
+                            <h3 class="text-2xl font-bold text-gray-800 mb-1">Review Submitted Forms</h3>
+                            <p class="text-sm text-gray-600">Inspect submitted IPCRFs with detailed feedback options</p>
+                        </div>
+
+                        <div class="mb-6">
+                            <label class="block text-xs font-semibold text-gray-600 mb-2 uppercase">Search Employee</label>
+                            <input type="text" id="review-search" placeholder="Search by name or employee ID..." class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500">
+                        </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <!-- Forms List -->
+                            <div class="lg:col-span-1">
+                                <h4 class="font-bold text-gray-800 mb-3">Pending Reviews</h4>
+                                <div id="review-forms-list" class="space-y-2 max-h-96 overflow-y-auto">
+                                    <div class="p-3 bg-gray-50 rounded-lg text-sm text-gray-500 text-center">No forms to review</div>
+                                </div>
+                            </div>
+
+                            <!-- Review Form -->
+                            <div class="lg:col-span-2">
+                                <div id="review-detail" class="bg-gray-50 rounded-lg p-6 border border-gray-200">
+                                    <p class="text-center text-gray-500 text-sm">Select a form to review</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- POO: PERFORMANCE FEEDBACK & ACTIONS VIEW -->
+                <div id="view-performance-feedback" class="view-section hidden fade-in">
+                    <div class="glass-panel rounded-2xl p-6">
+                        <h3 class="text-2xl font-bold text-gray-800 mb-4">Performance Feedback</h3>
+                        
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <!-- Feedback Form -->
+                            <div class="bg-white border border-gray-200 rounded-xl p-6">
+                                <h4 class="font-bold text-gray-800 mb-4">Write Review Feedback</h4>
+                                <form id="feedback-form" class="space-y-4">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Feedback Type</label>
+                                        <select class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm">
+                                            <option>Correction Required</option>
+                                            <option>Recommendation</option>
+                                            <option>Note</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Feedback Text</label>
+                                        <textarea placeholder="Enter your feedback..." class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm" rows="6"></textarea>
+                                    </div>
+                                    <div class="flex gap-3">
+                                        <button type="button" class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">Return for Correction</button>
+                                        <button type="button" class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">Approve Form</button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- Recent Actions -->
+                            <div class="bg-white border border-gray-200 rounded-xl p-6">
+                                <h4 class="font-bold text-gray-800 mb-4">Recent Actions</h4>
+                                <div class="space-y-3">
+                                    <div class="pb-3 border-b border-gray-200">
+                                        <p class="text-sm font-medium text-gray-800">Approved: Maria Santos IPCRF</p>
+                                        <p class="text-xs text-gray-500">2 hours ago</p>
+                                    </div>
+                                    <div class="pb-3 border-b border-gray-200">
+                                        <p class="text-sm font-medium text-gray-800">Returned: John Reyes - Corrections Needed</p>
+                                        <p class="text-xs text-gray-500">5 hours ago</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- POO: PROVINCIAL DIRECTORY VIEW -->
+                <div id="view-provincial-directory" class="view-section hidden fade-in">
+                    <div class="glass-panel rounded-2xl p-6">
+                        <div class="mb-6">
+                            <h3 class="text-2xl font-bold text-gray-800">Provincial Staff Directory</h3>
+                            <p class="text-sm text-gray-600">Search and filter all staff registered in your province</p>
+                        </div>
+
+                        <div class="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Search Name</label>
+                                <input type="text" id="staff-search" placeholder="Employee name or ID..." class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Position</label>
+                                <select id="staff-position" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm">
+                                    <option value="">All Positions</option>
+                                    <option value="Teacher">Teacher</option>
+                                    <option value="Principal">Principal</option>
+                                    <option value="Master Teacher">Master Teacher</option>
+                                    <option value="Supervisor">Supervisor</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Status</label>
+                                <select id="staff-status" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm">
+                                    <option value="">All Status</option>
+                                    <option value="Active">Active</option>
+                                    <option value="Inactive">Inactive</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="text-left border-b-2 border-gray-200">
+                                        <th class="pb-3 font-semibold text-sm text-gray-700">Name</th>
+                                        <th class="pb-3 font-semibold text-sm text-gray-700">Employee ID</th>
+                                        <th class="pb-3 font-semibold text-sm text-gray-700">School</th>
+                                        <th class="pb-3 font-semibold text-sm text-gray-700">Position</th>
+                                        <th class="pb-3 font-semibold text-sm text-gray-700">Status</th>
+                                        <th class="pb-3 font-semibold text-sm text-gray-700">Email</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="staff-directory-table" class="text-sm">
+                                    <tr><td colspan="6" class="text-center py-4 text-gray-500">Loading staff directory...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- POO: PROVINCIAL ARCHIVES VIEW -->
+                <div id="view-provincial-archives" class="view-section hidden fade-in">
+                    <div class="glass-panel rounded-2xl p-6">
+                        <div class="mb-6">
+                            <h3 class="text-2xl font-bold text-gray-800">Provincial Archives</h3>
+                            <p class="text-sm text-gray-600">Access historical approved IPCRF records for audit and review</p>
+                        </div>
+
+                        <div class="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">School Year</label>
+                                <select id="archive-year" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm">
+                                    <option value="">All Years</option>
+                                    <option>2026-2027</option>
+                                    <option>2025-2026</option>
+                                    <option>2024-2025</option>
+                                    <option>2023-2024</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Semester</label>
+                                <select id="archive-semester" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm">
+                                    <option value="">All Semesters</option>
+                                    <option>1st Semester</option>
+                                    <option>2nd Semester</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">School</label>
+                                <input type="text" placeholder="School name..." class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm">
+                            </div>
+                            <div class="flex items-end">
+                                <button onclick="filterArchives()" class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">Filter</button>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="text-left border-b-2 border-gray-200">
+                                        <th class="pb-3 font-semibold text-sm text-gray-700">Employee</th>
+                                        <th class="pb-3 font-semibold text-sm text-gray-700">School</th>
+                                        <th class="pb-3 font-semibold text-sm text-gray-700">School Year</th>
+                                        <th class="pb-3 font-semibold text-sm text-gray-700">Semester</th>
+                                        <th class="pb-3 font-semibold text-sm text-gray-700">Approved Date</th>
+                                        <th class="pb-3 font-semibold text-sm text-gray-700">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="archives-table" class="text-sm">
+                                    <tr><td colspan="6" class="text-center py-4 text-gray-500">Loading archives...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                @endif
             </div>
         </main>
     </div>
@@ -941,7 +1203,11 @@
                 'upload': 'Update/Upload IPCRF',
                 'records': 'IPCRF Records Database',
                 'notices': 'Regional Announcements',
-                'forms': 'Manage Downloadable Forms'
+                'forms': 'Manage Downloadable Forms',
+                'provincial-queue': 'Provincial Submission Queue',
+                'review-forms': 'Review Submitted Forms',
+                'provincial-directory': 'Provincial Staff Directory',
+                'provincial-archives': 'Provincial Archives'
             };
             document.getElementById('page-title').textContent = titles[viewName];
             
@@ -1692,6 +1958,61 @@
                 }, 50);
             });
         @endif
+
+        // POO Functions
+        function loadProvincialQueue() {
+            const statusFilter = document.getElementById('queue-status-filter')?.value || '';
+            const dateFilter = document.getElementById('queue-date-filter')?.value || '';
+            
+            // TODO: Load from API - for now show placeholder
+            document.getElementById('queue-count').textContent = '5';
+            const tbody = document.getElementById('provincial-queue-table');
+            tbody.innerHTML = `
+                <tr>
+                    <td class="py-4">Maria Santos</td>
+                    <td class="py-4">Central Elementary School</td>
+                    <td class="py-4">Jun 02, 2026</td>
+                    <td class="py-4"><span class="status-badge bg-amber-100 text-amber-700">Submitted</span></td>
+                    <td class="py-4"><span class="status-badge bg-blue-100 text-blue-700">High</span></td>
+                    <td class="py-4">
+                        <button onclick="showView('review-forms')" class="text-blue-600 hover:underline text-sm">Review</button>
+                    </td>
+                </tr>
+            `;
+        }
+
+        function filterArchives() {
+            const year = document.getElementById('archive-year')?.value || '';
+            const semester = document.getElementById('archive-semester')?.value || '';
+            
+            const tbody = document.getElementById('archives-table');
+            tbody.innerHTML = `
+                <tr>
+                    <td class="py-4">John Reyes</td>
+                    <td class="py-4">North District School</td>
+                    <td class="py-4">2025-2026</td>
+                    <td class="py-4">1st Semester</td>
+                    <td class="py-4">May 15, 2026</td>
+                    <td class="py-4">
+                        <a href="#" class="text-blue-600 hover:underline text-sm flex items-center gap-1">
+                            <i class="fas fa-download"></i> Download
+                        </a>
+                    </td>
+                </tr>
+            `;
+        }
+
+        // Initialize POO views when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            if (document.getElementById('view-provincial-queue')) {
+                loadProvincialQueue();
+                
+                // Setup event listeners
+                document.getElementById('queue-status-filter')?.addEventListener('change', loadProvincialQueue);
+                document.getElementById('queue-date-filter')?.addEventListener('change', loadProvincialQueue);
+                document.getElementById('queue-priority-filter')?.addEventListener('change', loadProvincialQueue);
+            }
+        });
     </script>
 
     <!-- LOGOUT CONFIRMATION MODAL -->

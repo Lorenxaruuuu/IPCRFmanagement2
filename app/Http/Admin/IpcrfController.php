@@ -115,12 +115,36 @@ class IpcrfController extends Controller
 
         $provinces = \App\Models\Province::all();
 
+        // Get current user information for role-based features
+        $currentUser = null;
+        $userPosition = 'none'; // Default position
+        
+        $sessionUser = session('user');
+        if ($sessionUser) {
+            if (isset($sessionUser['employee_id'])) {
+                $currentUser = \App\Models\User::where('employee_id', $sessionUser['employee_id'])->first();
+            }
+            
+            // If not found in DB or no employee_id, create object from session
+            if (!$currentUser) {
+                $currentUser = (object)[
+                    'name' => $sessionUser['name'] ?? 'Administrator',
+                    'email' => $sessionUser['email'] ?? 'admin@deped.gov.ph',
+                    'position' => $sessionUser['position'] ?? 'none'
+                ];
+            }
+            
+            $userPosition = $currentUser?->position ?? ($sessionUser['position'] ?? 'none');
+        }
+
         return view('admin.dashboard', compact(
             'stats',
             'announcements',
             'forms',
             'recentSubmissions',
-            'provinces'
+            'provinces',
+            'currentUser',
+            'userPosition'
         ));
     }
 

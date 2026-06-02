@@ -157,6 +157,7 @@ Route::get('/notifications', function () {
 
 Route::post('/profile/update', [AuthController::class, 'updateProfile'])->name('profile.update');
 Route::post('/profile/change-password', [AuthController::class, 'changePassword'])->name('profile.changePassword');
+Route::post('/profile/request-role-change', [AuthController::class, 'requestRoleChange'])->name('profile.requestRoleChange');
 
 Route::post('/register.php', function () {
     $data = request()->json()->all();
@@ -277,5 +278,7 @@ Route::prefix('superadmin')->name('superadmin.')->group(function () {
     Route::get('/dashboard2', [SuperadminController::class, 'dashboard'])->name('dashboard');
     Route::post('/users/{id}/approve', [SuperadminController::class, 'approve'])->name('users.approve');
     Route::delete('/users/{id}/reject', [SuperadminController::class, 'reject'])->name('users.reject');
+    Route::post('/users/{id}/approve-role', [SuperadminController::class, 'approveRoleChange'])->name('users.approveRole');
+    Route::delete('/users/{id}/reject-role', [SuperadminController::class, 'rejectRoleChange'])->name('users.rejectRole');
     Route::post('/admin/create', [SuperadminController::class, 'createAdmin'])->name('admin.create');
 });

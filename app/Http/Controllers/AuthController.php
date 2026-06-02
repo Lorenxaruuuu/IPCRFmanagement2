@@ -61,7 +61,8 @@ class AuthController extends Controller
                 'role' => $user->role,
                 'email' => $user->email,
                 'firstname' => $user->firstname,
-                'lastname' => $user->lastname
+                'lastname' => $user->lastname,
+                'position' => $user->position
             ]);
 
             if ($user->role === 'superadmin') {
@@ -299,6 +300,42 @@ public function store(Request $request)
         ]);
 
         return back()->with('success', 'Password updated successfully!');
+    }
+
+    public function requestRoleChange(Request $request)
+    {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $sessionUser = session('user');
+        if (!$sessionUser && isset($_SESSION['employee_id'])) {
+            $sessionUser = [
+                'employee_id' => $_SESSION['employee_id'],
+            ];
+        }
+
+        if (!$sessionUser) {
+            return redirect()->route('login');
+        }
+
+        $request->validate([
+            'requested_role' => 'required|string|max:255',
+        ]);
+
+        $user = User::where('employee_id', $sessionUser['employee_id'])->first();
+        if (!$user) {
+            return back()->withErrors(['requested_role' => 'User not found.']);
+        }
+
+        if ($user->role === $request->requested_role) {
+            return back()->withErrors(['requested_role' => 'You already have this role.']);
+        }
+
+        $user->update([
+            'requested_role' => $request->requested_role
+        ]);
+
+        return back()->with('success', 'Role change request submitted successfully. It is pending admin approval.');
     }
 
     public function logout()

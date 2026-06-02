@@ -34,7 +34,8 @@ class UserDashboardController extends Controller
         }
 
         // Templates assigned to user's position
-        $assignedTemplates = IpcrfTemplate::active()
+        $assignedTemplates = IpcrfTemplate::select('id', 'name', 'description', 'is_active')
+            ->active()
             ->whereHas('positions', fn($q) => $q->where('positions.id', $user->position_id))
             ->with('positions')
             ->get()

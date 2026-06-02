@@ -102,10 +102,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/templates/all',              [AdminTemplateController::class, 'getAll'])->name('templates.all');
     Route::post('/templates/upload',          [AdminTemplateController::class, 'store'])->name('templates.store');
     Route::get('/templates/{id}/builder',     [AdminTemplateController::class, 'builder'])->name('templates.builder');
-    Route::post('/templates/{id}/fields',     [AdminTemplateController::class, 'saveFields'])->name('templates.fields.save');
-    Route::post('/templates/{id}/upload-picture', [AdminTemplateController::class, 'uploadPicture'])->name('templates.upload-picture');
-    Route::post('/templates/{id}/positions',  [AdminTemplateController::class, 'assignPositions'])->name('templates.positions.save');
-    Route::delete('/templates/{id}',          [AdminTemplateController::class, 'destroy'])->name('templates.destroy');
+    Route::post('/templates/{id}/fields',        [AdminTemplateController::class, 'saveFields'])->name('templates.fields.save');
+    Route::post('/templates/{id}/positions',     [AdminTemplateController::class, 'assignPositions'])->name('templates.positions.save');
+    Route::post('/templates/{id}/cell-text',     [AdminTemplateController::class, 'updateCellText'])->name('templates.cell.text');
+    Route::post('/templates/{id}/upload-image',  [AdminTemplateController::class, 'uploadCellImage'])->name('templates.cell.image');
+    Route::post('/templates/{id}/merge-cells',   [AdminTemplateController::class, 'saveMergedCells'])->name('templates.merge.cells');
+    Route::put('/templates/{id}',                [AdminTemplateController::class, 'update'])->name('templates.update');
+    Route::delete('/templates/{id}',             [AdminTemplateController::class, 'destroy'])->name('templates.destroy');
 
     // ─── Submission Management ────────────────────────────────────────────────
     Route::get('/submissions',                [AdminSubmissionController::class, 'index'])->name('submissions.index');
@@ -119,6 +122,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/users/{id}',     [AdminUserController::class, 'show'])->name('users.show');
     Route::put('/users/{id}',     [AdminUserController::class, 'update'])->name('users.update');
     Route::delete('/users/{id}',  [AdminUserController::class, 'destroy'])->name('users.destroy');
+    Route::post('/users/{id}/approve', [AdminUserController::class, 'approve'])->name('users.approve');
 
     // ─── Position Management ──────────────────────────────────────────────────
     Route::get('/positions',          [AdminPositionController::class, 'index'])->name('positions.index');
@@ -157,7 +161,6 @@ Route::get('/notifications', function () {
 
 Route::post('/profile/update', [AuthController::class, 'updateProfile'])->name('profile.update');
 Route::post('/profile/change-password', [AuthController::class, 'changePassword'])->name('profile.changePassword');
-Route::post('/profile/request-role-change', [AuthController::class, 'requestRoleChange'])->name('profile.requestRoleChange');
 
 Route::post('/register.php', function () {
     $data = request()->json()->all();
@@ -278,7 +281,6 @@ Route::prefix('superadmin')->name('superadmin.')->group(function () {
     Route::get('/dashboard2', [SuperadminController::class, 'dashboard'])->name('dashboard');
     Route::post('/users/{id}/approve', [SuperadminController::class, 'approve'])->name('users.approve');
     Route::delete('/users/{id}/reject', [SuperadminController::class, 'reject'])->name('users.reject');
-    Route::post('/users/{id}/approve-role', [SuperadminController::class, 'approveRoleChange'])->name('users.approveRole');
-    Route::delete('/users/{id}/reject-role', [SuperadminController::class, 'rejectRoleChange'])->name('users.rejectRole');
     Route::post('/admin/create', [SuperadminController::class, 'createAdmin'])->name('admin.create');
 });
+

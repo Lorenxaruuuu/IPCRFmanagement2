@@ -53,28 +53,28 @@ class IpcrfController extends Controller
 
         $stats = [
             'uploaded_employees' => $uniqueRecordEmployees + $uniqueWizardEmployees,
-            'total_uploaded' => \App\Models\IpcrfRecord::count() + \App\Models\Ipcrf::count(),
-            'active_forms' => \App\Models\Form::where('is_active', true)->count(),
-            'notices' => \App\Models\Notice::active()->count(),
-            'total_employees' => \App\Models\Employee::count(),
+            'total_uploaded'     => \App\Models\IpcrfRecord::count() + \App\Models\Ipcrf::count(),
+            'active_forms'       => \App\Models\Form::where('is_active', true)->count(),
+            'notices'            => \App\Models\Notice::active()->count(),
+            'total_employees'    => \App\Models\Employee::count(),
+            // New IPCRF digital system stats
+            'total_users'        => \App\Models\User::whereNotIn('role', ['superadmin', 'admin'])->count(),
+            'total_templates'    => \App\Models\IpcrfTemplate::active()->count(),
+            'total_submissions'  => \App\Models\IpcrfSubmission::count(),
+            'pending_reviews'    => \App\Models\IpcrfSubmission::whereIn('status', ['submitted', 'under_review'])->count(),
+            'approved'           => \App\Models\IpcrfSubmission::where('status', 'approved')->count(),
+            'rejected'           => \App\Models\IpcrfSubmission::where('status', 'rejected')->count(),
         ];
 
         $announcements = \App\Models\Notice::active()->get();
         $forms = \App\Models\Form::where('is_active', true)->latest('published_at')->get();
-        
-        $dbRecords = \App\Models\IpcrfRecord::with('employee.school.municipality.province')
-            ->latest('uploaded_at')
-            ->take(10)
-            ->get();
 
-        $wizardRecords = \App\Models\Ipcrf::latest('created_at')
-            ->take(10)
-            ->get();
+        $dbRecords = \App\Models\IpcrfRecord::with('employee.school.municipality.province')
+            ->latest('uploaded_at')->take(10)->get();
+        $wizardRecords = \App\Models\Ipcrf::latest('created_at')->take(10)->get();
 
         $recentSubmissions = collect();
-        foreach ($dbRecords as $r) {
-            $recentSubmissions->push($r);
-        }
+        foreach ($dbRecords as $r) { $recentSubmissions->push($r); }
         foreach ($wizardRecords as $w) {
             $fakeRecord = new \App\Models\IpcrfRecord();
             $fakeRecord->id = $w->id;
@@ -85,66 +85,42 @@ class IpcrfController extends Controller
             $fakeRecord->school_year = $w->created_at ? $w->created_at->format('Y') : 'N/A';
             $fakeRecord->status = $w->status;
             $fakeRecord->uploaded_at = $w->created_at;
-
             $parts = explode(' ', $w->name, 2);
-            $first = $parts[0];
-            $last = $parts[1] ?? '';
-            $fakeEmp = new \App\Models\Employee([
-                'employee_id' => 'N/A',
-                'first_name' => $first,
-                'last_name' => $last,
-                'role' => 'N/A',
-                'email' => 'N/A',
-            ]);
-
-            $fakeProv = new \App\Models\Province(['name' => $w->province]);
-            $fakeMun = new \App\Models\Municipality(['name' => $w->municipality]);
+            $fakeEmp = new \App\Models\Employee(['employee_id'=>'N/A','first_name'=>$parts[0],'last_name'=>$parts[1]??'','role'=>'N/A','email'=>'N/A']);
+            $fakeProv  = new \App\Models\Province(['name' => $w->province]);
+            $fakeMun   = new \App\Models\Municipality(['name' => $w->municipality]);
             $fakeSchool = new \App\Models\School(['name' => 'N/A']);
-
             $fakeSchool->setRelation('municipality', $fakeMun);
             $fakeMun->setRelation('province', $fakeProv);
             $fakeEmp->setRelation('school', $fakeSchool);
             $fakeRecord->setRelation('employee', $fakeEmp);
-
             $recentSubmissions->push($fakeRecord);
         }
-
-        $recentSubmissions = $recentSubmissions->sortByDesc(function ($item) {
-            return $item->uploaded_at ? $item->uploaded_at->timestamp : 0;
-        })->take(10)->values();
+        $recentSubmissions = $recentSubmissions->sortByDesc(fn($i) => $i->uploaded_at ? $i->uploaded_at->timestamp : 0)->take(10)->values();
 
         $provinces = \App\Models\Province::all();
 
-        // Get current user information for role-based features
+        // New IPCRF digital system data for management panels
+        $positions         = \App\Models\Position::withCount('users')->orderBy('name')->get();
+        $ipcrf_templates   = \App\Models\IpcrfTemplate::select('id', 'name', 'description', 'file_path', 'file_name', 'file_original_name', 'total_rows', 'total_cols', 'is_active', 'uploaded_by', 'semester', 'form_specification', 'created_at', 'updated_at')
+            ->with(['positions', 'uploader'])
+            ->active()
+            ->latest()
+            ->get();
+        $ipcrf_submissions = \App\Models\IpcrfSubmission::with(['user.position', 'template'])->latest()->take(50)->get();
+        $managed_users     = \App\Models\User::with('position')->whereNotIn('role', ['superadmin'])->latest()->take(50)->get();
+
+        // Current admin user info
         $currentUser = null;
-        $userPosition = 'none'; // Default position
-        
         $sessionUser = session('user');
         if ($sessionUser) {
-            if (isset($sessionUser['employee_id'])) {
-                $currentUser = \App\Models\User::where('employee_id', $sessionUser['employee_id'])->first();
-            }
-            
-            // If not found in DB or no employee_id, create object from session
-            if (!$currentUser) {
-                $currentUser = (object)[
-                    'name' => $sessionUser['name'] ?? 'Administrator',
-                    'email' => $sessionUser['email'] ?? 'admin@deped.gov.ph',
-                    'position' => $sessionUser['position'] ?? 'none'
-                ];
-            }
-            
-            $userPosition = $currentUser?->position ?? ($sessionUser['position'] ?? 'none');
+            $currentUser = \App\Models\User::find($sessionUser['id'] ?? 0)
+                ?? (object)['name' => $sessionUser['name'] ?? 'Administrator', 'email' => $sessionUser['email'] ?? ''];
         }
 
         return view('admin.dashboard', compact(
-            'stats',
-            'announcements',
-            'forms',
-            'recentSubmissions',
-            'provinces',
-            'currentUser',
-            'userPosition'
+            'stats', 'announcements', 'forms', 'recentSubmissions', 'provinces',
+            'currentUser', 'positions', 'ipcrf_templates', 'ipcrf_submissions', 'managed_users'
         ));
     }
 

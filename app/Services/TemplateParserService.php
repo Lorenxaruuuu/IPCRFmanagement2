@@ -275,7 +275,8 @@ class TemplateParserService
                 $style   = $cell['style'];
                 $css     = $this->buildCss($style);
 
-                $attrs = 'data-cell="' . $cellRef . '" data-row="' . $cell['row'] . '" data-col="' . $cell['col'] . '"';
+                $cellText = htmlspecialchars((string)($cell['value'] ?? ''));
+                $attrs = 'data-cell="' . $cellRef . '" data-row="' . $cell['row'] . '" data-col="' . $cell['col'] . '" data-text="' . $cellText . '"';
                 if ($cell['rowspan'] > 1) $attrs .= ' rowspan="' . $cell['rowspan'] . '"';
                 if ($cell['colspan'] > 1) $attrs .= ' colspan="' . $cell['colspan'] . '"';
 
@@ -302,6 +303,7 @@ class TemplateParserService
                 } else {
                     $content = htmlspecialchars((string)($cell['value'] ?? ''));
                     $class   = 'ipcrf-cell';
+                    $css    .= 'position:relative;';
                 }
 
                 if (!empty($drawingsHtml)) {
@@ -350,19 +352,22 @@ class TemplateParserService
     private function fieldTypeIcon(string $type): string
     {
         return match ($type) {
-            'autofill_name'       => 'fa-user',
-            'autofill_position'   => 'fa-briefcase',
-            'autofill_department' => 'fa-building',
-            'autofill_date'       => 'fa-calendar',
-            'text'                => 'fa-font',
-            'number'              => 'fa-hashtag',
-            'textarea'            => 'fa-align-left',
-            'rating'              => 'fa-star',
-            'dropdown'            => 'fa-chevron-down',
-            'signature'           => 'fa-signature',
-            'readonly'            => 'fa-lock',
-            'picture'             => 'fa-image',
-            default               => 'fa-square',
+            'autofill_name'                => 'fa-user',
+            'autofill_position'            => 'fa-briefcase',
+            'autofill_department'          => 'fa-building',
+            'autofill_date'                => 'fa-calendar-day',
+            'date'                         => 'fa-calendar-alt',
+            'autofill_division_chief'      => 'fa-user-tie',
+            'autofill_approving_authority' => 'fa-stamp',
+            'text'                         => 'fa-font',
+            'number'                       => 'fa-hashtag',
+            'textarea'                     => 'fa-align-left',
+            'rating'                       => 'fa-star',
+            'dropdown'                     => 'fa-chevron-down',
+            'signature'                    => 'fa-signature',
+            'readonly'                     => 'fa-lock',
+            'picture'                      => 'fa-image',
+            default                        => 'fa-square',
         };
     }
 }

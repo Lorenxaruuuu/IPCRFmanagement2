@@ -18,7 +18,8 @@ class AdminTemplateController extends Controller
 
     public function index()
     {
-        $templates = IpcrfTemplate::with(['positions', 'uploader'])
+        $templates = IpcrfTemplate::select('id', 'name', 'description', 'file_path', 'file_name', 'file_original_name', 'total_rows', 'total_cols', 'is_active', 'uploaded_by', 'created_at', 'updated_at')
+            ->with(['positions', 'uploader'])
             ->latest()
             ->get();
         return response()->json(['templates' => $templates]);
@@ -28,9 +29,11 @@ class AdminTemplateController extends Controller
     {
         ini_set('memory_limit', '512M');
         $request->validate([
-            'name'     => 'required|string|max:255',
-            'file'     => 'required|file|mimes:xlsx|max:102400',
-            'description' => 'nullable|string',
+            'name'               => 'required|string|max:255',
+            'file'               => 'required|file|mimes:xlsx|max:102400',
+            'description'        => 'nullable|string',
+            'semester'           => 'required|string|in:1st,2nd',
+            'form_specification' => 'required|string|in:Target,Rating',
         ]);
 
         $file     = $request->file('file');
@@ -45,16 +48,18 @@ class AdminTemplateController extends Controller
         }
 
         $template = IpcrfTemplate::create([
-            'name'              => $request->name,
-            'description'       => $request->description,
-            'file_path'         => $path,
-            'file_name'         => Str::slug($request->name) . '.xlsx',
+            'name'               => $request->name,
+            'description'        => $request->description,
+            'file_path'          => $path,
+            'file_name'          => Str::slug($request->name) . '.xlsx',
             'file_original_name' => $file->getClientOriginalName(),
-            'sheet_data'        => $parsed['rows'],
-            'merged_cells'      => $parsed['merged_cells'],
-            'total_rows'        => $parsed['total_rows'],
-            'total_cols'        => $parsed['total_cols'],
-            'uploaded_by'       => session('user')['id'] ?? null,
+            'sheet_data'         => $parsed['rows'],
+            'merged_cells'       => $parsed['merged_cells'],
+            'total_rows'         => $parsed['total_rows'],
+            'total_cols'         => $parsed['total_cols'],
+            'uploaded_by'        => session('user')['id'] ?? null,
+            'semester'           => $request->semester,
+            'form_specification' => $request->form_specification,
         ]);
 
         $adminId = session('user')['id'] ?? null;
@@ -72,12 +77,16 @@ class AdminTemplateController extends Controller
             'is_active' => true
         ]);
 
-        return response()->json([
-            'success'     => true,
-            'message'     => 'Template uploaded successfully!',
-            'template_id' => $template->id,
-            'builder_url' => route('admin.templates.builder', $template->id),
-        ]);
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success'     => true,
+                'message'     => 'Template uploaded successfully!',
+                'template_id' => $template->id,
+                'builder_url' => route('admin.templates.builder', $template->id),
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'Template uploaded successfully!');
     }
 
     public function builder(int $id)
@@ -168,7 +177,202 @@ class AdminTemplateController extends Controller
             'positions' => $request->position_ids,
         ]);
 
-        return response()->json(['success' => true, 'message' => 'Positions assigned!']);
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json(['success' => true, 'message' => 'Positions assigned!']);
+        }
+        return redirect()->back()->with('success', 'Positions assigned successfully');
+    }
+
+    public function updateCellText(Request $request, int $id)
+    {
+        $request->validate([
+            'cell_ref' => 'required|string|max:20',
+            'value'    => 'nullable|string|max:2000',
+        ]);
+
+        ini_set('memory_limit', '512M');
+        $template  = IpcrfTemplate::findOrFail($id);
+        $sheetData = $template->sheet_data ?? [];
+        $target    = strtoupper(trim($request->cell_ref));
+        $found     = false;
+
+        foreach ($sheetData as &$row) {
+            foreach ($row as &$cell) {
+                if (isset($cell['cell_ref']) && $cell['cell_ref'] === $target) {
+                    $cell['value']     = $request->value ?? '';
+                    $cell['raw_value'] = $request->value ?? '';
+                    $found = true;
+                    break 2;
+                }
+            }
+        }
+        unset($row, $cell);
+
+        if ($found) {
+            $template->update(['sheet_data' => $sheetData]);
+        }
+
+        return response()->json(['success' => true, 'found' => $found]);
+    }
+
+    public function uploadCellImage(Request $request, int $id)
+    {
+        $request->validate([
+            'image'    => 'required|image|max:5120',
+            'cell_ref' => 'required|string|max:20',
+        ]);
+
+        $publicDir = public_path('storage/ipcrf_images');
+        if (!file_exists($publicDir)) {
+            mkdir($publicDir, 0755, true);
+        }
+
+        $file      = $request->file('image');
+        $filename  = uniqid('img_', true) . '.' . $file->getClientOriginalExtension();
+        $file->move($publicDir, $filename);
+        $url = asset('storage/ipcrf_images/' . $filename);
+
+        // Persist drawing info into sheet_data
+        ini_set('memory_limit', '512M');
+        $template  = IpcrfTemplate::findOrFail($id);
+        $sheetData = $template->sheet_data ?? [];
+        $target    = strtoupper(trim($request->cell_ref));
+
+        foreach ($sheetData as &$row) {
+            foreach ($row as &$cell) {
+                if (isset($cell['cell_ref']) && $cell['cell_ref'] === $target) {
+                    $cell['drawings'] = [[
+                        'url'     => $url,
+                        'width'   => 120,
+                        'height'  => 60,
+                        'offsetX' => 0,
+                        'offsetY' => 0,
+                        'name'    => 'uploaded',
+                    ]];
+                    break 2;
+                }
+            }
+        }
+        unset($row, $cell);
+
+        $template->update(['sheet_data' => $sheetData]);
+
+        return response()->json(['success' => true, 'url' => $url]);
+    }
+
+    public function saveMergedCells(Request $request, int $id)
+    {
+        $request->validate([
+            'action'      => 'required|in:merge,unmerge',
+            'primary_ref' => 'required|string|max:20',
+            'range'       => 'nullable|string|max:30',
+            'rowspan'     => 'nullable|integer|min:1|max:100',
+            'colspan'     => 'nullable|integer|min:1|max:100',
+        ]);
+
+        ini_set('memory_limit', '512M');
+        $template    = IpcrfTemplate::findOrFail($id);
+        $sheetData   = $template->sheet_data   ?? [];
+        $mergedCells = $template->merged_cells ?? [];
+        $primaryRef  = strtoupper(trim($request->primary_ref));
+
+        if ($request->action === 'merge' && $request->range) {
+            $range   = strtoupper(trim($request->range));
+            $rowspan = max(1, (int)($request->rowspan ?? 1));
+            $colspan = max(1, (int)($request->colspan ?? 1));
+            $mergedCells[$range] = null;
+
+            [$start, $end] = array_pad(explode(':', $range), 2, $range);
+            [$sc, $sr] = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::coordinateFromString($start);
+            [$ec, $er] = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::coordinateFromString($end);
+            $scIdx = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($sc);
+            $ecIdx = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($ec);
+
+            foreach ($sheetData as &$row) {
+                foreach ($row as &$cell) {
+                    $ref = $cell['cell_ref'] ?? '';
+                    if ($ref === $primaryRef) {
+                        $cell['rowspan'] = $rowspan;
+                        $cell['colspan'] = $colspan;
+                    } else {
+                        preg_match('/^([A-Z]+)(\d+)$/', $ref, $m);
+                        if ($m) {
+                            $r = (int)$m[2];
+                            $c = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($m[1]);
+                            if ($r >= (int)$sr && $r <= (int)$er && $c >= $scIdx && $c <= $ecIdx) {
+                                $cell['hidden'] = true;
+                            }
+                        }
+                    }
+                }
+            }
+            unset($row, $cell);
+
+        } elseif ($request->action === 'unmerge') {
+            foreach ($mergedCells as $range => $_) {
+                [$start] = explode(':', $range);
+                if (strtoupper(trim($start)) !== $primaryRef) continue;
+
+                unset($mergedCells[$range]);
+                [$start2, $end2] = array_pad(explode(':', $range), 2, $range);
+                [$sc, $sr] = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::coordinateFromString($start2);
+                [$ec, $er] = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::coordinateFromString($end2);
+                $scIdx = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($sc);
+                $ecIdx = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($ec);
+
+                foreach ($sheetData as &$row) {
+                    foreach ($row as &$cell) {
+                        $ref = $cell['cell_ref'] ?? '';
+                        if ($ref === $primaryRef) {
+                            $cell['rowspan'] = 1;
+                            $cell['colspan'] = 1;
+                        } else {
+                            preg_match('/^([A-Z]+)(\d+)$/', $ref, $m);
+                            if ($m) {
+                                $r = (int)$m[2];
+                                $c = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($m[1]);
+                                if ($r >= (int)$sr && $r <= (int)$er && $c >= $scIdx && $c <= $ecIdx) {
+                                    $cell['hidden'] = false;
+                                }
+                            }
+                        }
+                    }
+                }
+                unset($row, $cell);
+                break;
+            }
+        }
+
+        $template->update(['sheet_data' => $sheetData, 'merged_cells' => $mergedCells]);
+        return response()->json(['success' => true]);
+    }
+
+    public function update(Request $request, int $id)
+    {
+        $request->validate([
+            'name'               => 'required|string|max:255',
+            'semester'           => 'required|string|in:1st,2nd',
+            'form_specification' => 'required|string|in:Target,Rating',
+            'description'        => 'nullable|string',
+        ]);
+
+        $template = IpcrfTemplate::findOrFail($id);
+        $template->update([
+            'name'               => $request->name,
+            'semester'           => $request->semester,
+            'form_specification' => $request->form_specification,
+            'description'        => $request->description,
+        ]);
+
+        AuditService::log('template_updated', session('user')['id'] ?? null, 'IpcrfTemplate', $id, [
+            'name' => $template->name,
+        ]);
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json(['success' => true, 'message' => 'Template updated successfully!']);
+        }
+
+        return redirect()->back()->with('success', 'Template updated successfully!');
     }
 
     public function destroy(int $id)
@@ -177,91 +381,32 @@ class AdminTemplateController extends Controller
         Storage::disk('private')->delete($template->file_path);
         $template->delete();
         AuditService::log('template_deleted', null, 'IpcrfTemplate', $id);
-        return response()->json(['success' => true]);
-    }
 
-    /**
-     * Upload picture directly onto a template cell (static image).
-     */
-    public function uploadPicture(Request $request, int $id)
-    {
-        $request->validate([
-            'file'     => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
-            'cell_ref' => 'required|string',
-        ]);
-
-        $template = IpcrfTemplate::findOrFail($id);
-        $file     = $request->file('file');
-        
-        $publicDir = public_path('storage/ipcrf_images');
-        if (!file_exists($publicDir)) {
-            mkdir($publicDir, 0755, true);
+        if (request()->wantsJson() || request()->ajax()) {
+            return response()->json(['success' => true]);
         }
-
-        $extension = $file->getClientOriginalExtension() ?: 'png';
-        $filename = uniqid('tpl_img_', true) . '.' . $extension;
-        $file->move($publicDir, $filename);
-
-        $url = asset('storage/ipcrf_images/' . $filename);
-        
-        // Get image dimensions
-        $size = @getimagesize($publicDir . '/' . $filename);
-        $width = $size[0] ?? 120;
-        $height = $size[1] ?? 80;
-
-        // Update sheet_data with this drawing
-        $sheetData = $template->sheet_data;
-        $cellRef = strtoupper($request->cell_ref);
-        
-        $updated = false;
-        foreach ($sheetData as &$row) {
-            foreach ($row as &$cell) {
-                if (strtoupper($cell['cell_ref']) === $cellRef) {
-                    if (!isset($cell['drawings']) || !is_array($cell['drawings'])) {
-                        $cell['drawings'] = [];
-                    }
-                    $cell['drawings'][] = [
-                        'url'     => $url,
-                        'width'   => $width,
-                        'height'  => $height,
-                        'offsetX' => 0,
-                        'offsetY' => 0,
-                        'name'    => $file->getClientOriginalName(),
-                    ];
-                    $updated = true;
-                    break 2;
-                }
-            }
-        }
-
-        if ($updated) {
-            $template->update(['sheet_data' => $sheetData]);
-        }
-
-        return response()->json([
-            'success' => true,
-            'url'     => $url,
-            'width'   => $width,
-            'height'  => $height,
-            'name'    => $file->getClientOriginalName(),
-        ]);
+        return redirect()->back()->with('success', 'Template deleted successfully');
     }
 
     public function getAll()
     {
-        $templates = IpcrfTemplate::with(['positions', 'uploader', 'fields'])
+        $templates = IpcrfTemplate::select('id', 'name', 'description', 'file_path', 'file_name', 'file_original_name', 'total_rows', 'total_cols', 'is_active', 'uploaded_by', 'semester', 'form_specification', 'created_at', 'updated_at')
+            ->with(['positions', 'uploader', 'fields'])
             ->active()
             ->latest()
             ->get()
             ->map(fn($t) => [
-                'id'          => $t->id,
-                'name'        => $t->name,
-                'description' => $t->description,
-                'positions'   => $t->positions->pluck('name')->toArray(),
-                'field_count' => $t->fields->count(),
-                'created_at'  => $t->created_at->format('M d, Y'),
-                'uploader'    => $t->uploader?->name ?? 'System',
+                'id'                 => $t->id,
+                'name'               => $t->name,
+                'description'        => $t->description,
+                'semester'           => $t->semester,
+                'form_specification' => $t->form_specification,
+                'positions'          => $t->positions->pluck('name')->toArray(),
+                'field_count'        => $t->fields->count(),
+                'created_at'         => $t->created_at->format('M d, Y'),
+                'uploader'           => $t->uploader?->name ?? 'System',
             ]);
         return response()->json(['templates' => $templates]);
     }
 }
+

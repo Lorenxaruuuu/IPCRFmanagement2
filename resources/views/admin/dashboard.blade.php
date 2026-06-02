@@ -1,4 +1,5 @@
 
+
 @extends('admin.layouts.admin')
 
 @section('title', 'Admin Dashboard')
@@ -117,19 +118,43 @@
                 </div>
             </div>
             
-            <nav class="flex-1 py-6">
+            <nav class="flex-1 py-4 overflow-y-auto">
+                <div class="px-4 mb-2"><p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Overview</p></div>
                 <a href="#" onclick="showView('dashboard')" class="nav-item active flex items-center gap-3 px-6 py-3 text-sm" id="nav-dashboard">
                     <i class="fas fa-home w-5"></i>
                     Dashboard Home
                 </a>
+                <div class="px-4 mt-4 mb-2"><p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">IPCRF Digital System</p></div>
+                <a href="#" onclick="showView('templates')" class="nav-item flex items-center gap-3 px-6 py-3 text-sm" id="nav-templates">
+                    <i class="fas fa-file-excel w-5"></i>
+                    IPCRF Templates
+                    <span class="ml-auto bg-indigo-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{{ $stats['total_templates'] }}</span>
+                </a>
+                <a href="#" onclick="showView('submissions')" class="nav-item flex items-center gap-3 px-6 py-3 text-sm" id="nav-submissions">
+                    <i class="fas fa-inbox w-5"></i>
+                    Submissions
+                    @if($stats['pending_reviews'] > 0)
+                    <span class="ml-auto bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{{ $stats['pending_reviews'] }}</span>
+                    @endif
+                </a>
+                <a href="#" onclick="showView('users')" class="nav-item flex items-center gap-3 px-6 py-3 text-sm" id="nav-users">
+                    <i class="fas fa-users w-5"></i>
+                    User Management
+                </a>
+                <a href="#" onclick="showView('positions')" class="nav-item flex items-center gap-3 px-6 py-3 text-sm" id="nav-positions">
+                    <i class="fas fa-id-badge w-5"></i>
+                    Positions
+                </a>
+                <div class="px-4 mt-4 mb-2"><p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Legacy Records</p></div>
                 <a href="#" onclick="showView('upload')" class="nav-item flex items-center gap-3 px-6 py-3 text-sm" id="nav-upload">
                     <i class="fas fa-upload w-5"></i>
-                    Update/Upload IPCRF
+                    Upload IPCRF File
                 </a>
                 <a href="#" onclick="showView('records')" class="nav-item flex items-center gap-3 px-6 py-3 text-sm" id="nav-records">
                     <i class="fas fa-list w-5"></i>
-                    List of Uploaded
+                    Uploaded Records
                 </a>
+                <div class="px-4 mt-4 mb-2"><p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">System</p></div>
                 <a href="#" onclick="showView('notices')" class="nav-item flex items-center gap-3 px-6 py-3 text-sm" id="nav-notices">
                     <i class="fas fa-bell w-5"></i>
                     Manage Notices
@@ -142,10 +167,10 @@
             
             <div class="p-4 border-t border-gray-700">
                 <div class="flex items-center gap-3 px-2">
-                    <img src="https://ui-avatars.com/api/?name=Admin+User&background=3b82f6&color=fff" class="w-10 h-10 rounded-full">
-                    <div class="flex-1">
-                        <p class="text-sm font-medium">Administrator</p>
-                        <p class="text-xs text-gray-400">admin@deped.gov.ph</p>
+                    <img src="https://ui-avatars.com/api/?name={{ urlencode($currentUser->name ?? 'Admin User') }}&background=3b82f6&color=fff" class="w-10 h-10 rounded-full">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium truncate">{{ $currentUser->name ?? 'Administrator' }}</p>
+                        <p class="text-xs text-gray-400 truncate">{{ $currentUser->email ?? '' }}</p>
                     </div>
                 </div>
             </div>
@@ -226,7 +251,67 @@
             <div class="p-8">
                 <!-- DASHBOARD VIEW -->
                 <div id="view-dashboard" class="view-section fade-in">
-                    <!-- Stats Cards -->
+                    <!-- Stats Cards Row 1: IPCRF Digital System -->
+                    <div class="mb-3"><p class="text-xs font-bold text-indigo-600 uppercase tracking-widest flex items-center gap-2"><i class="fas fa-file-excel"></i> IPCRF Digital System</p></div>
+                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+                        <div class="glass-panel rounded-2xl p-5 card-hover border-t-4 border-indigo-500 cursor-pointer" onclick="showView('templates')">
+                            <div class="flex flex-col">
+                                <div class="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center mb-3">
+                                    <i class="fas fa-file-excel text-indigo-600 text-lg"></i>
+                                </div>
+                                <h3 class="text-2xl font-bold text-gray-800">{{ $stats['total_templates'] }}</h3>
+                                <p class="text-gray-500 text-xs mt-1">Templates</p>
+                            </div>
+                        </div>
+                        <div class="glass-panel rounded-2xl p-5 card-hover border-t-4 border-blue-500 cursor-pointer" onclick="showView('users')">
+                            <div class="flex flex-col">
+                                <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center mb-3">
+                                    <i class="fas fa-users text-blue-600 text-lg"></i>
+                                </div>
+                                <h3 class="text-2xl font-bold text-gray-800">{{ $stats['total_users'] }}</h3>
+                                <p class="text-gray-500 text-xs mt-1">Registered Users</p>
+                            </div>
+                        </div>
+                        <div class="glass-panel rounded-2xl p-5 card-hover border-t-4 border-teal-500 cursor-pointer" onclick="showView('submissions')">
+                            <div class="flex flex-col">
+                                <div class="w-10 h-10 bg-teal-100 rounded-xl flex items-center justify-center mb-3">
+                                    <i class="fas fa-inbox text-teal-600 text-lg"></i>
+                                </div>
+                                <h3 class="text-2xl font-bold text-gray-800">{{ $stats['total_submissions'] }}</h3>
+                                <p class="text-gray-500 text-xs mt-1">Total Submissions</p>
+                            </div>
+                        </div>
+                        <div class="glass-panel rounded-2xl p-5 card-hover border-t-4 border-orange-500 cursor-pointer" onclick="showView('submissions')">
+                            <div class="flex flex-col">
+                                <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center mb-3">
+                                    <i class="fas fa-clock text-orange-600 text-lg"></i>
+                                </div>
+                                <h3 class="text-2xl font-bold text-gray-800">{{ $stats['pending_reviews'] }}</h3>
+                                <p class="text-gray-500 text-xs mt-1">Pending Review</p>
+                            </div>
+                        </div>
+                        <div class="glass-panel rounded-2xl p-5 card-hover border-t-4 border-green-500 cursor-pointer" onclick="showView('submissions')">
+                            <div class="flex flex-col">
+                                <div class="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center mb-3">
+                                    <i class="fas fa-check-circle text-green-600 text-lg"></i>
+                                </div>
+                                <h3 class="text-2xl font-bold text-gray-800">{{ $stats['approved'] }}</h3>
+                                <p class="text-gray-500 text-xs mt-1">Approved</p>
+                            </div>
+                        </div>
+                        <div class="glass-panel rounded-2xl p-5 card-hover border-t-4 border-red-500 cursor-pointer" onclick="showView('submissions')">
+                            <div class="flex flex-col">
+                                <div class="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center mb-3">
+                                    <i class="fas fa-times-circle text-red-600 text-lg"></i>
+                                </div>
+                                <h3 class="text-2xl font-bold text-gray-800">{{ $stats['rejected'] }}</h3>
+                                <p class="text-gray-500 text-xs mt-1">Rejected</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stats Cards Row 2: Legacy System -->
+                    <div class="mb-3"><p class="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2"><i class="fas fa-archive"></i> Legacy Record System</p></div>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                         <div class="glass-panel rounded-2xl p-6 card-hover border-l-4 border-blue-500 cursor-pointer" onclick="showView('records')">
                             <div class="flex justify-between items-start">
@@ -237,18 +322,6 @@
                                 </div>
                                 <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
                                     <i class="fas fa-file-alt text-blue-600 text-xl"></i>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="glass-panel rounded-2xl p-6 card-hover border-l-4 border-green-500 cursor-pointer" onclick="showView('forms')">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <p class="text-gray-500 text-sm mb-1">Active Forms</p>
-                                    <h3 class="text-3xl font-bold text-gray-800">{{ $stats['active_forms'] }}</h3>
-                                </div>
-                                <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                                    <i class="fas fa-check-circle text-green-600 text-xl"></i>
                                 </div>
                             </div>
                         </div>
@@ -267,7 +340,7 @@
                         <div class="glass-panel rounded-2xl p-6 card-hover border-l-4 border-teal-500">
                             <div class="flex justify-between items-start">
                                 <div>
-                                    <p class="text-gray-500 text-sm mb-1">Total Employees</p>
+                                    <p class="text-gray-500 text-sm mb-1">Total Employees (Legacy)</p>
                                     <h3 class="text-3xl font-bold text-gray-800" id="staff-count">{{ $stats['total_employees'] }}</h3>
                                 </div>
                                 <div class="w-12 h-12 bg-teal-100 rounded-xl flex items-center justify-center">
@@ -552,16 +625,7 @@
                                 <button onclick="resetUpload()" class="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition">Upload Another</button>
                                 <button onclick="showView('records')" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">View Records</button>
                             </div>
-                            <div style="margin-bottom:20px;">
-                                <label class="form-label">Priority</label>
-                                <select name="priority" class="form-input">
-                                    <option value="Low">Low</option>
-                                    <option value="Medium" selected>Medium</option>
-                                    <option value="High">High</option>
-                                </select>
-                            </div>
-                            <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;"><i class="fas fa-paper-plane"></i> Post Announcement</button>
-                        </form>
+                        </div>
                     </div>
                 </div>
 
@@ -845,8 +909,514 @@
                         </div>
                     </div>
                 </div>
-            </div>
+
+                <!-- ══════════════════════════════════════════════════════ -->
+                <!-- IPCRF TEMPLATES VIEW                                  -->
+                <!-- ══════════════════════════════════════════════════════ -->
+                <div id="view-templates" class="view-section hidden fade-in">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                        <div>
+                            <h3 class="text-2xl font-bold text-gray-800">IPCRF Templates</h3>
+                            <p class="text-sm text-gray-500">Upload Excel templates and configure fillable fields for each position</p>
+                        </div>
+                        <button onclick="document.getElementById('upload-template-modal').classList.remove('hidden')"
+                            class="bg-indigo-600 text-white px-6 py-2.5 rounded-xl hover:bg-indigo-700 transition flex items-center gap-2 shadow">
+                            <i class="fas fa-plus"></i> Upload New Template
+                        </button>
+                    </div>
+
+                    @if(count($ipcrf_templates) === 0)
+                        <div class="glass-panel rounded-2xl p-12 text-center">
+                            <i class="fas fa-file-excel text-5xl text-gray-300 mb-4"></i>
+                            <h4 class="text-lg font-semibold text-gray-600 mb-1">No templates yet</h4>
+                            <p class="text-gray-400 text-sm mb-6">Upload an IPCRF Excel template to get started. You can then map cells to fillable fields.</p>
+                            <button onclick="document.getElementById('upload-template-modal').classList.remove('hidden')"
+                                class="bg-indigo-600 text-white px-6 py-2.5 rounded-xl hover:bg-indigo-700 transition">
+                                Upload First Template
+                            </button>
+                        </div>
+                    @else
+                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                            @foreach($ipcrf_templates as $tpl)
+                            <div class="glass-panel rounded-2xl p-6 card-hover flex flex-col gap-3">
+                                <div class="flex items-start justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                                            <i class="fas fa-file-excel text-indigo-600 text-xl"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-bold text-gray-800 leading-tight">{{ $tpl->name }}</h4>
+                                            <p class="text-xs text-gray-500">{{ $tpl->file_original_name }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <button onclick="openEditTemplateModal({{ json_encode($tpl->only('id', 'name', 'semester', 'form_specification', 'description')) }})" 
+                                                class="text-gray-300 hover:text-blue-500 transition p-1" title="Edit Template Details">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <form action="{{ route('admin.templates.destroy', $tpl->id) }}" method="POST"
+                                            onsubmit="return confirm('Delete this template? This also deletes all field mappings.')" class="inline">
+                                            @csrf @method('DELETE')
+                                            <button type="submit" class="text-gray-300 hover:text-red-500 transition p-1" title="Delete Template">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+
+                                <div class="flex flex-wrap gap-2 my-1">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                                        <i class="fas fa-calendar-alt mr-1"></i> {{ $tpl->semester ?? '1st' }} Semester
+                                    </span>
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+                                        <i class="fas fa-file-invoice mr-1"></i> {{ $tpl->form_specification ?? 'Target' }}
+                                    </span>
+                                </div>
+
+                                @if($tpl->description)
+                                <p class="text-xs text-gray-500">{{ Str::limit($tpl->description, 80) }}</p>
+                                @endif
+
+                                <!-- Assigned positions -->
+                                <div class="flex flex-wrap gap-1">
+                                    @forelse($tpl->positions as $pos)
+                                        <span class="inline-block bg-indigo-50 text-indigo-700 text-[11px] font-medium px-2 py-0.5 rounded-full border border-indigo-200">{{ $pos->name }}</span>
+                                    @empty
+                                        <span class="text-xs text-orange-500 font-medium"><i class="fas fa-exclamation-triangle mr-1"></i>No positions assigned</span>
+                                    @endforelse
+                                </div>
+
+                                <div class="flex gap-2 mt-auto pt-3 border-t border-gray-100">
+                                    <a href="{{ route('admin.templates.builder', $tpl->id) }}"
+                                        class="flex-1 text-center bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition text-sm font-medium flex items-center justify-center gap-2">
+                                        <i class="fas fa-magic"></i> Build Fields
+                                    </a>
+                                    <button onclick="openAssignModal({{ $tpl->id }}, {{ json_encode($tpl->positions->pluck('id')) }})"
+                                        class="flex-1 text-center border border-indigo-300 text-indigo-700 py-2 rounded-lg hover:bg-indigo-50 transition text-sm font-medium flex items-center justify-center gap-2">
+                                        <i class="fas fa-users"></i> Assign Positions
+                                    </button>
+                                </div>
+                                <p class="text-[10px] text-gray-400">Uploaded {{ $tpl->created_at->diffForHumans() }} by {{ $tpl->uploader?->name ?? 'Admin' }}</p>
+                            </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+
+                <!-- ══════════════════════════════════════════════════════ -->
+                <!-- SUBMISSIONS VIEW                                      -->
+                <!-- ══════════════════════════════════════════════════════ -->
+                <div id="view-submissions" class="view-section hidden fade-in">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                        <div>
+                            <h3 class="text-2xl font-bold text-gray-800">IPCRF Submissions</h3>
+                            <p class="text-sm text-gray-500">Review and approve or reject submitted IPCRF forms</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <span class="bg-orange-100 text-orange-700 text-sm font-semibold px-3 py-1.5 rounded-lg">
+                                <i class="fas fa-clock mr-1"></i>{{ $stats['pending_reviews'] }} Pending
+                            </span>
+                            <span class="bg-green-100 text-green-700 text-sm font-semibold px-3 py-1.5 rounded-lg">
+                                <i class="fas fa-check mr-1"></i>{{ $stats['approved'] }} Approved
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel rounded-2xl overflow-hidden">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="bg-gray-50 text-left border-b border-gray-200">
+                                    <th class="px-6 py-4 font-semibold text-gray-700">Employee</th>
+                                    <th class="px-6 py-4 font-semibold text-gray-700">Template</th>
+                                    <th class="px-6 py-4 font-semibold text-gray-700">Submitted</th>
+                                    <th class="px-6 py-4 font-semibold text-gray-700">Status</th>
+                                    <th class="px-6 py-4 font-semibold text-gray-700">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($ipcrf_submissions as $sub)
+                                <tr class="border-b border-gray-100 hover:bg-gray-50 transition">
+                                    <td class="px-6 py-4">
+                                        <div class="font-medium text-gray-800">{{ $sub->user?->name ?? 'Unknown' }}</div>
+                                        <div class="text-xs text-gray-500">{{ $sub->user?->position?->name ?? 'No position' }}</div>
+                                    </td>
+                                    <td class="px-6 py-4 text-gray-600">{{ $sub->template?->name ?? '—' }}</td>
+                                    <td class="px-6 py-4 text-gray-500">{{ $sub->submitted_at ? $sub->submitted_at->format('M j, Y') : ($sub->updated_at ? $sub->updated_at->format('M j, Y') : '—') }}</td>
+                                    <td class="px-6 py-4">
+                                        @php
+                                            $statusColors = ['draft'=>'bg-gray-100 text-gray-600','submitted'=>'bg-blue-100 text-blue-700','under_review'=>'bg-orange-100 text-orange-700','approved'=>'bg-green-100 text-green-700','rejected'=>'bg-red-100 text-red-700'];
+                                            $sc = $statusColors[$sub->status] ?? 'bg-gray-100 text-gray-600';
+                                        @endphp
+                                        <span class="inline-block px-2.5 py-1 rounded-full text-[11px] font-semibold {{ $sc }}">{{ ucfirst(str_replace('_', ' ', $sub->status)) }}</span>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center gap-2">
+                                            <a href="{{ route('admin.submissions.show', $sub->id) }}" class="text-blue-600 hover:text-blue-800 text-xs font-medium" title="View">
+                                                <i class="fas fa-eye"></i> View
+                                            </a>
+                                            @if(in_array($sub->status, ['submitted', 'under_review']))
+                                            <form action="{{ route('admin.submissions.approve', $sub->id) }}" method="POST" class="inline">
+                                                @csrf
+                                                <button type="submit" class="text-green-600 hover:text-green-800 text-xs font-medium">
+                                                    <i class="fas fa-check"></i> Approve
+                                                </button>
+                                            </form>
+                                            <button onclick="openRejectModal({{ $sub->id }})" class="text-red-500 hover:text-red-700 text-xs font-medium">
+                                                <i class="fas fa-times"></i> Reject
+                                            </button>
+                                            @endif
+                                            @if($sub->status === 'approved')
+                                            <a href="{{ route('admin.submissions.download', $sub->id) }}" class="text-indigo-600 hover:text-indigo-800 text-xs font-medium">
+                                                <i class="fas fa-download"></i> XLSX
+                                            </a>
+                                            @endif
+                                        </div>
+                                    </td>
+                                </tr>
+                                @empty
+                                <tr>
+                                    <td colspan="5" class="px-6 py-12 text-center text-gray-400">
+                                        <i class="fas fa-inbox text-4xl mb-3 block"></i>
+                                        No submissions yet. Users will appear here once they submit their IPCRF forms.
+                                    </td>
+                                </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ══════════════════════════════════════════════════════ -->
+                <!-- USER MANAGEMENT VIEW                                  -->
+                <!-- ══════════════════════════════════════════════════════ -->
+                <div id="view-users" class="view-section hidden fade-in">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                        <div>
+                            <h3 class="text-2xl font-bold text-gray-800">User Management</h3>
+                            <p class="text-sm text-gray-500">Approve accounts, manage roles and positions</p>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel rounded-2xl overflow-hidden">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="bg-gray-50 text-left border-b border-gray-200">
+                                    <th class="px-6 py-4 font-semibold text-gray-700">Employee</th>
+                                    <th class="px-6 py-4 font-semibold text-gray-700">Email</th>
+                                    <th class="px-6 py-4 font-semibold text-gray-700">Position</th>
+                                    <th class="px-6 py-4 font-semibold text-gray-700">Role</th>
+                                    <th class="px-6 py-4 font-semibold text-gray-700">Status</th>
+                                    <th class="px-6 py-4 font-semibold text-gray-700">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($managed_users as $mu)
+                                <tr class="border-b border-gray-100 hover:bg-gray-50 transition" id="user-row-{{ $mu->id }}">
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center gap-3">
+                                            <img src="https://ui-avatars.com/api/?name={{ urlencode($mu->name) }}&size=32&background=ddd6fe&color=5b21b6" class="w-8 h-8 rounded-full">
+                                            <div>
+                                                <div class="font-medium text-gray-800">{{ $mu->name }}</div>
+                                                <div class="text-xs text-gray-500">{{ $mu->employee_id }}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 text-gray-600">{{ $mu->email }}</td>
+                                    <td class="px-6 py-4 text-gray-600">{{ $mu->position?->name ?? '—' }}</td>
+                                    <td class="px-6 py-4">
+                                        <span class="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold {{ $mu->role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600' }}">
+                                            {{ ucfirst($mu->role) }}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        @if($mu->approved)
+                                            <span class="inline-block bg-green-100 text-green-700 text-[11px] font-semibold px-2.5 py-1 rounded-full">Active</span>
+                                        @else
+                                            <span class="inline-block bg-yellow-100 text-yellow-700 text-[11px] font-semibold px-2.5 py-1 rounded-full">Pending</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center gap-2">
+                                            @if(!$mu->approved)
+                                            <form action="{{ route('admin.users.approve', $mu->id) }}" method="POST" class="inline">
+                                                @csrf
+                                                <button type="submit" class="text-green-600 hover:text-green-800 text-xs font-semibold">
+                                                    <i class="fas fa-user-check"></i> Approve
+                                                </button>
+                                            </form>
+                                            @endif
+                                            <form action="{{ route('admin.users.destroy', $mu->id) }}" method="POST" class="inline"
+                                                onsubmit="return confirm('Delete user {{ addslashes($mu->name) }}? This cannot be undone.')">
+                                                @csrf @method('DELETE')
+                                                <button type="submit" class="text-red-400 hover:text-red-600 text-xs font-semibold">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                @empty
+                                <tr>
+                                    <td colspan="6" class="px-6 py-12 text-center text-gray-400">
+                                        <i class="fas fa-users text-4xl mb-3 block"></i>
+                                        No users registered yet.
+                                    </td>
+                                </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ══════════════════════════════════════════════════════ -->
+                <!-- POSITIONS VIEW                                        -->
+                <!-- ══════════════════════════════════════════════════════ -->
+                <div id="view-positions" class="view-section hidden fade-in">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <!-- Create/Edit Position Form -->
+                        <div class="glass-panel rounded-2xl p-6">
+                            <h3 class="text-xl font-bold mb-1">Create Position</h3>
+                            <p class="text-sm text-gray-500 mb-6">Add employee positions that templates can be assigned to</p>
+
+                            <form id="positionForm" method="POST" action="{{ route('admin.positions.store') }}" class="space-y-4">
+                                @csrf
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Position Name</label>
+                                    <input type="text" name="name" id="pos-name" required
+                                        class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500"
+                                        placeholder="e.g. Social Welfare Officer II">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Description (optional)</label>
+                                    <textarea name="description" id="pos-desc" rows="3"
+                                        class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 resize-none"
+                                        placeholder="Brief description of this position"></textarea>
+                                </div>
+                                <div>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" name="is_active" checked class="w-4 h-4 text-indigo-600">
+                                        <span class="text-sm text-gray-700">Active (visible to users during registration)</span>
+                                    </label>
+                                </div>
+                                <button type="submit" class="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition font-medium">
+                                    <i class="fas fa-plus mr-2"></i>Create Position
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Positions List -->
+                        <div class="glass-panel rounded-2xl p-6">
+                            <h3 class="text-xl font-bold mb-6">All Positions ({{ count($positions) }})</h3>
+                            <div class="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+                                @forelse($positions as $pos)
+                                <div class="flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3 border border-gray-100 group">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-9 h-9 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                            <i class="fas fa-id-badge text-indigo-600 text-sm"></i>
+                                        </div>
+                                        <div>
+                                            <p class="font-semibold text-gray-800 text-sm">{{ $pos->name }}</p>
+                                            <p class="text-xs text-gray-500">{{ $pos->users_count }} user{{ $pos->users_count != 1 ? 's' : '' }} assigned</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        @if($pos->is_active ?? true)
+                                            <span class="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full">Active</span>
+                                        @else
+                                            <span class="bg-gray-200 text-gray-500 text-[10px] font-bold px-2 py-0.5 rounded-full">Inactive</span>
+                                        @endif
+                                        <form action="{{ route('admin.positions.destroy', $pos->id) }}" method="POST"
+                                            onsubmit="return confirm('Delete position {{ addslashes($pos->name) }}?')">
+                                            @csrf @method('DELETE')
+                                            <button type="submit" class="text-gray-300 hover:text-red-500 transition opacity-0 group-hover:opacity-100 p-1">
+                                                <i class="fas fa-trash text-sm"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                                @empty
+                                <div class="text-center py-8 text-gray-400">
+                                    <i class="fas fa-id-badge text-4xl mb-3 block"></i>
+                                    No positions yet. Create one to get started.
+                                </div>
+                                @endforelse
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+        </div>
         </main>
+    </div>
+
+    <!-- ═══════════════════════════ UPLOAD TEMPLATE MODAL ═══════════════════════════ -->
+    <div id="upload-template-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-lg w-full mx-4 relative">
+            <button onclick="document.getElementById('upload-template-modal').classList.add('hidden')"
+                class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl">
+                <i class="fas fa-times"></i>
+            </button>
+            <h3 class="text-xl font-bold mb-1">Upload IPCRF Template</h3>
+            <p class="text-sm text-gray-500 mb-6">Upload an Excel (.xlsx) file. You can then build fillable fields using the builder.</p>
+
+            <form method="POST" action="{{ route('admin.templates.store') }}" enctype="multipart/form-data" class="space-y-4">
+                @csrf
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Template Name</label>
+                    <input type="text" name="name" required
+                        class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500"
+                        placeholder="e.g. IPCRF – Non-Teaching Staff 2025">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Description (optional)</label>
+                    <textarea name="description" rows="2"
+                        class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 resize-none"
+                        placeholder="Brief description of who this template is for"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Semester</label>
+                        <select name="semester" required class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500">
+                            <option value="1st">1st Semester</option>
+                            <option value="2nd">2nd Semester</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Form Specification</label>
+                        <select name="form_specification" required class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500">
+                            <option value="Target">Target</option>
+                            <option value="Rating">Rating</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-2 uppercase">Excel File (.xlsx)</label>
+                    <label class="block cursor-pointer">
+                        <div class="border-2 border-dashed border-indigo-300 rounded-xl p-6 text-center hover:border-indigo-500 hover:bg-indigo-50 transition bg-indigo-50">
+                            <i class="fas fa-file-excel text-3xl text-indigo-400 mb-2"></i>
+                            <p class="text-sm text-indigo-600 font-medium tpl-file-name">Click to select XLSX file</p>
+                            <p class="text-xs text-gray-400 mt-1">Only .xlsx files accepted</p>
+                        </div>
+                        <input type="file" name="file" accept=".xlsx" required class="hidden"
+                            onchange="this.previousElementSibling.querySelector('.tpl-file-name').textContent = this.files[0]?.name || 'Click to select XLSX file'">
+                    </label>
+                </div>
+                <button type="submit" class="w-full bg-indigo-600 text-white py-3 rounded-xl hover:bg-indigo-700 transition font-semibold flex items-center justify-center gap-2">
+                    <i class="fas fa-upload"></i> Upload Template
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════ ASSIGN POSITIONS MODAL ═══════════════════════════ -->
+    <div id="assign-positions-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 relative">
+            <button onclick="document.getElementById('assign-positions-modal').classList.add('hidden')"
+                class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl">
+                <i class="fas fa-times"></i>
+            </button>
+            <h3 class="text-xl font-bold mb-1">Assign Positions</h3>
+            <p class="text-sm text-gray-500 mb-6">Users with these positions will see this template in their dashboard.</p>
+
+            <form id="assign-positions-form" method="POST" action="" class="space-y-4">
+                @csrf
+                <div class="space-y-2 max-h-60 overflow-y-auto pr-1">
+                    @foreach($positions as $pos)
+                    <label class="flex items-center gap-3 cursor-pointer p-3 rounded-lg hover:bg-indigo-50 transition">
+                        <input type="checkbox" name="position_ids[]" value="{{ $pos->id }}" class="assign-pos-checkbox w-4 h-4 text-indigo-600 rounded">
+                        <span class="text-sm font-medium text-gray-700">{{ $pos->name }}</span>
+                        <span class="ml-auto text-xs text-gray-400">{{ $pos->users_count }} user{{ $pos->users_count != 1 ? 's' : '' }}</span>
+                    </label>
+                    @endforeach
+                </div>
+                <button type="submit" class="w-full bg-indigo-600 text-white py-3 rounded-xl hover:bg-indigo-700 transition font-semibold">
+                    Save Position Assignments
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════ EDIT TEMPLATE MODAL ═══════════════════════════ -->
+    <div id="edit-template-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-lg w-full mx-4 relative">
+            <button onclick="document.getElementById('edit-template-modal').classList.add('hidden')"
+                class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl">
+                <i class="fas fa-times"></i>
+            </button>
+            <h3 class="text-xl font-bold mb-1">Edit Template Details</h3>
+            <p class="text-sm text-gray-500 mb-6">Modify the name, semester, form specification, and description.</p>
+
+            <form id="edit-template-form" method="POST" action="" class="space-y-4">
+                @csrf
+                @method('PUT')
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Template Name</label>
+                    <input type="text" id="edit-template-name" name="name" required
+                        class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Semester</label>
+                        <select id="edit-template-semester" name="semester" required class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500">
+                            <option value="1st">1st Semester</option>
+                            <option value="2nd">2nd Semester</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Form Specification</label>
+                        <select id="edit-template-specification" name="form_specification" required class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500">
+                            <option value="Target">Target</option>
+                            <option value="Rating">Rating</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Description (optional)</label>
+                    <textarea id="edit-template-description" name="description" rows="2"
+                        class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 resize-none"></textarea>
+                </div>
+
+                <button type="submit" class="w-full bg-indigo-600 text-white py-3 rounded-xl hover:bg-indigo-700 transition font-semibold flex items-center justify-center gap-2">
+                    <i class="fas fa-check"></i> Save Changes
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════ REJECT SUBMISSION MODAL ═══════════════════════════ -->
+    <div id="reject-submission-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 relative">
+            <button onclick="document.getElementById('reject-submission-modal').classList.add('hidden')"
+                class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-times-circle text-red-500 text-2xl"></i>
+            </div>
+            <h3 class="text-xl font-bold mb-1 text-center">Reject Submission</h3>
+            <p class="text-sm text-gray-500 mb-6 text-center">Please provide a reason for rejection so the employee can revise their form.</p>
+
+            <form id="reject-submission-form" method="POST" action="" class="space-y-4">
+                @csrf
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Rejection Remarks</label>
+                    <textarea name="remarks" rows="4" required
+                        class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-red-500 resize-none"
+                        placeholder="e.g. Please correct the ratings in Section 2..."></textarea>
+                </div>
+                <div class="flex gap-3">
+                    <button type="button" onclick="document.getElementById('reject-submission-modal').classList.add('hidden')"
+                        class="flex-1 border border-gray-300 text-gray-600 py-3 rounded-xl hover:bg-gray-50 transition">
+                        Cancel
+                    </button>
+                    <button type="submit" class="flex-1 bg-red-600 text-white py-3 rounded-xl hover:bg-red-700 transition font-semibold">
+                        Reject Submission
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <!-- Report Filter Modal -->
@@ -933,24 +1503,60 @@
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             
             // Show selected view
-            document.getElementById(`view-${viewName}`).classList.remove('hidden');
-            document.getElementById(`nav-${viewName}`).classList.add('active');
+            const viewEl = document.getElementById(`view-${viewName}`);
+            if (viewEl) viewEl.classList.remove('hidden');
+            const navEl = document.getElementById(`nav-${viewName}`);
+            if (navEl) navEl.classList.add('active');
             
             // Update page title
             const titles = {
-                'dashboard': 'Admin Dashboard Overview',
-                'upload': 'Update/Upload IPCRF',
-                'records': 'IPCRF Records Database',
-                'notices': 'Regional Announcements',
-                'forms': 'Manage Downloadable Forms'
+                'dashboard':   'Admin Dashboard Overview',
+                'upload':      'Upload IPCRF File',
+                'records':     'IPCRF Records Database',
+                'notices':     'Regional Announcements',
+                'forms':       'Manage Downloadable Forms',
+                'templates':   'IPCRF Templates',
+                'submissions': 'IPCRF Submissions',
+                'users':       'User Management',
+                'positions':   'Position Management',
             };
-            document.getElementById('page-title').textContent = titles[viewName];
+            const titleEl = document.getElementById('page-title');
+            if (titleEl) titleEl.textContent = titles[viewName] || viewName;
             
             // Load records when records view is shown
             if (viewName === 'records') {
                 loadDashboardRecords();
             }
         }
+
+        // Open Assign Positions Modal for a given template
+        function openAssignModal(templateId, assignedIds) {
+            const form = document.getElementById('assign-positions-form');
+            form.action = `/admin/templates/${templateId}/positions`;
+            // Tick the already-assigned positions
+            document.querySelectorAll('.assign-pos-checkbox').forEach(cb => {
+                cb.checked = assignedIds.includes(parseInt(cb.value));
+            });
+            document.getElementById('assign-positions-modal').classList.remove('hidden');
+        }
+
+        function openEditTemplateModal(template) {
+            const form = document.getElementById('edit-template-form');
+            form.action = `/admin/templates/${template.id}`;
+            document.getElementById('edit-template-name').value = template.name;
+            document.getElementById('edit-template-semester').value = template.semester || '1st';
+            document.getElementById('edit-template-specification').value = template.form_specification || 'Target';
+            document.getElementById('edit-template-description').value = template.description || '';
+            document.getElementById('edit-template-modal').classList.remove('hidden');
+        }
+
+        // Open Reject Submission Modal
+        function openRejectModal(submissionId) {
+            const form = document.getElementById('reject-submission-form');
+            form.action = `/admin/submissions/${submissionId}/reject`;
+            document.getElementById('reject-submission-modal').classList.remove('hidden');
+        }
+
 
         function selectRole(role) {
             selectedRole = role;

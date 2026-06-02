@@ -72,10 +72,25 @@ class AdminUserController extends Controller
         return response()->json(['success' => true, 'user' => $user->fresh('position')]);
     }
 
+    public function approve(int $id)
+    {
+        $user = User::findOrFail($id);
+        $user->update(['approved' => true]);
+
+        if (request()->expectsJson()) {
+            return response()->json(['success' => true, 'message' => 'User approved.']);
+        }
+        return redirect()->route('admin.dashboard')->with('success', "User {$user->name} has been approved.");
+    }
+
     public function destroy(int $id)
     {
         $user = User::findOrFail($id);
         $user->delete();
-        return response()->json(['success' => true]);
+
+        if (request()->expectsJson()) {
+            return response()->json(['success' => true]);
+        }
+        return redirect()->route('admin.dashboard')->with('success', 'User deleted.');
     }
 }

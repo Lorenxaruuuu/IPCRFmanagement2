@@ -551,16 +551,7 @@
                                 <button onclick="resetUpload()" class="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition">Upload Another</button>
                                 <button onclick="showView('records')" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">View Records</button>
                             </div>
-                            <div style="margin-bottom:20px;">
-                                <label class="form-label">Priority</label>
-                                <select name="priority" class="form-input">
-                                    <option value="Low">Low</option>
-                                    <option value="Medium" selected>Medium</option>
-                                    <option value="High">High</option>
-                                </select>
-                            </div>
-                            <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;"><i class="fas fa-paper-plane"></i> Post Announcement</button>
-                        </form>
+                        </div>
                     </div>
                 </div>
 

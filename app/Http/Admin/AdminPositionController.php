@@ -30,7 +30,10 @@ class AdminPositionController extends Controller
 
         AuditService::log('position_created', null, 'Position', $position->id, ['name' => $position->name]);
 
-        return response()->json(['success' => true, 'position' => $position]);
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'position' => $position]);
+        }
+        return redirect()->route('admin.dashboard')->with('success', "Position '{$position->name}' created successfully.");
     }
 
     public function update(Request $request, int $id)
@@ -51,7 +54,12 @@ class AdminPositionController extends Controller
     {
         $position = Position::findOrFail($id);
         $position->delete();
+
         AuditService::log('position_deleted', null, 'Position', $id);
-        return response()->json(['success' => true]);
+
+        if (request()->expectsJson()) {
+            return response()->json(['success' => true]);
+        }
+        return redirect()->back()->with('success', 'Position deleted.');
     }
 }

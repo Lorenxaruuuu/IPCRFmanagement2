@@ -12,7 +12,7 @@ class IpcrfTemplate extends Model
     protected $fillable = [
         'name', 'description', 'file_path', 'file_name', 'file_original_name',
         'sheet_data', 'merged_cells', 'total_rows', 'total_cols',
-        'is_active', 'uploaded_by',
+        'is_active', 'uploaded_by', 'semester', 'form_specification',
     ];
 
     protected $casts = [

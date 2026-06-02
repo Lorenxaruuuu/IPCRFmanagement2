@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -18,19 +19,22 @@ class User extends Authenticatable
      * @var list<string>
      */
      protected $fillable = [
-    'lastname', 
-    'firstname', 
+    'lastname',
+    'firstname',
     'name',
-    'employee_id', 
+    'employee_id',
     'email',
-    'password', 
+    'password',
     'role',
     'approved',
     'profile_edited',
     'birthday',
     'gender',
     'address',
-    'region'
+    'region',
+    'position_id',
+    'department',
+    'office',
 ];
     /**
      * The attributes that should be hidden for serialization.
@@ -53,5 +57,20 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function position(): BelongsTo
+    {
+        return $this->belongsTo(Position::class);
+    }
+
+    public function submissions()
+    {
+        return $this->hasMany(IpcrfSubmission::class);
+    }
+
+    public function getFullNameAttribute(): string
+    {
+        return trim(($this->firstname ?? '') . ' ' . ($this->lastname ?? '')) ?: ($this->name ?? '');
     }
 }

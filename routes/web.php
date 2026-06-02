@@ -6,8 +6,13 @@ use App\Http\Admin\IpcrfController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\RegisterController;
 use App\Http\Controllers\PerformanceController;
+use App\Http\Controllers\UserDashboardController;
 use App\Http\Admin\NoticeController;
 use App\Http\Admin\FormController;
+use App\Http\Admin\AdminTemplateController;
+use App\Http\Admin\AdminSubmissionController;
+use App\Http\Admin\AdminPositionController;
+use App\Http\Admin\AdminUserController;
 use App\Http\Controllers\GoogleDriveAuthController;
 use App\Http\Controllers\SuperadminController;
 
@@ -45,7 +50,7 @@ Route::get('/', function () {
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('register');
-Route::post('/register', [AuthController::class, 'register'])->name('register.post');
+Route::post('/register', [RegisterController::class, 'store'])->name('register.post');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::get('/home', function () {
@@ -62,37 +67,75 @@ Route::get('/upload', [IpcrfController::class, 'create'])->name('upload.create')
 Route::post('/upload', [IpcrfController::class, 'store'])->name('upload.store');
 
 Route::prefix('admin')->name('admin.')->group(function () {
-    
+
     // Dashboard
     Route::get('/dashboard', [IpcrfController::class, 'dashboard'])->name('dashboard');
-    
+
     // Upload - Single page, no steps
     Route::get('/upload', [IpcrfController::class, 'uploadForm'])->name('upload');
     Route::post('/upload', [IpcrfController::class, 'store2'])->name('upload.store');
-    
+
     // Records
     Route::get('/records', [IpcrfController::class, 'records'])->name('records');
     Route::get('/records/{id}/download', [IpcrfController::class, 'download'])->name('records.download');
     Route::delete('/records/{id}', [IpcrfController::class, 'destroy'])->name('records.destroy');
-    
+
     // API for cascading dropdowns (controller-based)
     Route::get('/api/provinces/{province}/municipalities', [IpcrfController::class, 'getMunicipalities']);
     Route::get('/api/municipalities/{municipality}/schools', [IpcrfController::class, 'getSchools']);
-    
+
     // Notices
     Route::get('/notices', [NoticeController::class, 'index'])->name('notices');
     Route::post('/notices', [NoticeController::class, 'store'])->name('notices.store');
     Route::delete('/notices/{id}', [NoticeController::class, 'destroy'])->name('notices.destroy');
-    
+
     // Forms
     Route::get('/forms', [FormController::class, 'index'])->name('forms');
     Route::post('/forms', [FormController::class, 'store'])->name('forms.store');
-
     Route::get('/forms/{id}/download', [FormController::class, 'download2'])->name('forms.download');
     Route::delete('/forms/{id}', [FormController::class, 'destroy'])->name('forms.destroy');
-    
+
     // Google Drive Authorization
     Route::get('/settings/google-drive/authorize', [GoogleDriveAuthController::class, 'authorize'])->name('gdrive.authorize');
+
+    // ─── IPCRF Template Management ───────────────────────────────────────────
+    Route::get('/templates/all',              [AdminTemplateController::class, 'getAll'])->name('templates.all');
+    Route::post('/templates/upload',          [AdminTemplateController::class, 'store'])->name('templates.store');
+    Route::get('/templates/{id}/builder',     [AdminTemplateController::class, 'builder'])->name('templates.builder');
+    Route::post('/templates/{id}/fields',     [AdminTemplateController::class, 'saveFields'])->name('templates.fields.save');
+    Route::post('/templates/{id}/upload-picture', [AdminTemplateController::class, 'uploadPicture'])->name('templates.upload-picture');
+    Route::post('/templates/{id}/positions',  [AdminTemplateController::class, 'assignPositions'])->name('templates.positions.save');
+    Route::delete('/templates/{id}',          [AdminTemplateController::class, 'destroy'])->name('templates.destroy');
+
+    // ─── Submission Management ────────────────────────────────────────────────
+    Route::get('/submissions',                [AdminSubmissionController::class, 'index'])->name('submissions.index');
+    Route::get('/submissions/{id}',           [AdminSubmissionController::class, 'show'])->name('submissions.show');
+    Route::post('/submissions/{id}/approve',  [AdminSubmissionController::class, 'approve'])->name('submissions.approve');
+    Route::post('/submissions/{id}/reject',   [AdminSubmissionController::class, 'reject'])->name('submissions.reject');
+    Route::get('/submissions/{id}/download',  [AdminSubmissionController::class, 'download'])->name('submissions.download');
+
+    // ─── User Management ─────────────────────────────────────────────────────
+    Route::get('/users',          [AdminUserController::class, 'index'])->name('users.index');
+    Route::get('/users/{id}',     [AdminUserController::class, 'show'])->name('users.show');
+    Route::put('/users/{id}',     [AdminUserController::class, 'update'])->name('users.update');
+    Route::delete('/users/{id}',  [AdminUserController::class, 'destroy'])->name('users.destroy');
+
+    // ─── Position Management ──────────────────────────────────────────────────
+    Route::get('/positions',          [AdminPositionController::class, 'index'])->name('positions.index');
+    Route::post('/positions',         [AdminPositionController::class, 'store'])->name('positions.store');
+    Route::put('/positions/{id}',     [AdminPositionController::class, 'update'])->name('positions.update');
+    Route::delete('/positions/{id}',  [AdminPositionController::class, 'destroy'])->name('positions.destroy');
+});
+
+// ─── User Form-Filling Routes ─────────────────────────────────────────────────
+Route::prefix('my')->name('user.')->group(function () {
+    Route::get('/dashboard-data',               [UserDashboardController::class, 'index'])->name('dashboard.data');
+    Route::get('/templates/{id}/fill',          [UserDashboardController::class, 'fillForm'])->name('templates.fill');
+    Route::post('/templates/{id}/draft',        [UserDashboardController::class, 'saveDraft'])->name('templates.draft');
+    Route::post('/templates/{id}/submit',       [UserDashboardController::class, 'submit'])->name('templates.submit');
+    Route::get('/submissions/{id}/download',    [UserDashboardController::class, 'download'])->name('submissions.download');
+    Route::post('/submissions/{id}/upload-picture/{fieldId}', [UserDashboardController::class, 'uploadPicture'])->name('submissions.upload-picture');
+    Route::get('/history',                      [UserDashboardController::class, 'submissionHistory'])->name('history');
 });
 
 // Google Drive OAuth Callback (outside admin group)
@@ -185,6 +228,7 @@ Route::post('/login.php', function () {
     }
     
     Session::put('user', [
+        'id' => $user->id,
         'employee_id' => $user->employee_id,
         'name' => $user->name,
         'role' => $user->role,

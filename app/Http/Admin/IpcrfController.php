@@ -168,7 +168,7 @@ class IpcrfController extends Controller
             'province' => 'required|string',
             'municipality' => 'required|string',
             'name' => 'required|string|max:255',
-            'scanned_file' => 'required|file|mimes:pdf,jpg,png|max:10240',
+            'scanned_file' => 'required|file|mimes:pdf,jpg,png|max:102400',
         ]);
 
         try {
@@ -211,7 +211,7 @@ class IpcrfController extends Controller
             'province' => 'required|string',
             'municipality' => 'required|string',
             'name' => 'required|string|max:255',
-            'scanned_file' => 'required|file|mimes:pdf,jpg,png|max:10240',
+            'scanned_file' => 'required|file|mimes:pdf,jpg,png|max:102400',
         ]);
 
         try {
@@ -304,7 +304,7 @@ class IpcrfController extends Controller
                 'municipality_id' => 'required|exists:municipalities,id',
                 'school_name' => 'nullable|string|max:255',
                 'school_id' => 'nullable|exists:schools,id',
-                'file' => 'required|file|mimes:pdf,xlsx,xls,doc,docx|max:10240',
+                'file' => 'required|file|mimes:pdf,xlsx,xls,doc,docx|max:102400',
                 'semester' => 'required|in:1st,2nd',
                 'school_year' => 'required|string',
                 'role' => 'required|in:Teacher,Master Teacher,Principal,Supervisor',

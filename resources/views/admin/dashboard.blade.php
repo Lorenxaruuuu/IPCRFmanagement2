@@ -1,1737 +1,1131 @@
 @extends('admin.layouts.admin')
+@section('title', 'IPCRF Admin — Management System')
 
-@section('title', 'Admin Dashboard')
+@push('styles')
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+*{box-sizing:border-box;}
+body{font-family:'Inter',sans-serif;background:#0f172a;margin:0;}
+
+/* ── Layout ─────────────────────────────── */
+.layout{display:flex;height:100vh;overflow:hidden;}
+.sidebar{width:260px;flex-shrink:0;background:linear-gradient(180deg,#1e293b 0%,#0f172a 100%);display:flex;flex-direction:column;border-right:1px solid rgba(255,255,255,.06);}
+.main-area{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.topbar{background:rgba(15,23,42,.9);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,.06);padding:0 28px;height:64px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.content-area{flex:1;overflow-y:auto;padding:28px;background:#0f172a;}
+
+/* ── Sidebar ─────────────────────────────── */
+.sb-brand{padding:20px 20px 16px;border-bottom:1px solid rgba(255,255,255,.06);}
+.sb-brand h1{font-size:16px;font-weight:700;color:#f1f5f9;margin:0;}
+.sb-brand p{font-size:11px;color:#64748b;margin:2px 0 0;}
+.sb-nav{flex:1;padding:12px 0;overflow-y:auto;}
+.sb-section{font-size:10px;font-weight:600;color:#475569;letter-spacing:.08em;text-transform:uppercase;padding:16px 20px 6px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 20px;font-size:13px;font-weight:500;color:#94a3b8;cursor:pointer;transition:all .2s;border-left:3px solid transparent;text-decoration:none;}
+.nav-item:hover{color:#f1f5f9;background:rgba(255,255,255,.05);border-left-color:rgba(99,102,241,.4);}
+.nav-item.active{color:#fff;background:rgba(99,102,241,.15);border-left-color:#6366f1;}
+.nav-item i{width:18px;text-align:center;font-size:14px;}
+.sb-badge{margin-left:auto;background:#ef4444;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;}
+.sb-footer{padding:16px 20px;border-top:1px solid rgba(255,255,255,.06);}
+
+/* ── Cards ─────────────────────────────── */
+.stat-card{background:rgba(30,41,59,.7);border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:22px;transition:transform .2s,box-shadow .2s;}
+.stat-card:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(0,0,0,.3);}
+.stat-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;}
+.stat-val{font-size:30px;font-weight:800;color:#f1f5f9;}
+.stat-lbl{font-size:12px;color:#64748b;margin-top:2px;}
+
+/* ── Section Panels ─────────────────────── */
+.panel{background:rgba(30,41,59,.7);border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:24px;}
+.panel-title{font-size:16px;font-weight:700;color:#f1f5f9;margin:0 0 4px;}
+.panel-sub{font-size:12px;color:#64748b;margin:0 0 20px;}
+
+/* ── Buttons ─────────────────────────────── */
+.btn{display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .2s;text-decoration:none;}
+.btn-primary{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;}
+.btn-primary:hover{opacity:.9;transform:translateY(-1px);box-shadow:0 4px 20px rgba(99,102,241,.4);}
+.btn-success{background:linear-gradient(135deg,#10b981,#059669);color:#fff;}
+.btn-success:hover{opacity:.9;}
+.btn-danger{background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3);}
+.btn-danger:hover{background:rgba(239,68,68,.25);}
+.btn-ghost{background:rgba(255,255,255,.05);color:#94a3b8;border:1px solid rgba(255,255,255,.1);}
+.btn-ghost:hover{background:rgba(255,255,255,.1);color:#f1f5f9;}
+
+/* ── Badges ─────────────────────────────── */
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;}
+.badge-draft{background:rgba(100,116,139,.2);color:#94a3b8;}
+.badge-submitted{background:rgba(59,130,246,.2);color:#60a5fa;}
+.badge-review{background:rgba(245,158,11,.2);color:#fbbf24;}
+.badge-approved{background:rgba(16,185,129,.2);color:#34d399;}
+.badge-rejected{background:rgba(239,68,68,.2);color:#f87171;}
+
+/* ── Tables ─────────────────────────────── */
+.data-table{width:100%;border-collapse:collapse;}
+.data-table th{font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.06);text-align:left;}
+.data-table td{font-size:13px;color:#cbd5e1;padding:12px;border-bottom:1px solid rgba(255,255,255,.04);}
+.data-table tr:hover td{background:rgba(255,255,255,.03);}
+.data-table tr:last-child td{border-bottom:none;}
+
+/* ── Forms ─────────────────────────────── */
+.form-label{display:block;font-size:12px;font-weight:600;color:#94a3b8;margin-bottom:6px;}
+.form-input{width:100%;background:rgba(15,23,42,.8);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:10px 14px;font-size:13px;color:#f1f5f9;outline:none;transition:border-color .2s;}
+.form-input:focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.15);}
+.form-input::placeholder{color:#475569;}
+select.form-input option{background:#1e293b;color:#f1f5f9;}
+
+/* ── Upload zone ────────────────────────── */
+.upload-zone{border:2px dashed rgba(99,102,241,.3);border-radius:16px;padding:48px 24px;text-align:center;cursor:pointer;transition:all .3s;background:rgba(99,102,241,.04);}
+.upload-zone:hover,.upload-zone.dragover{border-color:#6366f1;background:rgba(99,102,241,.08);}
+
+/* ── Template builder ───────────────────── */
+.builder-wrap{display:flex;gap:0;height:calc(100vh - 100px);overflow:hidden;background:rgba(15,23,42,.5);border:1px solid rgba(255,255,255,.07);border-radius:16px;}
+.spreadsheet-area{flex:1;overflow:auto;padding:0;}
+.field-panel{width:300px;flex-shrink:0;background:rgba(30,41,59,.9);border-left:1px solid rgba(255,255,255,.07);display:flex;flex-direction:column;overflow-y:auto;}
+.ipcrf-preview-table{border-collapse:collapse;min-width:100%;}
+.ipcrf-preview-table td{border:1px solid #334155;font-size:11px;cursor:pointer;min-width:60px;max-width:200px;}
+.ipcrf-preview-table td:hover{background:rgba(99,102,241,.1) !important;outline:2px solid #6366f1;}
+.ipcrf-preview-table td.selected{outline:2px solid #f59e0b !important;background:rgba(245,158,11,.1) !important;}
+.ipcrf-preview-table td.ipcrf-cell--mapped{outline:2px solid rgba(99,102,241,.5);}
+.field-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;background:rgba(99,102,241,.25);color:#a5b4fc;white-space:nowrap;max-width:100%;overflow:hidden;}
+.field-badge.field-badge--autofill_name,.field-badge.field-badge--autofill_position,.field-badge.field-badge--autofill_department,.field-badge.field-badge--autofill_date{background:rgba(16,185,129,.2);color:#6ee7b7;}
+.field-badge.field-badge--readonly{background:rgba(100,116,139,.2);color:#94a3b8;}
+.field-badge.field-badge--dropdown{background:rgba(245,158,11,.2);color:#fbbf24;}
+.field-badge.field-badge--signature{background:rgba(236,72,153,.2);color:#f9a8d4;}
+
+/* ── Field type selector ────────────────── */
+.ft-btn{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;font-size:12px;cursor:pointer;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:#94a3b8;transition:all .2s;text-align:left;width:100%;}
+.ft-btn:hover,.ft-btn.selected{background:rgba(99,102,241,.15);border-color:rgba(99,102,241,.4);color:#a5b4fc;}
+
+/* ── Modals ─────────────────────────────── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:1000;display:flex;align-items:center;justify-content:center;}
+.modal-box{background:#1e293b;border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:32px;min-width:480px;max-width:90vw;max-height:90vh;overflow-y:auto;}
+.modal-title{font-size:18px;font-weight:700;color:#f1f5f9;margin:0 0 20px;}
+
+/* ── Tabs ───────────────────────────────── */
+.tab-bar{display:flex;gap:2px;background:rgba(15,23,42,.5);border-radius:12px;padding:4px;margin-bottom:24px;}
+.tab-btn{flex:1;padding:8px 16px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:transparent;color:#64748b;transition:all .2s;}
+.tab-btn.active{background:rgba(99,102,241,.2);color:#a5b4fc;}
+
+/* ── Misc ─────────────────────────────── */
+.view-section{display:none;animation:fadeIn .25s ease;}
+.view-section.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;}
+.divider{border:none;border-top:1px solid rgba(255,255,255,.06);margin:20px 0;}
+.search-input{background:rgba(15,23,42,.6);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:8px 14px 8px 38px;font-size:13px;color:#f1f5f9;outline:none;width:100%;}
+.search-wrap{position:relative;}
+.search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#475569;font-size:13px;}
+.empty-state{text-align:center;padding:60px 24px;color:#475569;}
+.empty-state i{font-size:40px;margin-bottom:16px;display:block;}
+.empty-state p{font-size:14px;}
+.toast{position:fixed;bottom:24px;right:24px;background:#1e293b;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:14px 20px;font-size:13px;color:#f1f5f9;z-index:9999;transform:translateY(20px);opacity:0;transition:all .3s;min-width:280px;display:flex;align-items:center;gap:10px;}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast.toast-success{border-left:3px solid #10b981;}
+.toast.toast-error{border-left:3px solid #ef4444;}
+.grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+@media(max-width:768px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr;}.sidebar{display:none;}}
+</style>
+@endpush
 
 @section('content')
-@yield('content')
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IPCRF Admin Management System</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        
-        body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            min-height: 100vh;
-        }
-        
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        .sidebar-gradient {
-            background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
-        }
-        
-        .nav-item {
-            transition: all 0.3s ease;
-        }
-        
-        .nav-item:hover, .nav-item.active {
-            background: rgba(255, 255, 255, 0.1);
-            border-left: 4px solid #3b82f6;
-        }
-        
-        .gradient-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        
-        .card-hover {
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        
-        .card-hover:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-        }
-        
-        .status-badge {
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-        
-        .priority-high { background: #fee2e2; color: #dc2626; }
-        .priority-medium { background: #fef3c7; color: #d97706; }
-        .priority-low { background: #dbeafe; color: #2563eb; }
-        
-        .fade-in {
-            animation: fadeIn 0.3s ease-in;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .step-indicator {
-            position: relative;
-        }
-        
-        .step-indicator::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            right: -50%;
-            width: 100%;
-            height: 2px;
-            background: #e5e7eb;
-            z-index: 0;
-        }
-        
-        .step-indicator:last-child::after {
-            display: none;
-        }
-        
-        .step-active {
-            background: #3b82f6;
-            color: white;
-        }
-        
-        .step-completed {
-            background: #10b981;
-            color: white;
-        }
-    </style>
-<div class="bg-gray-50" x-data="{ showLogoutModal: false, loggingOut: false }">
-    <div class="flex h-screen overflow-hidden">
-        <!-- Sidebar -->
-        <aside class="sidebar-gradient w-64 flex-shrink-0 text-white flex flex-col">
-            <div class="p-6 border-b border-gray-700">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-chart-line text-xl"></i>
-                    </div>
-                    <div>
-                        <h1 class="font-bold text-lg">IPCRF Admin</h1>
-                        <p class="text-xs text-gray-400">Management System</p>
-                    </div>
+<div class="layout" x-data="adminApp()">
+    {{-- ═══ SIDEBAR ═══════════════════════════════════════════════════════════ --}}
+    <aside class="sidebar">
+        <div class="sb-brand">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+                <div style="width:32px;height:32px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:8px;display:flex;align-items:center;justify-content:center;">
+                    <i class="fas fa-file-contract" style="color:#fff;font-size:14px;"></i>
                 </div>
-            </div>
-            
-            <nav class="flex-1 py-6">
-                <a href="#" onclick="showView('dashboard')" class="nav-item active flex items-center gap-3 px-6 py-3 text-sm" id="nav-dashboard">
-                    <i class="fas fa-home w-5"></i>
-                    Dashboard Home
-                </a>
-                <a href="#" onclick="showView('upload')" class="nav-item flex items-center gap-3 px-6 py-3 text-sm" id="nav-upload">
-                    <i class="fas fa-upload w-5"></i>
-                    Update/Upload IPCRF
-                </a>
-                <a href="#" onclick="showView('records')" class="nav-item flex items-center gap-3 px-6 py-3 text-sm" id="nav-records">
-                    <i class="fas fa-list w-5"></i>
-                    List of Uploaded
-                </a>
-                <a href="#" onclick="showView('notices')" class="nav-item flex items-center gap-3 px-6 py-3 text-sm" id="nav-notices">
-                    <i class="fas fa-bell w-5"></i>
-                    Manage Notices
-                </a>
-                <a href="#" onclick="showView('forms')" class="nav-item flex items-center gap-3 px-6 py-3 text-sm" id="nav-forms">
-                    <i class="fas fa-file-alt w-5"></i>
-                    Manage Forms
-                </a>
-            </nav>
-            
-            <div class="p-4 border-t border-gray-700">
-                <div class="flex items-center gap-3 px-2">
-                    <img src="https://ui-avatars.com/api/?name=Admin+User&background=3b82f6&color=fff" class="w-10 h-10 rounded-full">
-                    <div class="flex-1">
-                        <p class="text-sm font-medium">Administrator</p>
-                        <p class="text-xs text-gray-400">admin@deped.gov.ph</p>
-                    </div>
-                </div>
-            </div>
-        </aside>
-
-        <!-- Main Content -->
-        <main class="flex-1 overflow-auto">
-            <!-- Top Header -->
-            <header class="glass-panel sticky top-0 z-40 px-8 py-4 flex justify-between items-center border-b">
                 <div>
-                    <h2 class="text-2xl font-bold text-gray-800" id="page-title">Admin Dashboard Overview</h2>
-                    <p class="text-sm text-gray-500">Manage IPCRF records and system announcements</p>
+                    <h1>IPCRF Admin</h1>
+                    <p>Management System</p>
                 </div>
-                <div class="flex items-center gap-4">
-                    <div class="relative">
-                        @php
-                            $allNotifications = collect();
-                            foreach($announcements as $notice) {
-                                $allNotifications->push((object)[
-                                    'type' => 'notice',
-                                    'title' => $notice->subject,
-                                    'content' => $notice->content,
-                                    'priority' => $notice->priority,
-                                    'date' => $notice->posted_at,
-                                    'link' => "showView('notices'); toggleNotifications();"
-                                ]);
-                            }
-                            if(isset($forms)) {
-                                foreach($forms as $form) {
-                                    $allNotifications->push((object)[
-                                        'type' => 'form',
-                                        'title' => 'New ' . $form->category . ' Form',
-                                        'content' => $form->title . ' - ' . substr($form->description, 0, 50),
-                                        'priority' => 'Info',
-                                        'date' => $form->published_at ?? now(),
-                                        'link' => "showView('forms'); toggleNotifications();"
-                                    ]);
-                                }
-                            }
-                            $allNotifications = $allNotifications->sortByDesc('date')->take(10);
-                        @endphp
+            </div>
+        </div>
 
-                        <button onclick="toggleNotifications()" id="notification-btn" class="relative p-2 text-gray-600 hover:text-gray-800 transition-colors">
-                            <i class="fas fa-bell text-xl"></i>
-                            @if($allNotifications->count() > 0)
-                                <span id="notification-badge" class="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full"></span>
-                            @endif
-                        </button>
+        <nav class="sb-nav">
+            <span class="sb-section">Overview</span>
+            <a class="nav-item" :class="{active: view==='dashboard'}" @click.prevent="showView('dashboard')" href="#">
+                <i class="fas fa-home"></i> Dashboard
+            </a>
 
-                        <div id="notification-dropdown" class="hidden absolute top-full right-0 mt-2 w-80 glass-panel rounded-xl shadow-lg border border-gray-200 z-50 overflow-hidden fade-in text-left">
-                            <div class="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
-                                <h3 class="font-bold text-gray-800">Notifications</h3>
-                                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-semibold">{{ $allNotifications->count() }} New</span>
+            <span class="sb-section">Template System</span>
+            <a class="nav-item" :class="{active: view==='templates'}" @click.prevent="showView('templates')" href="#">
+                <i class="fas fa-file-excel"></i> IPCRF Templates
+            </a>
+            <a class="nav-item" :class="{active: view==='positions'}" @click.prevent="showView('positions')" href="#">
+                <i class="fas fa-id-badge"></i> Positions
+            </a>
+
+            <span class="sb-section">Submissions</span>
+            <a class="nav-item" :class="{active: view==='submissions'}" @click.prevent="showView('submissions')" href="#">
+                <i class="fas fa-inbox"></i> All Submissions
+                <span class="sb-badge" x-text="stats.pending" x-show="stats.pending > 0"></span>
+            </a>
+
+            <span class="sb-section">Administration</span>
+            <a class="nav-item" :class="{active: view==='users'}" @click.prevent="showView('users')" href="#">
+                <i class="fas fa-users"></i> Manage Users
+            </a>
+            <a class="nav-item" :class="{active: view==='notices'}" @click.prevent="showView('notices')" href="#">
+                <i class="fas fa-bullhorn"></i> Notices
+            </a>
+            <a class="nav-item" :class="{active: view==='legacy'}" @click.prevent="showView('legacy')" href="#">
+                <i class="fas fa-archive"></i> Legacy Records
+            </a>
+            <a class="nav-item" :class="{active: view==='audit'}" @click.prevent="showView('audit')" href="#">
+                <i class="fas fa-history"></i> Audit Trail
+            </a>
+        </nav>
+
+        <div class="sb-footer">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <div class="avatar">A</div>
+                <div style="flex:1;min-width:0;">
+                    <p style="font-size:13px;font-weight:600;color:#f1f5f9;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Administrator</p>
+                    <p style="font-size:11px;color:#64748b;margin:0;">admin role</p>
+                </div>
+                <form method="POST" action="{{ route('logout') }}" style="margin:0;">
+                    @csrf
+                    <button type="submit" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:16px;" title="Logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </aside>
+
+    {{-- ═══ MAIN AREA ══════════════════════════════════════════════════════════ --}}
+    <div class="main-area">
+        {{-- Topbar --}}
+        <header class="topbar">
+            <div>
+                <h2 style="font-size:17px;font-weight:700;color:#f1f5f9;margin:0;" x-text="viewTitle"></h2>
+                <p style="font-size:12px;color:#64748b;margin:0;" x-text="viewSub"></p>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+                {{-- Notification Bell --}}
+                <div style="position:relative;">
+                    @php
+                        $allNotifications = collect();
+                        foreach($announcements as $notice) {
+                            $allNotifications->push((object)[
+                                'type'    => 'notice',
+                                'title'   => $notice->subject,
+                                'content' => $notice->content,
+                                'priority'=> $notice->priority,
+                                'date'    => $notice->posted_at,
+                            ]);
+                        }
+                        $allNotifications = $allNotifications->sortByDesc('date')->take(8);
+                    @endphp
+                    <button @click="notifOpen = !notifOpen"
+                        style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:10px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;color:#94a3b8;font-size:15px;">
+                        <i class="fas fa-bell"></i>
+                        @if($allNotifications->count() > 0)
+                        <span style="position:absolute;top:6px;right:6px;width:8px;height:8px;background:#ef4444;border-radius:50%;border:2px solid #1e293b;"></span>
+                        @endif
+                    </button>
+                    <div x-show="notifOpen" @click.outside="notifOpen=false" x-transition
+                        style="position:absolute;top:calc(100% + 8px);right:0;width:320px;background:#1e293b;border:1px solid rgba(255,255,255,.1);border-radius:16px;overflow:hidden;z-index:100;box-shadow:0 20px 60px rgba(0,0,0,.5);">
+                        <div style="padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;justify-content:space-between;align-items:center;">
+                            <span style="font-size:14px;font-weight:700;color:#f1f5f9;">Notifications</span>
+                            <span style="font-size:11px;background:rgba(99,102,241,.2);color:#a5b4fc;padding:2px 8px;border-radius:20px;font-weight:600;">{{ $allNotifications->count() }}</span>
+                        </div>
+                        <div style="max-height:300px;overflow-y:auto;">
+                            @forelse($allNotifications as $n)
+                            <div style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;" @click="showView('notices');notifOpen=false">
+                                <p style="font-size:13px;font-weight:600;color:#f1f5f9;margin:0 0 4px;">{{ $n->title }}</p>
+                                <p style="font-size:12px;color:#64748b;margin:0;">{{ Str::limit($n->content, 60) }}</p>
+                                <p style="font-size:11px;color:#475569;margin:4px 0 0;">{{ $n->date?->diffForHumans() }}</p>
                             </div>
-                            <div class="max-h-96 overflow-y-auto">
-                                @forelse($allNotifications as $notification)
-                                <div class="p-4 border-b border-gray-100 hover:bg-gray-50 transition cursor-pointer" onclick="{!! $notification->link !!}">
-                                    <div class="flex justify-between items-start mb-1">
-                                        <h4 class="font-semibold text-sm text-gray-800">{{ $notification->title }}</h4>
-                                        <span class="status-badge {{ $notification->type === 'form' ? 'bg-blue-100 text-blue-700' : 'priority-' . strtolower($notification->priority) }} text-[10px]">{{ $notification->priority }}</span>
-                                    </div>
-                                    <p class="text-xs text-gray-600 line-clamp-2 mb-2 whitespace-pre-wrap">{{ $notification->content }}</p>
-                                    <p class="text-[10px] text-gray-400">{{ $notification->date->diffForHumans() }}</p>
-                                </div>
-                                @empty
-                                <div class="p-4 text-center text-sm text-gray-500">No new notifications</div>
-                                @endforelse
-                            </div>
+                            @empty
+                            <div style="padding:24px;text-align:center;color:#475569;font-size:13px;">No notifications</div>
+                            @endforelse
                         </div>
                     </div>
+                </div>
+                <div class="avatar" style="font-size:11px;">AD</div>
+            </div>
+        </header>
 
-                    <button @click="showLogoutModal = true" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center gap-2">
-                        <i class="fas fa-sign-out-alt"></i>Logout
+        <div class="content-area">
+
+            {{-- ── DASHBOARD VIEW ─────────────────────────────────────────── --}}
+            <div class="view-section" :class="{active: view==='dashboard'}">
+                <div class="grid-4" style="margin-bottom:24px;">
+                    <div class="stat-card" style="border-left:3px solid #6366f1;cursor:pointer;" @click="showView('templates')">
+                        <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:16px;">
+                            <div class="stat-icon" style="background:rgba(99,102,241,.15);color:#818cf8;"><i class="fas fa-file-excel"></i></div>
+                        </div>
+                        <div class="stat-val" x-text="stats.templates">0</div>
+                        <div class="stat-lbl">Total Templates</div>
+                    </div>
+                    <div class="stat-card" style="border-left:3px solid #10b981;cursor:pointer;" @click="showView('submissions')">
+                        <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:16px;">
+                            <div class="stat-icon" style="background:rgba(16,185,129,.15);color:#34d399;"><i class="fas fa-inbox"></i></div>
+                        </div>
+                        <div class="stat-val" x-text="stats.total_submissions">0</div>
+                        <div class="stat-lbl">Total Submissions</div>
+                    </div>
+                    <div class="stat-card" style="border-left:3px solid #f59e0b;cursor:pointer;" @click="showView('submissions');filterSubmissions('submitted')">
+                        <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:16px;">
+                            <div class="stat-icon" style="background:rgba(245,158,11,.15);color:#fbbf24;"><i class="fas fa-clock"></i></div>
+                        </div>
+                        <div class="stat-val" x-text="stats.pending">0</div>
+                        <div class="stat-lbl">Pending Review</div>
+                    </div>
+                    <div class="stat-card" style="border-left:3px solid #06b6d4;cursor:pointer;" @click="showView('users')">
+                        <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:16px;">
+                            <div class="stat-icon" style="background:rgba(6,182,212,.15);color:#22d3ee;"><i class="fas fa-users"></i></div>
+                        </div>
+                        <div class="stat-val" x-text="stats.users">0</div>
+                        <div class="stat-lbl">Registered Users</div>
+                    </div>
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
+                    {{-- Approval Breakdown --}}
+                    <div class="panel">
+                        <p class="panel-title">Submission Status Breakdown</p>
+                        <p class="panel-sub">Overview of all submitted forms</p>
+                        <div style="display:flex;flex-direction:column;gap:14px;">
+                            <template x-for="s in submissionBreakdown" :key="s.label">
+                                <div style="display:flex;align-items:center;gap:12px;">
+                                    <div :class="s.dotClass" style="width:10px;height:10px;border-radius:50%;flex-shrink:0;"></div>
+                                    <span style="font-size:13px;color:#94a3b8;flex:1;" x-text="s.label"></span>
+                                    <div style="flex:2;background:rgba(255,255,255,.05);border-radius:6px;height:8px;overflow:hidden;">
+                                        <div :style="'width:'+s.pct+'%;background:'+s.color+';height:100%;border-radius:6px;transition:width .5s'"></div>
+                                    </div>
+                                    <span style="font-size:13px;font-weight:600;color:#f1f5f9;width:30px;text-align:right;" x-text="s.count"></span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                    {{-- Recent Submissions --}}
+                    <div class="panel">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                            <div><p class="panel-title" style="margin-bottom:0;">Recent Submissions</p></div>
+                            <button class="btn btn-ghost" style="padding:5px 12px;font-size:12px;" @click="showView('submissions')">View All</button>
+                        </div>
+                        <table class="data-table">
+                            <thead><tr><th>User</th><th>Template</th><th>Status</th></tr></thead>
+                            <tbody>
+                                <template x-if="recentSubmissions.length === 0">
+                                    <tr><td colspan="3" style="text-align:center;color:#475569;padding:24px;">No submissions yet</td></tr>
+                                </template>
+                                <template x-for="s in recentSubmissions.slice(0,6)" :key="s.id">
+                                    <tr>
+                                        <td x-text="s.user_name ?? '—'"></td>
+                                        <td x-text="s.template_name ?? '—'" style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></td>
+                                        <td><span class="badge" :class="'badge-'+s.status" x-text="s.status_label ?? s.status"></span></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {{-- Notices preview --}}
+                <div class="panel">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                        <div><p class="panel-title" style="margin-bottom:0;">Latest Announcements</p></div>
+                        <button class="btn btn-ghost" style="padding:5px 12px;font-size:12px;" @click="showView('notices')">Manage</button>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;">
+                        @forelse($announcements as $notice)
+                        <div style="background:rgba(15,23,42,.6);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:16px;">
+                            <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px;">
+                                <p style="font-size:13px;font-weight:600;color:#f1f5f9;margin:0;">{{ $notice->subject }}</p>
+                                <span class="badge badge-{{ strtolower($notice->priority) === 'high' ? 'rejected' : (strtolower($notice->priority) === 'medium' ? 'review' : 'draft') }}" style="flex-shrink:0;margin-left:8px;">{{ $notice->priority }}</span>
+                            </div>
+                            <p style="font-size:12px;color:#64748b;margin:0;">{{ Str::limit($notice->content, 80) }}</p>
+                        </div>
+                        @empty
+                        <p style="color:#475569;font-size:13px;">No announcements posted.</p>
+                        @endforelse
+                    </div>
+                </div>
+            </div>
+
+            {{-- ── TEMPLATES VIEW ─────────────────────────────────────────── --}}
+            <div class="view-section" :class="{active: view==='templates'}">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                    <div></div>
+                    <button class="btn btn-primary" @click="openUploadModal()"><i class="fas fa-upload"></i> Upload New Template</button>
+                </div>
+
+                <div class="panel" style="margin-bottom:20px;" x-show="templates.length===0 && !loadingTemplates">
+                    <div class="empty-state">
+                        <i class="fas fa-file-excel"></i>
+                        <p>No IPCRF templates uploaded yet.</p>
+                        <button class="btn btn-primary" style="margin-top:16px;" @click="openUploadModal()"><i class="fas fa-upload"></i> Upload First Template</button>
+                    </div>
+                </div>
+
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;" x-show="templates.length>0">
+                    <template x-for="t in templates" :key="t.id">
+                        <div class="panel" style="cursor:default;position:relative;">
+                            <div style="display:flex;align-items:start;gap:12px;margin-bottom:14px;">
+                                <div style="width:44px;height:44px;background:rgba(99,102,241,.15);border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                    <i class="fas fa-file-excel" style="color:#818cf8;font-size:18px;"></i>
+                                </div>
+                                <div style="flex:1;min-width:0;">
+                                    <p style="font-size:14px;font-weight:700;color:#f1f5f9;margin:0 0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" x-text="t.name"></p>
+                                    <p style="font-size:12px;color:#64748b;margin:0;" x-text="t.description || 'No description'"></p>
+                                </div>
+                            </div>
+                            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
+                                <template x-for="pos in (t.positions || [])" :key="pos">
+                                    <span style="font-size:11px;background:rgba(99,102,241,.15);color:#a5b4fc;padding:2px 8px;border-radius:20px;font-weight:500;" x-text="pos"></span>
+                                </template>
+                                <span x-show="!t.positions || t.positions.length===0" style="font-size:11px;color:#475569;">No positions assigned</span>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#475569;margin-bottom:14px;">
+                                <span><i class="fas fa-th" style="margin-right:4px;"></i> <span x-text="t.field_count"></span> fields</span>
+                                <span><i class="fas fa-calendar" style="margin-right:4px;"></i> <span x-text="t.created_at"></span></span>
+                            </div>
+                            <div style="display:flex;gap:8px;">
+                                <a :href="'/admin/templates/'+t.id+'/builder'" class="btn btn-primary" style="flex:1;justify-content:center;font-size:12px;">
+                                    <i class="fas fa-magic"></i> Builder
+                                </a>
+                                <button class="btn btn-danger" @click="deleteTemplate(t.id,t.name)" style="font-size:12px;">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            {{-- ── POSITIONS VIEW ─────────────────────────────────────────── --}}
+            <div class="view-section" :class="{active: view==='positions'}">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                    <div></div>
+                    <button class="btn btn-primary" @click="openPositionModal()"><i class="fas fa-plus"></i> Add Position</button>
+                </div>
+                <div class="panel">
+                    <div x-show="positions.length===0" class="empty-state">
+                        <i class="fas fa-id-badge"></i>
+                        <p>No positions added yet.</p>
+                    </div>
+                    <table class="data-table" x-show="positions.length>0">
+                        <thead><tr><th>#</th><th>Position Name</th><th>Description</th><th>Users</th><th>Status</th><th>Actions</th></tr></thead>
+                        <tbody>
+                            <template x-for="p in positions" :key="p.id">
+                                <tr>
+                                    <td x-text="p.id"></td>
+                                    <td style="font-weight:600;color:#f1f5f9;" x-text="p.name"></td>
+                                    <td x-text="p.description || '—'" style="color:#64748b;"></td>
+                                    <td><span class="badge badge-submitted" x-text="p.users_count+' users'"></span></td>
+                                    <td><span class="badge" :class="p.is_active ? 'badge-approved' : 'badge-rejected'" x-text="p.is_active ? 'Active' : 'Inactive'"></span></td>
+                                    <td>
+                                        <div style="display:flex;gap:6px;">
+                                            <button class="btn btn-ghost" style="padding:4px 10px;font-size:11px;" @click="editPosition(p)"><i class="fas fa-pen"></i></button>
+                                            <button class="btn btn-danger" style="padding:4px 10px;font-size:11px;" @click="deletePosition(p.id,p.name)"><i class="fas fa-trash"></i></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {{-- ── SUBMISSIONS VIEW ───────────────────────────────────────── --}}
+            <div class="view-section" :class="{active: view==='submissions'}">
+                {{-- Filter Tabs --}}
+                <div class="tab-bar" style="max-width:600px;">
+                    <button class="tab-btn" :class="{active:submissionFilter===''}" @click="submissionFilter='';loadSubmissions()">All</button>
+                    <button class="tab-btn" :class="{active:submissionFilter==='submitted'}" @click="filterSubmissions('submitted')">Pending</button>
+                    <button class="tab-btn" :class="{active:submissionFilter==='under_review'}" @click="filterSubmissions('under_review')">Under Review</button>
+                    <button class="tab-btn" :class="{active:submissionFilter==='approved'}" @click="filterSubmissions('approved')">Approved</button>
+                    <button class="tab-btn" :class="{active:submissionFilter==='rejected'}" @click="filterSubmissions('rejected')">Rejected</button>
+                </div>
+
+                <div class="panel">
+                    <div style="margin-bottom:16px;" class="search-wrap">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" class="search-input" placeholder="Search by user name..." x-model="submissionSearch" @input.debounce.400ms="loadSubmissions()">
+                    </div>
+                    <div x-show="submissions.length===0" class="empty-state">
+                        <i class="fas fa-inbox"></i><p>No submissions found.</p>
+                    </div>
+                    <table class="data-table" x-show="submissions.length>0">
+                        <thead><tr><th>#</th><th>User</th><th>Position</th><th>Template</th><th>Submitted</th><th>Status</th><th>Actions</th></tr></thead>
+                        <tbody>
+                            <template x-for="s in submissions" :key="s.id">
+                                <tr>
+                                    <td x-text="s.id"></td>
+                                    <td style="font-weight:600;color:#f1f5f9;" x-text="s.user?.name || '—'"></td>
+                                    <td x-text="s.user?.position?.name || '—'" style="color:#64748b;font-size:12px;"></td>
+                                    <td x-text="s.template?.name || '—'" style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></td>
+                                    <td x-text="s.submitted_at ? formatDate(s.submitted_at) : '—'" style="font-size:12px;color:#64748b;"></td>
+                                    <td><span class="badge" :class="'badge-'+s.status" x-text="statusLabel(s.status)"></span></td>
+                                    <td>
+                                        <div style="display:flex;gap:6px;">
+                                            <button class="btn btn-ghost" style="padding:4px 10px;font-size:11px;" @click="viewSubmission(s)"><i class="fas fa-eye"></i></button>
+                                            <template x-if="s.status==='submitted' || s.status==='under_review'">
+                                                <button class="btn btn-success" style="padding:4px 10px;font-size:11px;" @click="approveSubmission(s.id)"><i class="fas fa-check"></i></button>
+                                            </template>
+                                            <template x-if="s.status==='submitted' || s.status==='under_review'">
+                                                <button class="btn btn-danger" style="padding:4px 10px;font-size:11px;" @click="openRejectModal(s.id)"><i class="fas fa-times"></i></button>
+                                            </template>
+                                            <template x-if="s.status==='approved'">
+                                                <a :href="'/admin/submissions/'+s.id+'/download'" class="btn btn-ghost" style="padding:4px 10px;font-size:11px;"><i class="fas fa-download"></i></a>
+                                            </template>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {{-- ── USERS VIEW ─────────────────────────────────────────────── --}}
+            <div class="view-section" :class="{active: view==='users'}">
+                <div class="panel">
+                    <div style="margin-bottom:16px;" class="search-wrap">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" class="search-input" placeholder="Search users by name or email..." x-model="userSearch" @input.debounce.400ms="loadUsers()">
+                    </div>
+                    <div x-show="users.length===0" class="empty-state">
+                        <i class="fas fa-users"></i><p>No users registered yet.</p>
+                    </div>
+                    <table class="data-table" x-show="users.length>0">
+                        <thead><tr><th>Name</th><th>Email</th><th>Position</th><th>Department</th><th>Status</th><th>Actions</th></tr></thead>
+                        <tbody>
+                            <template x-for="u in users" :key="u.id">
+                                <tr>
+                                    <td>
+                                        <div style="display:flex;align-items:center;gap:10px;">
+                                            <div class="avatar" style="width:30px;height:30px;font-size:10px;" x-text="(u.name||'U').charAt(0).toUpperCase()"></div>
+                                            <span style="color:#f1f5f9;font-weight:600;" x-text="u.name"></span>
+                                        </div>
+                                    </td>
+                                    <td x-text="u.email" style="font-size:12px;color:#64748b;"></td>
+                                    <td x-text="u.position?.name || '—'" style="font-size:12px;"></td>
+                                    <td x-text="u.department || '—'" style="font-size:12px;color:#64748b;"></td>
+                                    <td><span class="badge" :class="u.approved ? 'badge-approved' : 'badge-review'" x-text="u.approved ? 'Approved' : 'Pending'"></span></td>
+                                    <td>
+                                        <div style="display:flex;gap:6px;">
+                                            <button class="btn btn-ghost" style="padding:4px 10px;font-size:11px;" @click="viewUser(u)"><i class="fas fa-eye"></i></button>
+                                            <button class="btn btn-danger" style="padding:4px 10px;font-size:11px;" @click="deleteUser(u.id,u.name)"><i class="fas fa-trash"></i></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {{-- ── NOTICES VIEW ───────────────────────────────────────────── --}}
+            <div class="view-section" :class="{active: view==='notices'}">
+                <div style="display:grid;grid-template-columns:400px 1fr;gap:24px;">
+                    <div class="panel">
+                        <p class="panel-title">Post Announcement</p>
+                        <p class="panel-sub">Broadcast to all users</p>
+                        <form id="noticeForm" method="POST" action="{{ route('admin.notices.store') }}" @submit.prevent="submitNotice($event)">
+                            @csrf
+                            <div style="margin-bottom:14px;">
+                                <label class="form-label">Subject</label>
+                                <input type="text" name="subject" class="form-input" placeholder="Announcement title" required>
+                            </div>
+                            <div style="margin-bottom:14px;">
+                                <label class="form-label">Content</label>
+                                <textarea name="content" class="form-input" rows="4" placeholder="Write your announcement..." required style="resize:vertical;"></textarea>
+                            </div>
+                            <div style="margin-bottom:20px;">
+                                <label class="form-label">Priority</label>
+                                <select name="priority" class="form-input">
+                                    <option value="Low">Low</option>
+                                    <option value="Medium" selected>Medium</option>
+                                    <option value="High">High</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;"><i class="fas fa-paper-plane"></i> Post Announcement</button>
+                        </form>
+                    </div>
+                    <div class="panel">
+                        <p class="panel-title">Posted Announcements</p>
+                        <p class="panel-sub">All active notices</p>
+                        <div style="display:flex;flex-direction:column;gap:12px;">
+                            @forelse($announcements as $notice)
+                            <div style="background:rgba(15,23,42,.6);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:16px;display:flex;justify-content:space-between;align-items:start;gap:12px;">
+                                <div style="flex:1;">
+                                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                                        <p style="font-size:13px;font-weight:700;color:#f1f5f9;margin:0;">{{ $notice->subject }}</p>
+                                        <span class="badge badge-{{ strtolower($notice->priority)==='high'?'rejected':(strtolower($notice->priority)==='medium'?'review':'draft') }}">{{ $notice->priority }}</span>
+                                    </div>
+                                    <p style="font-size:12px;color:#64748b;margin:0 0 6px;">{{ $notice->content }}</p>
+                                    <p style="font-size:11px;color:#475569;margin:0;">{{ $notice->posted_at?->format('M j, Y g:i A') }}</p>
+                                </div>
+                                <form method="POST" action="{{ route('admin.notices.destroy', $notice->id) }}">
+                                    @csrf @method('DELETE')
+                                    <button type="submit" class="btn btn-danger" style="padding:4px 10px;font-size:11px;" onclick="return confirm('Delete this notice?')"><i class="fas fa-trash"></i></button>
+                                </form>
+                            </div>
+                            @empty
+                            <div class="empty-state"><i class="fas fa-bullhorn"></i><p>No announcements posted yet.</p></div>
+                            @endforelse
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- ── LEGACY RECORDS VIEW ────────────────────────────────────── --}}
+            <div class="view-section" :class="{active: view==='legacy'}">
+                <div class="panel">
+                    <p class="panel-title">Legacy IPCRF Records</p>
+                    <p class="panel-sub" style="margin-bottom:20px;">Previously uploaded IPCRF files</p>
+                    <div class="overflow-x-auto">
+                        <table class="data-table">
+                            <thead><tr><th>Employee</th><th>Region</th><th>Date Uploaded</th><th>Status</th><th>Actions</th></tr></thead>
+                            <tbody>
+                                @forelse($recentSubmissions as $record)
+                                <tr>
+                                    <td style="font-weight:600;color:#f1f5f9;">{{ $record->employee?->fullName() ?? 'N/A' }}</td>
+                                    <td style="font-size:12px;color:#64748b;">{{ optional(optional(optional($record->employee)->school)->municipality)->province->name ?? '—' }}</td>
+                                    <td style="font-size:12px;color:#64748b;">{{ $record->uploaded_at ? $record->uploaded_at->format('M j, Y') : 'N/A' }}</td>
+                                    <td><span class="badge badge-approved">{{ $record->status }}</span></td>
+                                    <td>
+                                        @if($record->id)
+                                        <div style="display:flex;gap:6px;">
+                                            <a href="{{ route('admin.records.download', $record->id) }}{{ isset($record->is_wizard) ? '?source=ipcrfs' : '' }}" class="btn btn-ghost" style="padding:4px 10px;font-size:11px;"><i class="fas fa-download"></i></a>
+                                            <form method="POST" action="{{ route('admin.records.destroy', $record->id) }}{{ isset($record->is_wizard) ? '?source=ipcrfs' : '' }}" style="margin:0;" onsubmit="return confirm('Delete this record?')">
+                                                @csrf @method('DELETE')
+                                                <button type="submit" class="btn btn-danger" style="padding:4px 10px;font-size:11px;"><i class="fas fa-trash"></i></button>
+                                            </form>
+                                        </div>
+                                        @endif
+                                    </td>
+                                </tr>
+                                @empty
+                                <tr><td colspan="5" style="text-align:center;color:#475569;padding:32px;">No legacy records</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            {{-- ── AUDIT TRAIL VIEW ───────────────────────────────────────── --}}
+            <div class="view-section" :class="{active: view==='audit'}">
+                <div class="panel">
+                    <p class="panel-title">Audit Trail</p>
+                    <p class="panel-sub" style="margin-bottom:20px;">System activity log</p>
+                    <div x-show="auditLogs.length===0" class="empty-state"><i class="fas fa-history"></i><p>No audit logs yet.</p></div>
+                    <table class="data-table" x-show="auditLogs.length>0">
+                        <thead><tr><th>Time</th><th>User</th><th>Action</th><th>Entity</th><th>Details</th></tr></thead>
+                        <tbody>
+                            <template x-for="log in auditLogs" :key="log.id">
+                                <tr>
+                                    <td style="font-size:11px;color:#64748b;" x-text="formatDate(log.created_at)"></td>
+                                    <td x-text="log.user?.name || 'System'"></td>
+                                    <td><code style="font-size:11px;background:rgba(99,102,241,.15);color:#a5b4fc;padding:2px 6px;border-radius:4px;" x-text="log.action"></code></td>
+                                    <td style="font-size:12px;" x-text="log.entity_type ? log.entity_type+' #'+log.entity_id : '—'"></td>
+                                    <td style="font-size:11px;color:#64748b;" x-text="log.details ? JSON.stringify(log.details).substring(0,60) : '—'"></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>{{-- /content-area --}}
+    </div>{{-- /main-area --}}
+
+    {{-- ═══ MODALS ══════════════════════════════════════════════════════════ --}}
+
+    {{-- Upload Template Modal --}}
+    <div class="modal-overlay" x-show="uploadModal" x-transition @click.self="uploadModal=false" style="display:none;">
+        <div class="modal-box">
+            <p class="modal-title"><i class="fas fa-upload" style="color:#6366f1;margin-right:8px;"></i>Upload IPCRF Template</p>
+            <form @submit.prevent="submitTemplateUpload($event)">
+                @csrf
+                <div style="margin-bottom:16px;">
+                    <label class="form-label">Template Name *</label>
+                    <input type="text" name="name" class="form-input" placeholder="e.g., IPCRF Form 2025 — Officer" required>
+                </div>
+                <div style="margin-bottom:16px;">
+                    <label class="form-label">Description</label>
+                    <textarea name="description" class="form-input" rows="2" placeholder="Optional description..."></textarea>
+                </div>
+                <div style="margin-bottom:20px;">
+                    <label class="form-label">Excel File (.xlsx) *</label>
+                    <div class="upload-zone" id="template-drop-zone" @dragover.prevent="$el.classList.add('dragover')" @dragleave="$el.classList.remove('dragover')" @drop.prevent="handleTemplateDrop($event)" @click="$refs.templateFile.click()">
+                        <i class="fas fa-file-excel" style="font-size:36px;color:#6366f1;margin-bottom:12px;display:block;"></i>
+                        <p style="font-size:14px;font-weight:600;color:#f1f5f9;margin:0 0 4px;">Drop XLSX file here or click to browse</p>
+                        <p style="font-size:12px;color:#64748b;margin:0;" x-text="uploadFileName || 'Only .xlsx files accepted'"></p>
+                        <input type="file" name="file" x-ref="templateFile" accept=".xlsx" style="display:none;" @change="uploadFileName=$event.target.files[0]?.name" required>
+                    </div>
+                </div>
+                <div style="display:flex;gap:12px;">
+                    <button type="button" class="btn btn-ghost" style="flex:1;justify-content:center;" @click="uploadModal=false">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="flex:2;justify-content:center;" :disabled="uploading">
+                        <span x-show="!uploading"><i class="fas fa-upload"></i> Upload & Parse</span>
+                        <span x-show="uploading"><i class="fas fa-spinner fa-spin"></i> Processing...</span>
                     </button>
                 </div>
-            </header>
+            </form>
+        </div>
+    </div>
 
-            <div class="p-8">
-                <!-- DASHBOARD VIEW -->
-                <div id="view-dashboard" class="view-section fade-in">
-                    <!-- Stats Cards -->
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                        <div class="glass-panel rounded-2xl p-6 card-hover border-l-4 border-blue-500 cursor-pointer" onclick="showView('records')">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <p class="text-gray-500 text-sm mb-1">IPCRF Uploaded</p>
-                                    <h3 class="text-3xl font-bold text-gray-800" id="uploaded-count">{{ $stats['uploaded_employees'] }}</h3>
-                                    <p class="text-xs text-gray-500">({{ $stats['total_uploaded'] }} file{{ $stats['total_uploaded'] == 1 ? '' : 's' }} uploaded)</p>
-                                </div>
-                                <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                                    <i class="fas fa-file-alt text-blue-600 text-xl"></i>
-                                </div>
+    {{-- Add/Edit Position Modal --}}
+    <div class="modal-overlay" x-show="positionModal" x-transition @click.self="positionModal=false" style="display:none;">
+        <div class="modal-box" style="min-width:400px;">
+            <p class="modal-title" x-text="editingPosition ? 'Edit Position' : 'Add New Position'"></p>
+            <form @submit.prevent="submitPosition($event)">
+                <div style="margin-bottom:16px;">
+                    <label class="form-label">Position Name *</label>
+                    <input type="text" name="name" class="form-input" placeholder="e.g., Social Welfare Officer III" x-model="positionForm.name" required>
+                </div>
+                <div style="margin-bottom:20px;">
+                    <label class="form-label">Description</label>
+                    <textarea name="description" class="form-input" rows="2" placeholder="Optional..." x-model="positionForm.description"></textarea>
+                </div>
+                <div style="display:flex;gap:12px;">
+                    <button type="button" class="btn btn-ghost" style="flex:1;justify-content:center;" @click="positionModal=false">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="flex:2;justify-content:center;"><i class="fas fa-save"></i> Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {{-- View Submission Modal --}}
+    <div class="modal-overlay" x-show="submissionModal" x-transition @click.self="submissionModal=false" style="display:none;">
+        <div class="modal-box" style="min-width:560px;">
+            <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:20px;">
+                <p class="modal-title" style="margin:0;">Submission Details</p>
+                <button @click="submissionModal=false" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:18px;"><i class="fas fa-times"></i></button>
+            </div>
+            <template x-if="selectedSubmission">
+                <div>
+                    <div style="background:rgba(15,23,42,.6);border-radius:12px;padding:16px;margin-bottom:16px;">
+                        <div class="grid-2">
+                            <div>
+                                <p style="font-size:11px;color:#475569;margin:0 0 4px;">USER</p>
+                                <p style="font-size:14px;font-weight:600;color:#f1f5f9;margin:0;" x-text="selectedSubmission.user?.name || '—'"></p>
                             </div>
-                        </div>
-                        
-                        <div class="glass-panel rounded-2xl p-6 card-hover border-l-4 border-green-500 cursor-pointer" onclick="showView('forms')">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <p class="text-gray-500 text-sm mb-1">Active Forms</p>
-                                    <h3 class="text-3xl font-bold text-gray-800">{{ $stats['active_forms'] }}</h3>
-                                </div>
-                                <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                                    <i class="fas fa-check-circle text-green-600 text-xl"></i>
-                                </div>
+                            <div>
+                                <p style="font-size:11px;color:#475569;margin:0 0 4px;">POSITION</p>
+                                <p style="font-size:14px;color:#94a3b8;margin:0;" x-text="selectedSubmission.user?.position?.name || '—'"></p>
                             </div>
-                        </div>
-                        
-                        <div class="glass-panel rounded-2xl p-6 card-hover border-l-4 border-orange-500 cursor-pointer" onclick="showView('notices')">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <p class="text-gray-500 text-sm mb-1">Notices</p>
-                                    <h3 class="text-3xl font-bold text-gray-800" id="notices-count">{{ $stats['notices'] }}</h3>
-                                </div>
-                                <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-                                    <i class="fas fa-bell text-orange-600 text-xl"></i>
-                                </div>
+                            <div>
+                                <p style="font-size:11px;color:#475569;margin:0 0 4px;">TEMPLATE</p>
+                                <p style="font-size:14px;color:#94a3b8;margin:0;" x-text="selectedSubmission.template?.name || '—'"></p>
                             </div>
-                        </div>
-                        <div class="glass-panel rounded-2xl p-6 card-hover border-l-4 border-teal-500">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <p class="text-gray-500 text-sm mb-1">Total Employees</p>
-                                    <h3 class="text-3xl font-bold text-gray-800" id="staff-count">{{ $stats['total_employees'] }}</h3>
-                                </div>
-                                <div class="w-12 h-12 bg-teal-100 rounded-xl flex items-center justify-center">
-                                    <i class="fas fa-users text-teal-600 text-xl"></i>
-                                </div>
+                            <div>
+                                <p style="font-size:11px;color:#475569;margin:0 0 4px;">STATUS</p>
+                                <span class="badge" :class="'badge-'+selectedSubmission.status" x-text="statusLabel(selectedSubmission.status)"></span>
                             </div>
                         </div>
                     </div>
-
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        <!-- Recent Submissions -->
-                        <div class="lg:col-span-2 glass-panel rounded-2xl p-6">
-                            <div class="flex justify-between items-center mb-6">
-                                <h3 class="text-lg font-bold text-gray-800">Recent IPCRF Submissions</h3>
-                                <button onclick="showView('records')" class="text-blue-600 text-sm hover:underline">View All</button>
-                            </div>
-                            <p class="text-xs text-gray-500 mb-4">Latest records from regional encoders</p>
-                            
-                            <div class="overflow-x-auto">
-                                <table class="w-full">
-                                    <thead>
-                                        <tr class="text-left text-xs text-gray-500 border-b">
-                                            <th class="pb-3 font-medium">Employee</th>
-                                            <th class="pb-3 font-medium">Region</th>
-                                            <th class="pb-3 font-medium">Date Uploaded</th>
-                                            <th class="pb-3 font-medium">Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="dashboard-recent-submissions" class="text-sm">
-                                        <tr><td colspan="4" class="text-center py-4 text-gray-500">Loading...</td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <!-- Latest Announcements -->
-                        <div class="glass-panel rounded-2xl p-6">
-                            <h3 class="text-lg font-bold text-gray-800 mb-1">Latest Announcements</h3>
-                            <p class="text-xs text-gray-500 mb-4">Broadcasted to all users</p>
-                            
-                            <div class="space-y-4">
-                                @foreach($announcements as $notice)
-                                    <div class="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                                        <div class="flex justify-between items-start mb-2">
-                                            <h4 class="font-semibold text-sm">{{ $notice->subject }}</h4>
-                                            <span class="status-badge priority-{{ strtolower($notice->priority) }}">{{ $notice->priority }}</span>
-                                        </div>
-                                        <p class="text-xs text-gray-600 mb-2">{{ $notice->content }}</p>
-                                        <p class="text-xs text-gray-400">Posted on {{ $notice->posted_at->format('M j, Y') }}</p>
-                                    </div>
-                                @endforeach
-                            </div>
-                            
-                            <button onclick="showView('notices')" class="w-full mt-4 text-blue-600 text-sm font-medium hover:underline">
-                                View All Notices
+                    <div x-show="selectedSubmission.admin_remarks" style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:12px;margin-bottom:16px;">
+                        <p style="font-size:12px;color:#fbbf24;margin:0 0 4px;font-weight:600;">Admin Remarks</p>
+                        <p style="font-size:13px;color:#94a3b8;margin:0;" x-text="selectedSubmission.admin_remarks"></p>
+                    </div>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                        <template x-if="selectedSubmission.status==='submitted'||selectedSubmission.status==='under_review'">
+                            <button class="btn btn-success" @click="approveSubmission(selectedSubmission.id);submissionModal=false">
+                                <i class="fas fa-check"></i> Approve
                             </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- UPLOAD/UPDATE IPCRF VIEW -->
-                <div id="view-upload" class="view-section hidden fade-in">
-                    <div class="max-w-4xl mx-auto">
-                        <!-- Progress Steps -->
-                        <div class="relative max-w-xl mx-auto mb-8 px-4">
-                            <!-- Background connecting line -->
-                            <div class="absolute left-10 right-10 top-5 h-0.5 bg-gray-200 -translate-y-1/2 z-0 rounded"></div>
-                            <!-- Active progress line -->
-                            <div class="absolute left-10 top-5 h-0.5 bg-blue-600 -translate-y-1/2 z-0 rounded transition-all duration-500" id="progress-bar-line" style="width: 0%;"></div>
-
-                            <div class="flex justify-between relative z-10">
-                                <div class="step-indicator flex-1 text-center" id="step-1">
-                                    <div class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center mx-auto mb-2 font-semibold border-4 border-slate-50 shadow-sm transition-all duration-300">1</div>
-                                    <p class="text-sm font-semibold text-blue-600 transition-colors duration-300" id="step-1-label">Select Role</p>
-                                </div>
-                                <div class="step-indicator flex-1 text-center" id="step-2">
-                                    <div class="w-10 h-10 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center mx-auto mb-2 font-semibold border-4 border-slate-50 shadow-sm transition-all duration-300">2</div>
-                                    <p class="text-sm font-medium text-gray-500 transition-colors duration-300" id="step-2-label">Upload Form</p>
-                                </div>
-                                <div class="step-indicator flex-1 text-center" id="step-3">
-                                    <div class="w-10 h-10 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center mx-auto mb-2 font-semibold border-4 border-slate-50 shadow-sm transition-all duration-300">3</div>
-                                    <p class="text-sm font-medium text-gray-500 transition-colors duration-300" id="step-3-label">Confirmation</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Step 1: Select Role -->
-                        <div id="upload-step-1" class="glass-panel rounded-2xl p-8">
-                            <h3 class="text-xl font-bold mb-6">Select Role to Update IPCRF</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <button onclick="selectRole('Teacher')" class="p-6 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition text-left group">
-                                    <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-blue-200">
-                                        <i class="fas fa-chalkboard-teacher text-blue-600 text-xl"></i>
-                                    </div>
-                                    <h4 class="font-bold text-lg mb-1">Teacher</h4>
-                                    <p class="text-sm text-gray-500">Update IPCRF for teaching staff</p>
-                                </button>
-                                
-                                <button onclick="selectRole('Master Teacher')" class="p-6 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition text-left group">
-                                    <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-purple-200">
-                                        <i class="fas fa-user-tie text-purple-600 text-xl"></i>
-                                    </div>
-                                    <h4 class="font-bold text-lg mb-1">Master Teacher</h4>
-                                    <p class="text-sm text-gray-500">Update IPCRF for master teachers</p>
-                                </button>
-                                
-                                <button onclick="selectRole('Principal')" class="p-6 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition text-left group">
-                                    <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-green-200">
-                                        <i class="fas fa-school text-green-600 text-xl"></i>
-                                    </div>
-                                    <h4 class="font-bold text-lg mb-1">Principal</h4>
-                                    <p class="text-sm text-gray-500">Update IPCRF for school heads</p>
-                                </button>
-                                
-                                <button onclick="selectRole('Supervisor')" class="p-6 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition text-left group">
-                                    <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-orange-200">
-                                        <i class="fas fa-users-cog text-orange-600 text-xl"></i>
-                                    </div>
-                                    <h4 class="font-bold text-lg mb-1">Supervisor</h4>
-                                    <p class="text-sm text-gray-500">Update IPCRF for supervisors</p>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Step 2: Upload Form -->
-                        <div id="upload-step-2" class="glass-panel rounded-2xl p-8 hidden">
-                            @if($errors->any())
-                                <div class="mb-4 p-3 bg-red-100 text-red-700 rounded">
-                                    {{ implode(' ', $errors->all()) }}
-                                </div>
-                            @endif
-                            @if(session('success'))
-                                <div class="mb-4 p-3 bg-green-100 text-green-700 rounded">
-                                    {{ session('success') }}
-                                </div>
-                            @endif
-                            @if(session('warning'))
-                                <div class="mb-4 p-3 bg-yellow-100 text-yellow-700 rounded">
-                                    {{ session('warning') }}
-                                </div>
-                            @endif
-                            <div class="flex items-center gap-2 mb-6">
-                                <button onclick="prevStep()" class="text-gray-500 hover:text-gray-700">
-                                    <i class="fas fa-arrow-left"></i>
-                                </button>
-                                <h3 class="text-xl font-bold">Upload IPCRF Form - <span id="selected-role" class="text-blue-600"></span></h3>
-                            </div>
-                            
-                            <form id="uploadForm" class="space-y-6" action="/api/upload.php" method="POST" enctype="multipart/form-data">
-                                @csrf
-                                <input type="hidden" name="role" id="hidden-role" value="{{ old('role') }}">
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-2">Employee Name</label>
-                                        <input type="text" name="employee_name" value="{{ old('employee_name') }}" required class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Search employee...">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-2">Employee ID</label>
-                                        <input type="text" name="employee_id" value="{{ old('employee_id') }}" required class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., 2024-00123">
-                                    </div>
-                                </div>
-
-                                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-2">Province</label>
-                                        <select id="province-select" name="province_id" required class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500">
-                                            <option value="">Select Province</option>
-                                            @foreach($provinces as $province)
-                                                <option value="{{ $province->id }}" {{ old('province_id') == $province->id ? 'selected' : '' }}>{{ $province->name }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-2">Municipality</label>
-                                        <select id="municipality-select" name="municipality_id" required class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500">
-                                            <option value="">Select Municipality</option>
-                                            @if(old('municipality_id') && old('province_id'))
-                                                @php
-                                                    $oldMuns = \App\Models\Municipality::where('province_id', old('province_id'))->get();
-                                                @endphp
-                                                @foreach($oldMuns as $mun)
-                                                    <option value="{{ $mun->id }}" {{ old('municipality_id') == $mun->id ? 'selected' : '' }}>{{ $mun->name }}</option>
-                                                @endforeach
-                                            @endif
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-2">School</label>
-                                        <input type="text" id="school_name" name="school_name" placeholder="Type School Name..." required class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                                    </div>
-                                </div>
-
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-2">Semester</label>
-                                        <select name="semester" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500">
-                                            <option value="1st" {{ old('semester') == '1st' ? 'selected' : '' }}>1st Semester</option>
-                                            <option value="2nd" {{ old('semester') == '2nd' ? 'selected' : '' }}>2nd Semester</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-2">School Year</label>
-                                        <select name="school_year" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500">
-                                            <option {{ old('school_year') == '2027-2028' ? 'selected' : '' }}>2027-2028</option>
-                                            <option {{ old('school_year') == '2026-2027' ? 'selected' : '' }}>2026-2027</option>
-                                            <option {{ old('school_year') == '2025-2026' ? 'selected' : '' }}>2025-2026</option>
-                                            <option {{ old('school_year') == '2024-2025' ? 'selected' : '' }}>2024-2025</option>
-                                            <option {{ old('school_year') == '2023-2024' ? 'selected' : '' }}>2023-2024</option>
-                                            <option {{ old('school_year') == '2022-2023' ? 'selected' : '' }}>2022-2023</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div id="file-dropzone" class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-500 transition cursor-pointer bg-gray-50">
-                                    <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-3"></i>
-                                    <p class="text-gray-600 mb-1">Click to upload or drag and drop</p>
-                                    <p class="text-sm text-gray-400">PDF, Excel, Word files up to 10MB</p>
-                                    <input type="file" name="file" class="hidden" accept=".pdf,.xlsx,.xls,.doc,.docx" required>
-                                    <p id="file-name" class="text-sm text-gray-600 mt-2"></p>
-                                </div>
-
-                                <div class="flex gap-4">
-                                    <button type="button" onclick="prevStep()" class="flex-1 px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition">Back</button>
-                                    <button type="button" onclick="nextStep()" class="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">Continue</button>
-                                </div>
-                            </form>
-                        </div>
-
-                        <!-- Step 3: Confirmation -->
-                        <div id="upload-step-3" class="glass-panel rounded-2xl p-8 hidden text-center">
-                            <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <i class="fas fa-check text-green-600 text-3xl"></i>
-                            </div>
-                            <h3 class="text-2xl font-bold mb-2">IPCRF Successfully Updated!</h3>
-                            <p class="text-gray-600 mb-6">The IPCRF form has been uploaded and saved to the system.</p>
-                            
-                            <div class="bg-gray-50 rounded-lg p-4 max-w-md mx-auto mb-6 text-left">
-                                <div class="flex justify-between py-2 border-b border-gray-200">
-                                    <span class="text-gray-600">Employee Name:</span>
-                                    <span class="font-medium">Loading...</span>
-                                </div>
-                                <div class="flex justify-between py-2 border-b border-gray-200">
-                                    <span class="text-gray-600">Employee ID:</span>
-                                    <span class="font-medium">—</span>
-                                </div>
-                                <div class="flex justify-between py-2 border-b border-gray-200">
-                                    <span class="text-gray-600">Role:</span>
-                                    <span class="font-medium" id="confirm-role">Teacher</span>
-                                </div>
-                                <div class="flex justify-between py-2 border-b border-gray-200">
-                                    <span class="text-gray-600">Province:</span>
-                                    <span class="font-medium">—</span>
-                                </div>
-                                <div class="flex justify-between py-2 border-b border-gray-200">
-                                    <span class="text-gray-600">Municipality:</span>
-                                    <span class="font-medium">—</span>
-                                </div>
-                                <div class="flex justify-between py-2 border-b border-gray-200">
-                                    <span class="text-gray-600">School:</span>
-                                    <span class="font-medium">—</span>
-                                </div>
-                                <div class="flex justify-between py-2 border-b border-gray-200">
-                                    <span class="text-gray-600">Semester:</span>
-                                    <span class="font-medium">—</span>
-                                </div>
-                                <div class="flex justify-between py-2 border-b border-gray-200">
-                                    <span class="text-gray-600">School Year:</span>
-                                    <span class="font-medium">—</span>
-                                </div>
-                                <div class="flex justify-between py-2">
-                                    <span class="text-gray-600">Status:</span>
-                                    <span class="status-badge bg-green-100 text-green-700">Successfully Uploaded</span>
-                                </div>
-                            </div>
-                            
-                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-sm text-blue-700">
-                                <i class="fas fa-info-circle mr-2"></i>
-                                Redirecting to dashboard in <span id="countdown">3</span> seconds...
-                            </div>
-                            
-                            <div class="flex gap-4 justify-center">
-                                <button onclick="resetUpload()" class="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition">Upload Another</button>
-                                <button onclick="showView('records')" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">View Records</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- RECORDS DATABASE VIEW -->
-                <div id="view-records" class="view-section hidden fade-in">
-                    <div class="glass-panel rounded-2xl p-6">
-                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                            <div>
-                                <h3 class="text-xl font-bold text-gray-800">IPCRF Records Database</h3>
-                                <p class="text-sm text-gray-500">Manage and download uploaded IPCRF forms</p>
-                            </div>
-                            <button onclick="downloadReport()" class="bg-blue-900 text-white px-6 py-2 rounded-lg hover:bg-blue-800 transition flex items-center gap-2">
-                                <i class="fas fa-download"></i>
-                                Download Report
+                        </template>
+                        <template x-if="selectedSubmission.status==='submitted'||selectedSubmission.status==='under_review'">
+                            <button class="btn btn-danger" @click="submissionModal=false;openRejectModal(selectedSubmission.id)">
+                                <i class="fas fa-times"></i> Reject
                             </button>
-                        </div>
-
-                        <!-- Filters -->
-                        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6 hidden" id="records-filters">
-                            <div>
-                                <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Employee ID</label>
-                                <input type="text" id="filter-employee-id" onchange="filterRecords()" placeholder="Search by Employee ID" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Province</label>
-                                <select id="filter-province" onchange="loadDashboardMunicipalities(this.value); filterRecords();" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm">
-                                    <option value="">All Provinces</option>
-                                    @foreach($provinces as $province)
-                                        <option value="{{ $province->id }}">{{ $province->name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Municipality</label>
-                                <select id="filter-municipality" onchange="filterRecords()" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm">
-                                    <option value="">All Municipalities</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Semester</label>
-                                <select id="filter-semester" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm">
-                                    <option value="">All Semesters</option>
-                                    <option value="1st Semester">1st Semester</option>
-                                    <option value="2nd Semester">2nd Semester</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Year</label>
-                                <select id="filter-year" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm">
-                                    <option value="">All Years</option>
-                                    <option>2027</option>
-                                    <option>2026</option>
-                                    <option>2025</option>
-                                    <option>2024</option>
-                                    <option>2023</option>
-                                    <option>2022</option>
-                                    <option>2021</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Records Table -->
-                        <div class="overflow-x-auto">
-                            <table class="w-full">
-                                <thead>
-                                    <tr class="text-left border-b-2 border-gray-200">
-                                        <th class="pb-3 font-semibold text-sm text-gray-700">Employee</th>
-                                        <th class="pb-3 font-semibold text-sm text-gray-700">Region</th>
-                                        <th class="pb-3 font-semibold text-sm text-gray-700">Date Uploaded</th>
-                                        <th class="pb-3 font-semibold text-sm text-gray-700">Status</th>
-                                        <th class="pb-3 font-semibold text-sm text-gray-700">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="records-table-body" class="text-sm">
-                                    @foreach($recentSubmissions as $record)
-                                        <tr class="border-b border-gray-100 hover:bg-gray-50">
-                                            <td class="py-4 font-medium">{{ $record->employee?->fullName() ?? 'N/A' }}</td>
-                                            <td class="py-4 text-gray-600">{{ optional(optional(optional($record->employee)->school)->municipality)->province->name ?? '' }}</td>
-                                            <td class="py-4 text-gray-600">{{ $record->uploaded_at ? $record->uploaded_at->format('F j, Y') : 'N/A' }}</td>
-                                            <td class="py-4"><span class="status-badge bg-green-100 text-green-700">{{ $record->status }}</span></td>
-                                            <td class="py-4">
-                                                 <div class="flex items-center gap-3">
-                                                     @if($record->id)
-                                                         <a href="{{ route('admin.records.download', $record->id) }}{{ isset($record->is_wizard) ? '?source=ipcrfs' : '' }}" class="text-gray-400 hover:text-blue-600 transition" title="Download">
-                                                             <i class="fas fa-download text-lg"></i>
-                                                         </a>
-                                                         <form action="{{ route('admin.records.destroy', $record->id) }}{{ isset($record->is_wizard) ? '?source=ipcrfs' : '' }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this IPCRF record? This action cannot be undone.');" style="display: inline;">
-                                                             @csrf
-                                                             @method('DELETE')
-                                                             <button type="submit" class="text-gray-400 hover:text-red-600 transition" title="Delete" style="background: none; border: none; padding: 0; cursor: pointer;">
-                                                                 <i class="fas fa-trash text-lg"></i>
-                                                             </button>
-                                                         </form>
-                                                     @else
-                                                         <span class="text-gray-400">–</span>
-                                                     @endif
-                                                 </div>
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-
-                        
+                        </template>
+                        <template x-if="selectedSubmission.status==='approved'">
+                            <a :href="'/admin/submissions/'+selectedSubmission.id+'/download'" class="btn btn-primary">
+                                <i class="fas fa-download"></i> Download XLSX
+                            </a>
+                        </template>
+                        <button class="btn btn-ghost" @click="submissionModal=false">Close</button>
                     </div>
                 </div>
-
-                <!-- NOTICES/ANNOUNCEMENTS VIEW -->
-                <div id="view-notices" class="view-section hidden fade-in">
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <!-- Create Notice Form -->
-                        <div class="glass-panel rounded-2xl p-6">
-                            <h3 class="text-xl font-bold mb-1">Create New Notice</h3>
-                            <p class="text-sm text-gray-500 mb-6">Post announcements for all users</p>
-                            
-                            <form id="noticeForm" method="POST" action="{{ route('admin.notices.store') }}" onsubmit="postNotice(event)" class="space-y-4">
-                                @csrf
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Subject</label>
-                                    <input type="text" id="notice-subject" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500" placeholder="e.g., Deadline Extension" required>
-                                </div>
-                                
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-600 mb-2 uppercase">Priority Level</label>
-                                    <div class="flex gap-3">
-                                        <label class="flex-1 cursor-pointer">
-                                            <input type="radio" name="priority" value="Low" class="hidden peer">
-                                            <div class="text-center py-2 border-2 rounded-lg peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600 hover:bg-gray-50 transition text-sm font-medium">
-                                                LOW
-                                            </div>
-                                        </label>
-                                        <label class="flex-1 cursor-pointer">
-                                            <input type="radio" name="priority" value="Medium" class="hidden peer">
-                                            <div class="text-center py-2 border-2 rounded-lg peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600 hover:bg-gray-50 transition text-sm font-medium">
-                                                MEDIUM
-                                            </div>
-                                        </label>
-                                        <label class="flex-1 cursor-pointer">
-                                            <input type="radio" name="priority" value="High" class="hidden peer" checked>
-                                            <div class="text-center py-2 border-2 rounded-lg peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600 hover:bg-gray-50 transition text-sm font-medium">
-                                                HIGH
-                                            </div>
-                                        </label>
-                                    </div>
-                                </div>
-                                
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Content</label>
-                                    <textarea id="notice-content" rows="5" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 resize-none" placeholder="Write your message here..." required></textarea>
-                                </div>
-                                
-                                <button type="submit" class="w-full bg-blue-900 text-white py-3 rounded-lg hover:bg-blue-800 transition font-medium">
-                                    Post Announcement
-                                </button>
-                            </form>
-                        </div>
-
-                        <!-- Active Announcements -->
-                        <div class="glass-panel rounded-2xl p-6">
-                            <h3 class="text-xl font-bold mb-6">Active Announcements</h3>
-                            
-                            <div id="announcements-list" class="space-y-4">
-                                @foreach($announcements as $notice)
-                                    <div class="bg-gray-50 rounded-xl p-4 border border-gray-200 relative group" data-id="{{ $notice->id }}">
-                                        <div class="flex justify-between items-start mb-2">
-                                            <div class="flex items-center gap-3">
-                                                <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                                                    <i class="fas fa-info text-blue-600"></i>
-                                                </div>
-                                                <div>
-                                                    <h4 class="font-bold text-gray-800">{{ $notice->subject }}</h4>
-                                                    <p class="text-xs text-gray-500">Posted on {{ $notice->posted_at->format('d/m/Y') }}</p>
-                                                </div>
-                                            </div>
-                                            <div class="flex items-center gap-2">
-                                                <span class="status-badge priority-{{ strtolower($notice->priority) }}">{{ $notice->priority }}</span>
-                                                <button onclick="deleteNotice({{ $notice->id }}, this)" class="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <p class="text-sm text-gray-600 ml-13 pl-13">{{ $notice->content }}</p>
-                                    </div>
-                                @endforeach
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- MANAGE FORMS VIEW -->
-                <div id="view-forms" class="view-section hidden fade-in">
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <!-- Upload New Form -->
-                        <div class="glass-panel rounded-2xl p-6">
-                            <h3 class="text-xl font-bold mb-1">Upload New Form</h3>
-                            <p class="text-sm text-gray-500 mb-6">Add documents for encoders to download</p>
-                            
-                            <form method="POST" action="{{ route('admin.forms.store') }}" enctype="multipart/form-data" class="space-y-4">
-                                @csrf
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Form Title</label>
-                                    <input type="text" name="title" required class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500" placeholder="e.g., IPCRF Template 2025">
-                                </div>
-                                
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Category</label>
-                                    <select name="category" required class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500">
-                                        <option value="Template">Template</option>
-                                        <option value="Guidelines">Guidelines</option>
-                                        <option value="Reference">Reference</option>
-                                    </select>
-                                </div>
-                                
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Description</label>
-                                    <textarea name="description" rows="3" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 resize-none" placeholder="Briefly describe the form..."></textarea>
-                                </div>
-                                
-                                <label class="block cursor-pointer">
-                                    <div class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-blue-500 transition bg-gray-50">
-                                        <i class="fas fa-file-upload text-3xl text-gray-400 mb-2"></i>
-                                        <p class="text-sm text-gray-600 file-name-display">Click to upload or drag and drop</p>
-                                        <p class="text-xs text-gray-400">PDF, DOC, XLS files</p>
-                                        <input type="file" name="file" class="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx" required onchange="this.parentElement.querySelector('.file-name-display').textContent = this.files[0].name">
-                                    </div>
-                                </label>
-                                
-                                <button type="submit" class="w-full bg-blue-900 text-white py-3 rounded-lg hover:bg-blue-800 transition font-medium">
-                                    Publish Form
-                                </button>
-                            </form>
-                        </div>
-
-                        <!-- Published Forms -->
-                        <div class="glass-panel rounded-2xl p-6">
-                            <h3 class="text-xl font-bold mb-6">Published Forms</h3>
-                            
-                            <div class="space-y-4">
-                                @forelse($forms as $form)
-                                <div class="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                                    <div class="flex justify-between items-start mb-3">
-                                        <div class="flex items-center gap-3">
-                                            <div class="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
-                                                <i class="fas {{ str_contains(strtolower($form->file_name ?? ''), 'pdf') ? 'fa-file-pdf' : (str_contains(strtolower($form->file_name ?? ''), 'xl') ? 'fa-file-excel' : 'fa-file-alt') }} text-gray-600 text-xl"></i>
-                                            </div>
-                                            <div>
-                                                @php
-                                                    $bgClass = 'bg-gray-200 text-gray-700';
-                                                    if($form->category == 'Guidelines') $bgClass = 'bg-blue-100 text-blue-700';
-                                                    elseif($form->category == 'Reference') $bgClass = 'bg-green-100 text-green-700';
-                                                @endphp
-                                                <span class="inline-block px-2 py-1 {{ $bgClass }} text-xs rounded mb-1">{{ $form->category }}</span>
-                                                <h4 class="font-bold text-gray-800">{{ $form->title }}</h4>
-                                                <p class="text-xs text-gray-500">{{ Str::limit($form->description, 60) }}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="flex justify-between items-center pt-3 border-t border-gray-200">
-                                        <span class="text-xs text-gray-500">{{ $form->published_at ? $form->published_at->format('d/m/Y') : 'N/A' }}</span>
-                                        <div class="flex gap-4">
-                                            <form action="{{ route('admin.forms.destroy', $form->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this form?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="text-red-500 text-sm font-medium hover:underline flex items-center gap-1">
-                                                    <i class="fas fa-trash"></i> Delete
-                                                </button>
-                                            </form>
-                                            <a href="{{ route('admin.forms.download', $form->id) }}" class="text-blue-600 text-sm font-medium hover:underline flex items-center gap-1">
-                                                <i class="fas fa-download"></i> Download
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                                @empty
-                                <div class="text-center py-6 text-gray-500 text-sm">
-                                    No forms published yet.
-                                </div>
-                                @endforelse
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <!-- Report Filter Modal -->
-    <div id="report-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="glass-panel rounded-2xl p-6 max-w-2xl w-full mx-4 transform scale-95 opacity-0 transition-all duration-300" id="report-modal-content">
-            <div class="mb-6">
-                <h3 class="text-xl font-bold mb-2">Generate IPCRF Records Report</h3>
-                <p class="text-sm text-gray-600">Select filters to customize your report</p>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4 mb-6">
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Province</label>
-                    <select id="report-province" onchange="loadReportMunicipalities(this.value);" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm">
-                        <option value="">All Provinces</option>
-                        @foreach($provinces as $province)
-                            <option value="{{ $province->id }}">{{ $province->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Municipality</label>
-                    <select id="report-municipality" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm">
-                        <option value="">All Municipalities</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Semester</label>
-                    <select id="report-semester" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm">
-                        <option value="">All Semesters</option>
-                        <option value="1st Semester">1st Semester</option>
-                        <option value="2nd Semester">2nd Semester</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Year</label>
-                    <select id="report-year" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm">
-                        <option value="">All Years</option>
-                        <option>2027</option>
-                        <option>2026</option>
-                        <option>2025</option>
-                        <option>2024</option>
-                        <option>2023</option>
-                        <option>2022</option>
-                        <option>2021</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="flex gap-3 justify-end">
-                <button onclick="closeReportModal()" class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition font-medium">
-                    Cancel
-                </button>
-                <button onclick="proceedDownloadReport()" class="px-4 py-2 bg-blue-900 text-white rounded-lg hover:bg-blue-800 transition font-medium flex items-center gap-2">
-                    <i class="fas fa-download"></i>
-                    Download Report
-                </button>
-            </div>
+            </template>
         </div>
     </div>
-    <div id="alert-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="glass-panel rounded-2xl p-6 max-w-md w-full mx-4 transform scale-95 opacity-0 transition-all duration-300" id="alert-content">
-            <div class="text-center">
-                <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-exclamation-triangle text-red-600 text-2xl"></i>
-                </div>
-                <h3 class="text-xl font-bold mb-2">System Alert</h3>
-                <p class="text-gray-600 mb-6" id="alert-message">Please complete the required fields before proceeding.</p>
-                <button onclick="closeAlert()" class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition">
-                    Acknowledge
-                </button>
+
+    {{-- Reject Modal --}}
+    <div class="modal-overlay" x-show="rejectModal" x-transition @click.self="rejectModal=false" style="display:none;">
+        <div class="modal-box" style="min-width:420px;">
+            <p class="modal-title"><i class="fas fa-times-circle" style="color:#ef4444;margin-right:8px;"></i>Reject Submission</p>
+            <div style="margin-bottom:16px;">
+                <label class="form-label">Remarks / Reason for Rejection *</label>
+                <textarea class="form-input" rows="4" x-model="rejectRemarks" placeholder="Explain why this submission is being rejected..."></textarea>
+            </div>
+            <div style="display:flex;gap:12px;">
+                <button class="btn btn-ghost" style="flex:1;justify-content:center;" @click="rejectModal=false">Cancel</button>
+                <button class="btn btn-danger" style="flex:2;justify-content:center;" @click="confirmReject()"><i class="fas fa-times"></i> Confirm Reject</button>
             </div>
         </div>
     </div>
 
-    <script>
-        let currentStep = 1;
-        let selectedRole = '';
-        let uploadFormData = {}; // Store form data for confirmation
-
-        function showView(viewName) {
-            // Hide all views
-            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            
-            // Show selected view
-            document.getElementById(`view-${viewName}`).classList.remove('hidden');
-            document.getElementById(`nav-${viewName}`).classList.add('active');
-            
-            // Update page title
-            const titles = {
-                'dashboard': 'Admin Dashboard Overview',
-                'upload': 'Update/Upload IPCRF',
-                'records': 'IPCRF Records Database',
-                'notices': 'Regional Announcements',
-                'forms': 'Manage Downloadable Forms'
-            };
-            document.getElementById('page-title').textContent = titles[viewName];
-            
-            // Load records when records view is shown
-            if (viewName === 'records') {
-                loadDashboardRecords();
-            }
-        }
-
-        function selectRole(role) {
-            selectedRole = role;
-            document.getElementById('selected-role').textContent = role;
-            document.getElementById('confirm-role').textContent = role;
-            document.getElementById('hidden-role').value = role;
-            nextStep();
-        }
-
-        function nextStep() {
-            if (currentStep === 2) {
-                // Submit form via API
-                submitUploadForm();
-                return;
-            }
-            if (currentStep < 3) {
-                document.getElementById(`upload-step-${currentStep}`).classList.add('hidden');
-                currentStep++;
-                document.getElementById(`upload-step-${currentStep}`).classList.remove('hidden');
-                updateStepIndicator();
-            }
-        }
-
-        function submitUploadForm() {
-            const form = document.getElementById('uploadForm');
-            const submitBtn = form.querySelector('button[type="button"]');
-            const btnText = submitBtn.innerHTML;
-
-            // guard against multiple calls
-            if (submitBtn.disabled) {
-                return;
-            }
-
-            // Disable submit button and show spinner
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
-
-            const formData = new FormData(form);
-            
-            // Store form data for confirmation display
-            uploadFormData = {
-                employee_name: form.querySelector('[name="employee_name"]').value,
-                employee_id: form.querySelector('[name="employee_id"]').value,
-                role: form.querySelector('[name="role"]').value,
-                province_id: form.querySelector('[name="province_id"]').value,
-                municipality_id: form.querySelector('[name="municipality_id"]').value,
-                school_name: form.querySelector('[name="school_name"]').value,
-                semester: form.querySelector('[name="semester"]').value,
-                school_year: form.querySelector('[name="school_year"]').value,
-                // Get display names
-                province_name: document.querySelector('[name="province_id"] option:checked').textContent,
-                municipality_name: document.querySelector('[name="municipality_id"] option:checked').textContent
-            };
-
-            fetch('/api/upload.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(res => res.json())
-            .then(response => {
-                if (response.success) {
-                    // Check if there's a warning about Google Drive upload
-                    if (response.warning) {
-                        // Show warning but still show confirmation
-                        showAlert('⚠️ Partial Upload', response.message || 'File saved but Google Drive upload failed', 'warning');
-                    }
-                    
-                    // Update confirmation display with actual data
-                    displayConfirmationData(response.data);
-                    
-                    // show confirmation step directly without re‑submitting
-                    document.getElementById('upload-step-2').classList.add('hidden');
-                    document.getElementById('upload-step-3').classList.remove('hidden');
-                    currentStep = 3;
-                    updateStepIndicator();
-                    
-                    // Auto-refresh page after 3 seconds
-                    setTimeout(() => {
-                        location.reload();
-                    }, 3000);
-                } else {
-                    showAlert('Upload Failed', response.error || 'An error occurred', 'warning');
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = btnText;
-                }
-            })
-            .catch(err => {
-                showAlert('Error', 'Failed to upload: ' + err.message, 'warning');
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = btnText;
-            });
-        }
-        
-        function displayConfirmationData(apiData) {
-            // Update confirmation fields with actual data
-            const confirmContent = document.querySelector('#upload-step-3 .bg-gray-50');
-            if (confirmContent) {
-                confirmContent.innerHTML = `
-                    <div class="flex justify-between py-2 border-b border-gray-200">
-                        <span class="text-gray-600">Employee Name:</span>
-                        <span class="font-medium">${escapeHtml(uploadFormData.employee_name)}</span>
-                    </div>
-                    <div class="flex justify-between py-2 border-b border-gray-200">
-                        <span class="text-gray-600">Employee ID:</span>
-                        <span class="font-medium">${escapeHtml(uploadFormData.employee_id)}</span>
-                    </div>
-                    <div class="flex justify-between py-2 border-b border-gray-200">
-                        <span class="text-gray-600">Role:</span>
-                        <span class="font-medium">${escapeHtml(uploadFormData.role)}</span>
-                    </div>
-                    <div class="flex justify-between py-2 border-b border-gray-200">
-                        <span class="text-gray-600">Province:</span>
-                        <span class="font-medium">${escapeHtml(uploadFormData.province_name)}</span>
-                    </div>
-                    <div class="flex justify-between py-2 border-b border-gray-200">
-                        <span class="text-gray-600">Municipality:</span>
-                        <span class="font-medium">${escapeHtml(uploadFormData.municipality_name)}</span>
-                    </div>
-                    <div class="flex justify-between py-2 border-b border-gray-200">
-                        <span class="text-gray-600">School:</span>
-                        <span class="font-medium">${escapeHtml(uploadFormData.school_name)}</span>
-                    </div>
-                    <div class="flex justify-between py-2 border-b border-gray-200">
-                        <span class="text-gray-600">Semester:</span>
-                        <span class="font-medium">${escapeHtml(uploadFormData.semester)}</span>
-                    </div>
-                    <div class="flex justify-between py-2 border-b border-gray-200">
-                        <span class="text-gray-600">School Year:</span>
-                        <span class="font-medium">${escapeHtml(uploadFormData.school_year)}</span>
-                    </div>
-                    <div class="flex justify-between py-2">
-                        <span class="text-gray-600">Status:</span>
-                        <span class="status-badge bg-green-100 text-green-700">Successfully Uploaded</span>
-                    </div>
-                `;
-            }
-            
-            // Start countdown timer
-            startCountdown();
-        }
-        
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        function prevStep() {
-            if (currentStep > 1) {
-                document.getElementById(`upload-step-${currentStep}`).classList.add('hidden');
-                currentStep--;
-                document.getElementById(`upload-step-${currentStep}`).classList.remove('hidden');
-                updateStepIndicator();
-            }
-        }
-        
-        function startCountdown() {
-            let count = 3;
-            const countdownEl = document.getElementById('countdown');
-            
-            const countdownInterval = setInterval(() => {
-                count--;
-                if (countdownEl) {
-                    countdownEl.textContent = count;
-                }
-                
-                if (count <= 0) {
-                    clearInterval(countdownInterval);
-                }
-            }, 1000);
-        }
-
-        function updateStepIndicator() {
-            // Update progress line width
-            const line = document.getElementById('progress-bar-line');
-            if (line) {
-                if (currentStep === 1) {
-                    line.style.width = '0%';
-                } else if (currentStep === 2) {
-                    line.style.width = '35%';
-                } else if (currentStep === 3) {
-                    line.style.width = '70%';
-                }
-            }
-
-            for (let i = 1; i <= 3; i++) {
-                const indicatorEl = document.getElementById(`step-${i}`);
-                if (!indicatorEl) continue;
-                const stepEl = indicatorEl.querySelector('div');
-                const labelEl = document.getElementById(`step-${i}-label`);
-                
-                if (i < currentStep) {
-                    stepEl.className = 'w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center mx-auto mb-2 font-semibold relative z-10 border-4 border-slate-50 shadow-sm transition-all duration-300';
-                    stepEl.innerHTML = '<i class="fas fa-check"></i>';
-                    if (labelEl) {
-                        labelEl.className = 'text-sm font-semibold text-green-600 transition-colors duration-300';
-                    }
-                } else if (i === currentStep) {
-                    stepEl.className = 'w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center mx-auto mb-2 font-semibold relative z-10 border-4 border-slate-50 shadow-md transition-all duration-300';
-                    stepEl.textContent = i;
-                    if (labelEl) {
-                        labelEl.className = 'text-sm font-bold text-blue-600 transition-colors duration-300';
-                    }
-                } else {
-                    stepEl.className = 'w-10 h-10 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center mx-auto mb-2 font-semibold relative z-10 border-4 border-slate-50 shadow-sm transition-all duration-300';
-                    stepEl.textContent = i;
-                    if (labelEl) {
-                        labelEl.className = 'text-sm font-medium text-gray-400 transition-colors duration-300';
-                    }
-                }
-            }
-        }
-
-        function resetUpload() {
-            currentStep = 1;
-            document.getElementById('upload-step-3').classList.add('hidden');
-            document.getElementById('upload-step-1').classList.remove('hidden');
-            updateStepIndicator();
-            document.getElementById('uploadForm').reset();
-        }
-
-        const noticeBaseUrl = `{{ url('admin/notices') }}`;
-
-        function postNotice(e) {
-            e.preventDefault();
-            const subject = document.getElementById('notice-subject').value;
-            const content = document.getElementById('notice-content').value;
-            let priority = document.querySelector('input[name="priority"]:checked').value;
-            // make sure case matches server enum (Low/Medium/High)
-            priority = priority.charAt(0).toUpperCase() + priority.slice(1).toLowerCase();
-            const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-
-            fetch(noticeBaseUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': csrf,
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: JSON.stringify({ subject, content, priority })
-            })
-            .then(res => {
-                if (!res.ok) {
-                    return res.json().then(err => { throw err; });
-                }
-                return res.json();
-            })
-            .then(() => {
-                location.reload();
-            })
-            .catch(err => {
-                console.error('Failed to post notice', err);
-                alert('Unable to post announcement: ' + (err.message || JSON.stringify(err)));
-            });
-        }
-
-        function deleteNotice(id, btn) {
-            if (!confirm('Are you sure you want to delete this announcement?')) return;
-            const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-            fetch(`${noticeBaseUrl}/${id}`, {
-                method: 'DELETE',
-                headers: {
-                    'X-CSRF-TOKEN': csrf,
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            }).then(() => location.reload());
-        }
-
-        function filterRecords() {
-            // request fresh data from server
-            loadDashboardRecords();
-        }
-
-        function loadDashboardRecords() {
-            fetch('/admin/get_records.php')
-                .then(res => res.json())
-                .then(response => {
-                    const tbody = document.getElementById('records-table-body');
-                    tbody.innerHTML = '';
-                    
-                    if (!response.success || !response.data) {
-                        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-gray-500">No records found</td></tr>';
-                        return;
-                    }
-                    
-                    response.data.forEach(r => {
-                        const tr = document.createElement('tr');
-                        tr.className = 'border-b border-gray-100 hover:bg-gray-50';
-
-                        const employee = document.createElement('td');
-                        employee.className = 'py-4 font-medium';
-                        employee.textContent = r.employee_name || 'N/A';
-
-                        const region = document.createElement('td');
-                        region.className = 'py-4 text-gray-600';
-                        region.textContent = r.province_name || 'N/A';
-
-                        const date = document.createElement('td');
-                        date.className = 'py-4 text-gray-600';
-                        if (r.uploaded_at) {
-                            const dt = new Date(r.uploaded_at);
-                            date.textContent = dt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-                        } else {
-                            date.textContent = 'N/A';
-                        }
-
-                        const status = document.createElement('td');
-                        status.className = 'py-4';
-                        status.innerHTML = `<span class="status-badge bg-green-100 text-green-700">${r.status || 'Submitted'}</span>`;
-
-                        const action = document.createElement('td');
-                        action.className = 'py-4';
-                        if (r.id) {
-                            const urlSuffix = r.type === 'wizard' ? '?source=ipcrfs' : '';
-                            action.innerHTML = `
-                                <div class="flex items-center gap-3">
-                                    <a href="/admin/records/${r.id}/download${urlSuffix}" class="text-gray-400 hover:text-blue-600 transition" title="Download">
-                                        <i class="fas fa-download text-lg"></i>
-                                    </a>
-                                    <button onclick="deleteRecord(${r.id}, '${r.type}', this)" class="text-gray-400 hover:text-red-600 transition" title="Delete" style="background: none; border: none; padding: 0; cursor: pointer;">
-                                        <i class="fas fa-trash text-lg"></i>
-                                    </button>
-                                </div>
-                            `;
-                        } else {
-                            action.textContent = '–';
-                            action.classList.add('text-gray-400');
-                        }
-
-                        tr.appendChild(employee);
-                        tr.appendChild(region);
-                        tr.appendChild(date);
-                        tr.appendChild(status);
-                        tr.appendChild(action);
-
-                        tbody.appendChild(tr);
-                    });
-                })
-                .catch(err => {
-                    console.error('Failed to load records:', err);
-                    const tbody = document.getElementById('records-table-body');
-                    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-red-500">Error loading records</td></tr>';
-                });
-        }
-
-        function deleteRecord(id, type, btn) {
-            if (!confirm('Are you sure you want to delete this IPCRF record? This action cannot be undone.')) {
-                return;
-            }
-            
-            const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-            const url = `/admin/records/${id}?source=${type === 'wizard' ? 'ipcrfs' : 'ipcrf_records'}`;
-            
-            fetch(url, {
-                method: 'DELETE',
-                headers: {
-                    'X-CSRF-TOKEN': csrf,
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(res => res.json())
-            .then(response => {
-                if (response.success) {
-                    showAlert(response.message || 'Record deleted successfully', 'success');
-                    loadDashboardRecords();
-                    loadDashboardRecentSubmissions();
-                    loadRecordsCount();
-                } else {
-                    showAlert(response.message || 'Failed to delete record', 'warning');
-                }
-            })
-            .catch(err => {
-                console.error('Failed to delete record', err);
-                showAlert('An error occurred while deleting the record', 'warning');
-            });
-        }
-
-        function downloadReport() {
-            // Open the report filter modal
-            const modal = document.getElementById('report-modal');
-            const content = document.getElementById('report-modal-content');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            setTimeout(() => {
-                content.classList.remove('scale-95', 'opacity-0');
-                content.classList.add('scale-100', 'opacity-100');
-            }, 10);
-        }
-
-        function closeReportModal() {
-            const modal = document.getElementById('report-modal');
-            const content = document.getElementById('report-modal-content');
-            content.classList.add('scale-95', 'opacity-0');
-            content.classList.remove('scale-100', 'opacity-100');
-            setTimeout(() => {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-            }, 300);
-        }
-
-        function loadReportMunicipalities(provinceId) {
-            const municipalitySelect = document.getElementById('report-municipality');
-            municipalitySelect.innerHTML = '<option value="">All Municipalities</option>';
-
-            if (!provinceId) return;
-
-            const url = `/admin/api/provinces/${provinceId}/municipalities`;
-            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-                .then(res => res.json())
-                .then(data => {
-                    data.forEach(municipality => {
-                        const option = document.createElement('option');
-                        option.value = municipality.id;
-                        option.textContent = municipality.name;
-                        municipalitySelect.appendChild(option);
-                    });
-                });
-        }
-
-        function proceedDownloadReport() {
-            const province = document.getElementById('report-province').value;
-            const municipality = document.getElementById('report-municipality').value;
-            const semester = document.getElementById('report-semester').value;
-            const year = document.getElementById('report-year').value;
-
-            let url = `/admin/records?province=${province}&municipality=${municipality}`;
-            if (semester) url += `&semester=${encodeURIComponent(semester)}`;
-            if (year) url += `&year=${encodeURIComponent(year)}`;
-
-            closeReportModal();
-            window.location.href = url;
-        }
-
-        function showAlert(message = 'Please complete the required fields before proceeding.', type = 'warning') {
-            const modal = document.getElementById('alert-modal');
-            const content = document.getElementById('alert-content');
-            const msgEl = document.getElementById('alert-message');
-            const iconEl = modal.querySelector('i');
-            const bgEl = modal.querySelector('.w-16');
-            
-            msgEl.textContent = message;
-            
-            if (type === 'success') {
-                iconEl.className = 'fas fa-check-circle text-green-600 text-2xl';
-                bgEl.className = 'w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4';
-            } else {
-                iconEl.className = 'fas fa-exclamation-triangle text-red-600 text-2xl';
-                bgEl.className = 'w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4';
-            }
-            
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            setTimeout(() => {
-                content.classList.remove('scale-95', 'opacity-0');
-                content.classList.add('scale-100', 'opacity-100');
-            }, 10);
-        }
-
-        function closeAlert() {
-            const modal = document.getElementById('alert-modal');
-            const content = document.getElementById('alert-content');
-            
-            content.classList.remove('scale-100', 'opacity-100');
-            content.classList.add('scale-95', 'opacity-0');
-            
-            setTimeout(() => {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-            }, 300);
-        }
-
-        // Close modal on outside click
-        document.getElementById('alert-modal').addEventListener('click', function(e) {
-            if (e.target === this) closeAlert();
-        });
-
-        function toggleNotifications() {
-            const dropdown = document.getElementById('notification-dropdown');
-            if (!dropdown) return;
-            dropdown.classList.toggle('hidden');
-            
-            // Hide the red notification badge when clicked
-            const badge = document.getElementById('notification-badge');
-            if (badge) {
-                badge.classList.add('hidden');
-            }
-        }
-
-        // Close notifications dropdown when clicking outside
-        document.addEventListener('click', function(e) {
-            const btn = document.getElementById('notification-btn');
-            const dropdown = document.getElementById('notification-dropdown');
-            if (btn && dropdown && !btn.contains(e.target) && !dropdown.contains(e.target)) {
-                dropdown.classList.add('hidden');
-            }
-        });
-
-        function loadDashboardRecentSubmissions() {
-            fetch('/admin/get_records.php')
-                .then(res => res.json())
-                .then(response => {
-                    const tbody = document.getElementById('dashboard-recent-submissions');
-                    tbody.innerHTML = '';
-                    
-                    if (!response.success || !response.data || response.data.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-500">No records found</td></tr>';
-                        return;
-                    }
-                    
-                    // Show only the 5 most recent submissions
-                    response.data.slice(0, 5).forEach(r => {
-                        const tr = document.createElement('tr');
-                        tr.className = 'border-b border-gray-100';
-
-                        const employee = document.createElement('td');
-                        employee.className = 'py-3 font-medium';
-                        employee.textContent = r.employee_name || 'N/A';
-
-                        const region = document.createElement('td');
-                        region.className = 'py-3 text-gray-600';
-                        region.textContent = r.province_name || 'N/A';
-
-                        const date = document.createElement('td');
-                        date.className = 'py-3 text-gray-600';
-                        if (r.uploaded_at) {
-                            const dt = new Date(r.uploaded_at);
-                            date.textContent = dt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-                        } else {
-                            date.textContent = 'N/A';
-                        }
-
-                        const status = document.createElement('td');
-                        status.className = 'py-3';
-                        status.innerHTML = `<span class="status-badge bg-green-100 text-green-700">${r.status || 'Submitted'}</span>`;
-
-                        tr.appendChild(employee);
-                        tr.appendChild(region);
-                        tr.appendChild(date);
-                        tr.appendChild(status);
-
-                        tbody.appendChild(tr);
-                    });
-                })
-                .catch(err => {
-                    console.error('Failed to load recent submissions:', err);
-                    const tbody = document.getElementById('dashboard-recent-submissions');
-                    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-red-500">Error loading records</td></tr>';
-                });
-        }
-
-        function loadRecordsCount() {
-            fetch('/admin/get_records_count.php')
-                .then(res => res.json())
-                .then(response => {
-                    if (response.success) {
-                        document.getElementById('uploaded-count').textContent = response.count;
-                    }
-                })
-                .catch(err => {
-                    console.error('Failed to load records count:', err);
-                });
-        }
-
-        function loadStaffCount() {
-            fetch('/admin/get_staff_count.php')
-                .then(res => res.json())
-                .then(response => {
-                    if (response.success) {
-                        document.getElementById('staff-count').textContent = response.count;
-                    }
-                })
-                .catch(err => {
-                    console.error('Failed to load staff count:', err);
-                });
-        }
-
-        function loadNoticesCount() {
-            fetch('/admin/get_notices_count.php')
-                .then(res => res.json())
-                .then(response => {
-                    if (response.success) {
-                        document.getElementById('notices-count').textContent = response.count;
-                    }
-                })
-                .catch(err => {
-                    console.error('Failed to load notices count:', err);
-                });
-        }
-
-        // Initialize upload form cascading dropdowns
-        document.addEventListener('DOMContentLoaded', function () {
-            const provinceSelect = document.getElementById('province-select');
-            const municipalitySelect = document.getElementById('municipality-select');
-            const uploadForm = document.getElementById('uploadForm');
-            
-            // Load recent submissions on dashboard
-            loadDashboardRecentSubmissions();
-            loadRecordsCount();
-            loadStaffCount();
-            loadNoticesCount();
-
-            
-            /* ===============================
-               LOAD PROVINCES
-            =============================== */
-            fetch('get_provinces.php')
-                .then(res => res.json())
-                .then(response => {
-
-                    provinceSelect.innerHTML =
-                        '<option value="">Select Province</option>';
-
-                    response.data.forEach(p => {
-                        provinceSelect.innerHTML +=
-                            `<option value="${p.id}">${p.name}</option>`;
-                    });
-                })
-                .catch(err => console.error('Province error:', err));
-
-
-            /* ===============================
-               PROVINCE → MUNICIPALITIES
-            =============================== */
-            provinceSelect.addEventListener('change', function () {
-
-                const provinceId = this.value;
-
-                municipalitySelect.innerHTML =
-                    '<option>Loading...</option>';
-
-                fetch('get_municipalities.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    },
-                    body: JSON.stringify({
-                        province_id: provinceId
-                    })
-                })
-                .then(res => res.json())
-                .then(response => {
-
-                    municipalitySelect.innerHTML =
-                        '<option value="">Select Municipality</option>';
-
-                    response.data.forEach(m => {
-                        municipalitySelect.innerHTML +=
-                            `<option value="${m.id}">${m.name}</option>`;
-                    });
-                });
-            });
-
-
-            /* ===============================
-               MUNICIPALITY → SCHOOLS
-            =============================== */
-            // Schools dynamic fetching disabled as School has been converted to text box.
-        });
-
-        function showFileName(input) {
-            if (input.files.length > 0) {
-                document.getElementById('file-name').textContent =
-                    input.files[0].name;
-            }
-        }
-
-        // Cascading dropdowns for records filter
-        function loadDashboardMunicipalities(provinceId) {
-            // filter select only
-            const filterSelect = document.getElementById('filter-municipality');
-            if (filterSelect) {
-                filterSelect.innerHTML = '<option value="">All Municipalities</option>';
-            }
-
-            if (!provinceId) return;
-
-            fetch(`/admin/api/provinces/${provinceId}/municipalities`)
-                .then(response => response.json())
-                .then(data => {
-                    data.forEach(mun => {
-                        const option = document.createElement('option');
-                        option.value = mun.id;
-                        option.textContent = mun.name;
-                        if (filterSelect) filterSelect.appendChild(option);
-                    });
-                });
-        }
-
-        // file dropzone interactions
-        const dropzone = document.getElementById('file-dropzone');
-        if (dropzone) {
-            const fileInput = dropzone.querySelector('input[type=file]');
-            const fileNameEl = document.getElementById('file-name');
-
-            const updateFilename = () => {
-                const f = fileInput.files[0];
-                fileNameEl.textContent = f ? f.name : '';
-            };
-
-            dropzone.addEventListener('click', () => fileInput.click());
-            fileInput.addEventListener('change', updateFilename);
-
-            dropzone.addEventListener('dragover', e => {
-                e.preventDefault();
-                dropzone.classList.add('border-blue-500');
-            });
-            dropzone.addEventListener('dragleave', () => {
-                dropzone.classList.remove('border-blue-500');
-            });
-            dropzone.addEventListener('drop', e => {
-                e.preventDefault();
-                dropzone.classList.remove('border-blue-500');
-                if (e.dataTransfer.files.length) {
-                    fileInput.files = e.dataTransfer.files;
-                    updateFilename();
-                }
-            });
-        }
-
-        @if(old('role'))
-            document.addEventListener('DOMContentLoaded', () => {
-                selectedRole = "{{ old('role') }}";
-                document.getElementById('selected-role').textContent = selectedRole;
-                document.getElementById('confirm-role').textContent = selectedRole;
-                document.getElementById('hidden-role').value = selectedRole;
-            });
-        @endif
-        @if(old('province_id'))
-            document.addEventListener('DOMContentLoaded', () => {
-                const prov = "{{ old('province_id') }}";
-                loadDashboardMunicipalities(prov);
-                // once municipalities loaded set old municipality
-                const checkInterval = setInterval(() => {
-                    const mun = document.getElementById('municipality-select');
-                    if (mun && mun.options.length > 1) {
-                        mun.value = "{{ old('municipality_id') }}";
-                        clearInterval(checkInterval);
-                    }
-                }, 50);
-            });
-        @endif
-    </script>
-
-    <!-- LOGOUT CONFIRMATION MODAL -->
-    <div x-show="showLogoutModal"
-         x-transition
-         class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-xl shadow-2xl p-6 w-96 text-center">
-            <i class="fas fa-sign-out-alt text-3xl text-red-600 mb-4 block"></i>
-            <h3 class="text-lg font-semibold mb-2">Confirm Logout</h3>
-            <p class="text-sm text-gray-500 mb-6">Are you sure you want to sign out?</p>
-
-            <div class="flex gap-3 justify-center">
-                <button @click="showLogoutModal=false"
-                        class="px-4 py-2 rounded-lg border text-gray-600 hover:bg-gray-100 transition">
-                    Cancel
-                </button>
-
-                <button @click="
-                    showLogoutModal=false;
-                    loggingOut=true;
-                    clearUserData();
-                    setTimeout(() => document.getElementById('logoutForm').submit(), 1200);
-                "
-                        class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
-                    Logout
-                </button>
+    {{-- User Details Modal --}}
+    <div class="modal-overlay" x-show="userModal" x-transition @click.self="userModal=false" style="display:none;">
+        <div class="modal-box" style="min-width:480px;">
+            <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:20px;">
+                <p class="modal-title" style="margin:0;">User Details</p>
+                <button @click="userModal=false" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:18px;"><i class="fas fa-times"></i></button>
             </div>
+            <template x-if="selectedUser">
+                <div>
+                    <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
+                        <div class="avatar" style="width:52px;height:52px;font-size:20px;" x-text="(selectedUser.name||'U').charAt(0).toUpperCase()"></div>
+                        <div>
+                            <p style="font-size:16px;font-weight:700;color:#f1f5f9;margin:0;" x-text="selectedUser.name"></p>
+                            <p style="font-size:12px;color:#64748b;margin:2px 0 0;" x-text="selectedUser.email"></p>
+                        </div>
+                    </div>
+                    <div class="grid-2" style="margin-bottom:16px;">
+                        <div>
+                            <p style="font-size:11px;color:#475569;margin:0 0 4px;">EMPLOYEE ID</p>
+                            <p style="font-size:13px;color:#94a3b8;margin:0;" x-text="selectedUser.employee_id || '—'"></p>
+                        </div>
+                        <div>
+                            <p style="font-size:11px;color:#475569;margin:0 0 4px;">POSITION</p>
+                            <p style="font-size:13px;color:#94a3b8;margin:0;" x-text="selectedUser.position?.name || '—'"></p>
+                        </div>
+                        <div>
+                            <p style="font-size:11px;color:#475569;margin:0 0 4px;">DEPARTMENT</p>
+                            <p style="font-size:13px;color:#94a3b8;margin:0;" x-text="selectedUser.department || '—'"></p>
+                        </div>
+                        <div>
+                            <p style="font-size:11px;color:#475569;margin:0 0 4px;">OFFICE</p>
+                            <p style="font-size:13px;color:#94a3b8;margin:0;" x-text="selectedUser.office || '—'"></p>
+                        </div>
+                    </div>
+                    <button class="btn btn-ghost" @click="userModal=false" style="width:100%;justify-content:center;">Close</button>
+                </div>
+            </template>
         </div>
     </div>
 
-    <!-- LOGGING OUT ANIMATION -->
-    <div x-show="loggingOut"
-         x-transition.opacity
-         class="fixed inset-0 bg-white flex flex-col items-center justify-center z-50">
-        <div class="animate-spin rounded-full h-16 w-16 border-4 border-blue-600 border-t-transparent mb-6"></div>
-        <h2 class="text-xl font-semibold text-blue-600">Logging out...</h2>
-        <p class="text-gray-500 text-sm">Please wait</p>
+    {{-- Toast --}}
+    <div class="toast" :class="toast.type ? 'toast-'+toast.type : ''" x-ref="toast" id="toast">
+        <i :class="toast.type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle'" :style="'color:'+(toast.type==='success'?'#10b981':'#ef4444')"></i>
+        <span x-text="toast.message"></span>
     </div>
 
-    <!-- Hidden Logout Form -->
-    <form id="logoutForm" method="POST" action="{{ route('logout') }}" style="display: none;">
-        @csrf
-    </form>
-
-    <script>
-        function clearUserData() {
-            localStorage.removeItem('user');
-            localStorage.removeItem('rememberMe');
-            sessionStorage.removeItem('user');
-        }
-    </script>
+</div>{{-- /layout --}}
 @endsection
+
+@push('scripts')
+<script>
+const CSRF = '{{ csrf_token() }}';
+
+function adminApp() {
+    return {
+        view: 'dashboard',
+        viewTitle: 'Dashboard Overview',
+        viewSub: 'IPCRF Management System',
+        notifOpen: false,
+
+        // Stats
+        stats: { templates: 0, total_submissions: 0, pending: 0, users: 0, approved: 0, rejected: 0 },
+        submissionBreakdown: [],
+        recentSubmissions: [],
+
+        // Templates
+        templates: [], loadingTemplates: false,
+        uploadModal: false, uploading: false, uploadFileName: '',
+
+        // Positions
+        positions: [], positionModal: false, editingPosition: null,
+        positionForm: { name: '', description: '' },
+
+        // Submissions
+        submissions: [], submissionFilter: '', submissionSearch: '',
+        submissionModal: false, selectedSubmission: null,
+        rejectModal: false, rejectRemarks: '', rejectTargetId: null,
+
+        // Users
+        users: [], userModal: false, selectedUser: null, userSearch: '',
+
+        // Audit
+        auditLogs: [],
+
+        // Toast
+        toast: { message: '', type: '' },
+
+        viewMeta: {
+            dashboard:    { title: 'Dashboard Overview',       sub: 'IPCRF Management System' },
+            templates:    { title: 'IPCRF Templates',          sub: 'Upload and configure IPCRF form templates' },
+            positions:    { title: 'Employee Positions',       sub: 'Manage position-based template access' },
+            submissions:  { title: 'Submissions',              sub: 'Review, approve and reject IPCRF submissions' },
+            users:        { title: 'User Management',          sub: 'Manage registered user accounts' },
+            notices:      { title: 'Announcements & Notices',  sub: 'Post and manage system announcements' },
+            legacy:       { title: 'Legacy IPCRF Records',     sub: 'Previously uploaded IPCRF files' },
+            audit:        { title: 'Audit Trail',              sub: 'System activity log' },
+        },
+
+        async init() {
+            await this.loadStats();
+            this.loadTemplates();
+            this.loadPositions();
+        },
+
+        showView(v) {
+            this.view = v;
+            const meta = this.viewMeta[v] || { title: v, sub: '' };
+            this.viewTitle = meta.title;
+            this.viewSub   = meta.sub;
+            if (v === 'submissions')  this.loadSubmissions();
+            if (v === 'users')        this.loadUsers();
+            if (v === 'audit')        this.loadAuditLogs();
+        },
+
+        async loadStats() {
+            try {
+                const r = await fetch('/admin/submissions?stats=1', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                const d = await r.json();
+                // submissions endpoint with pagination
+                const pending  = d.submissions?.filter(s => ['submitted','under_review'].includes(s.status)).length ?? 0;
+                const approved = d.submissions?.filter(s => s.status === 'approved').length ?? 0;
+                const rejected = d.submissions?.filter(s => s.status === 'rejected').length ?? 0;
+                const total    = d.pagination?.total ?? d.submissions?.length ?? 0;
+                this.stats.total_submissions = total;
+                this.stats.pending  = d.pagination ? (await this.fetchSubmissionCount('submitted')) : pending;
+                this.stats.approved = approved;
+                this.stats.rejected = rejected;
+                this.recentSubmissions = (d.submissions || []).slice(0, 6).map(s => ({
+                    id: s.id, status: s.status,
+                    status_label: this.statusLabel(s.status),
+                    user_name: s.user?.name,
+                    template_name: s.template?.name,
+                }));
+                this.buildBreakdown();
+            } catch(e) {}
+
+            try {
+                const rt = await fetch('/admin/templates/all', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                const dt = await rt.json();
+                this.stats.templates = (dt.templates || []).length;
+            } catch(e) {}
+
+            try {
+                const ru = await fetch('/admin/users', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                const du = await ru.json();
+                this.stats.users = du.pagination?.total ?? (du.users || []).length;
+            } catch(e) {}
+        },
+
+        async fetchSubmissionCount(status) {
+            try {
+                const r = await fetch('/admin/submissions?status=' + status, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                const d = await r.json();
+                return d.pagination?.total ?? (d.submissions || []).length;
+            } catch(e) { return 0; }
+        },
+
+        buildBreakdown() {
+            const total = this.stats.total_submissions || 1;
+            this.submissionBreakdown = [
+                { label:'Approved',    count: this.stats.approved, color:'#10b981', dotClass:'',  pct: Math.round(this.stats.approved/total*100)   },
+                { label:'Pending',     count: this.stats.pending,  color:'#f59e0b', dotClass:'',  pct: Math.round(this.stats.pending/total*100)    },
+                { label:'Rejected',    count: this.stats.rejected, color:'#ef4444', dotClass:'',  pct: Math.round(this.stats.rejected/total*100)   },
+            ].map(s => ({ ...s, dotClass: 'dot-'+s.label.toLowerCase() }));
+        },
+
+        async loadTemplates() {
+            this.loadingTemplates = true;
+            try {
+                const r = await fetch('/admin/templates/all', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                const d = await r.json();
+                this.templates = d.templates || [];
+            } catch(e) {}
+            this.loadingTemplates = false;
+        },
+
+        async loadPositions() {
+            try {
+                const r = await fetch('/admin/positions', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                const d = await r.json();
+                this.positions = d.positions || [];
+            } catch(e) {}
+        },
+
+        async loadSubmissions() {
+            try {
+                let url = '/admin/submissions?';
+                if (this.submissionFilter) url += 'status=' + this.submissionFilter + '&';
+                if (this.submissionSearch) url += 'search=' + encodeURIComponent(this.submissionSearch) + '&';
+                const r = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                const d = await r.json();
+                this.submissions = d.submissions || [];
+            } catch(e) {}
+        },
+
+        filterSubmissions(status) {
+            this.submissionFilter = status;
+            this.loadSubmissions();
+        },
+
+        async loadUsers() {
+            try {
+                let url = '/admin/users?';
+                if (this.userSearch) url += 'search=' + encodeURIComponent(this.userSearch) + '&';
+                const r = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                const d = await r.json();
+                this.users = d.users || [];
+            } catch(e) {}
+        },
+
+        async loadAuditLogs() {
+            try {
+                // Inline fetch from audit_logs — no dedicated endpoint yet, show empty for now
+                this.auditLogs = [];
+            } catch(e) {}
+        },
+
+        openUploadModal() { this.uploadModal = true; this.uploadFileName = ''; },
+        handleTemplateDrop(e) {
+            const f = e.dataTransfer.files[0];
+            if (f && f.name.endsWith('.xlsx')) {
+                this.$refs.templateFile.files = e.dataTransfer.files;
+                this.uploadFileName = f.name;
+            }
+        },
+
+        async submitTemplateUpload(e) {
+            this.uploading = true;
+            const fd = new FormData(e.target);
+            try {
+                const r = await fetch('/admin/templates/upload', {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': CSRF, 'X-Requested-With': 'XMLHttpRequest' },
+                    body: fd,
+                });
+                const d = await r.json();
+                if (d.success) {
+                    this.showToast('Template uploaded! Opening builder...', 'success');
+                    this.uploadModal = false;
+                    setTimeout(() => { window.location.href = d.builder_url; }, 1200);
+                } else {
+                    this.showToast(d.message || 'Upload failed', 'error');
+                }
+            } catch(err) { this.showToast('Upload error', 'error'); }
+            this.uploading = false;
+        },
+
+        async deleteTemplate(id, name) {
+            if (!confirm('Delete template "' + name + '"? This cannot be undone.')) return;
+            const r = await fetch('/admin/templates/' + id, {
+                method: 'DELETE',
+                headers: { 'X-CSRF-TOKEN': CSRF, 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            const d = await r.json();
+            if (d.success) { this.showToast('Template deleted.', 'success'); this.loadTemplates(); }
+        },
+
+        openPositionModal() { this.editingPosition = null; this.positionForm = { name: '', description: '' }; this.positionModal = true; },
+        editPosition(p)     { this.editingPosition = p; this.positionForm = { name: p.name, description: p.description || '' }; this.positionModal = true; },
+
+        async submitPosition(e) {
+            const url    = this.editingPosition ? '/admin/positions/' + this.editingPosition.id : '/admin/positions';
+            const method = this.editingPosition ? 'PUT' : 'POST';
+            try {
+                const r = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'X-Requested-With': 'XMLHttpRequest' },
+                    body: JSON.stringify(this.positionForm),
+                });
+                const d = await r.json();
+                if (d.success) { this.showToast('Position saved!', 'success'); this.positionModal = false; this.loadPositions(); }
+                else           { this.showToast(d.message || 'Error', 'error'); }
+            } catch(err) { this.showToast('Error saving position', 'error'); }
+        },
+
+        async deletePosition(id, name) {
+            if (!confirm('Delete position "' + name + '"?')) return;
+            const r = await fetch('/admin/positions/' + id, {
+                method: 'DELETE',
+                headers: { 'X-CSRF-TOKEN': CSRF, 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            const d = await r.json();
+            if (d.success) { this.showToast('Position deleted.', 'success'); this.loadPositions(); }
+        },
+
+        viewSubmission(s) {
+            this.selectedSubmission = s;
+            // fetch full details
+            fetch('/admin/submissions/' + s.id, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(r => r.json())
+                .then(d => { this.selectedSubmission = d.submission || s; this.submissionModal = true; });
+        },
+
+        async approveSubmission(id) {
+            const r = await fetch('/admin/submissions/' + id + '/approve', {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': CSRF, 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/json' },
+                body: JSON.stringify({ remarks: '' }),
+            });
+            const d = await r.json();
+            if (d.success) { this.showToast('Submission approved!', 'success'); this.loadSubmissions(); await this.loadStats(); }
+        },
+
+        openRejectModal(id) { this.rejectTargetId = id; this.rejectRemarks = ''; this.rejectModal = true; },
+        async confirmReject() {
+            if (!this.rejectRemarks.trim()) { this.showToast('Please enter remarks.', 'error'); return; }
+            const r = await fetch('/admin/submissions/' + this.rejectTargetId + '/reject', {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': CSRF, 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/json' },
+                body: JSON.stringify({ remarks: this.rejectRemarks }),
+            });
+            const d = await r.json();
+            if (d.success) { this.showToast('Submission rejected.', 'error'); this.rejectModal = false; this.loadSubmissions(); await this.loadStats(); }
+        },
+
+        async viewUser(u) {
+            const r = await fetch('/admin/users/' + u.id, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            const d = await r.json();
+            this.selectedUser = d.user || u;
+            this.userModal = true;
+        },
+
+        async deleteUser(id, name) {
+            if (!confirm('Delete user "' + name + '"?')) return;
+            const r = await fetch('/admin/users/' + id, {
+                method: 'DELETE',
+                headers: { 'X-CSRF-TOKEN': CSRF, 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            const d = await r.json();
+            if (d.success) { this.showToast('User deleted.', 'success'); this.loadUsers(); }
+        },
+
+        async submitNotice(e) {
+            const fd = new FormData(e.target);
+            const r  = await fetch('/admin/notices', {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': CSRF, 'X-Requested-With': 'XMLHttpRequest' },
+                body: fd,
+            });
+            if (r.ok) { this.showToast('Announcement posted!', 'success'); setTimeout(() => location.reload(), 1000); }
+        },
+
+        statusLabel(s) {
+            return { draft:'Draft', submitted:'Submitted', under_review:'Under Review', approved:'Approved', rejected:'Rejected' }[s] ?? s;
+        },
+
+        formatDate(d) {
+            if (!d) return '—';
+            return new Date(d).toLocaleDateString('en-PH', { month:'short', day:'numeric', year:'numeric' });
+        },
+
+        showToast(msg, type = 'success') {
+            this.toast = { message: msg, type };
+            const el = document.getElementById('toast');
+            el.classList.add('show');
+            setTimeout(() => el.classList.remove('show'), 3000);
+        },
+    };
+}
+</script>
+@endpush

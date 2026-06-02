@@ -40,12 +40,19 @@
     // Fetch DB record for the user to get permanent profile information and lock status
     $profileEdited = false;
     $dbUser = null;
-    if (isset($sessionUser['employee_id'])) {
+    $userId = $sessionUser['id'] ?? null;
+    $sessionEmployeeId = $sessionUser['employee_id'] ?? null;
+    if ($userId || $sessionEmployeeId) {
         try {
-            $dbUser = \App\Models\User::where('employee_id', $sessionUser['employee_id'])->first();
+            if ($userId) {
+                $dbUser = \App\Models\User::with('position')->find($userId);
+            } else {
+                $dbUser = \App\Models\User::with('position')->where('employee_id', $sessionEmployeeId)->first();
+            }
+            
             if ($dbUser) {
                 $profileEdited = (bool) $dbUser->profile_edited;
-                $employeeId = $dbUser->employee_id;
+                $employeeId = $dbUser->employee_id ?? $sessionEmployeeId;
                 $email = $dbUser->email ?? $email;
                 $name = $dbUser->name ?? $name;
                 $firstname = $dbUser->firstname ?? $firstname;
@@ -130,6 +137,147 @@
             transform: translateY(-2px);
             box-shadow: 0 10px 40px rgba(0,0,0,0.1);
         }
+        
+        /* Premium IPCRF Sheet Styles */
+        .ipcrf-table-wrapper {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 12px;
+            overflow: auto;
+            box-shadow: 0 10px 30px -5px rgba(0,0,0,0.05);
+        }
+        .ipcrf-preview-table {
+            border-collapse: collapse;
+            font-size: 11px;
+            color: #1e293b;
+            min-width: 100%;
+        }
+        .ipcrf-preview-table td {
+            border: 1px solid #cbd5e1;
+            padding: 2px 4px;
+            vertical-align: middle;
+            position: relative;
+        }
+        .ipcrf-preview-table select,
+        .ipcrf-preview-table input,
+        .ipcrf-preview-table textarea {
+            width: 100%;
+            height: 100%;
+            background: rgba(219, 234, 254, 0.45); /* soft blue */
+            border: none;
+            outline: none;
+            font-family: inherit;
+            font-size: inherit;
+            font-weight: inherit;
+            color: inherit;
+            text-align: inherit;
+            padding: 4px 6px;
+            border-radius: 2px;
+            transition: all 0.15s ease;
+        }
+        .ipcrf-preview-table select:focus,
+        .ipcrf-preview-table input:focus,
+        .ipcrf-preview-table textarea:focus {
+            background: #ffffff;
+            box-shadow: inset 0 0 0 2px #3b82f6;
+            z-index: 10;
+        }
+        .ipcrf-preview-table select {
+            cursor: pointer;
+        }
+        .ipcrf-preview-table select option {
+            background: #ffffff;
+            color: #1e293b;
+        }
+        .badge-ipcrf {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        /* Spreadsheet Table Headers (Row/Col Indicators) */
+        .ipcrf-hdr-corner,
+        .ipcrf-hdr-col,
+        .ipcrf-hdr-row {
+            background: #f8fafc !important;
+            color: #475569 !important;
+            font-weight: 700 !important;
+            font-size: 10px !important;
+            text-align: center !important;
+            border: 1px solid #cbd5e1 !important;
+            user-select: none !important;
+            position: relative !important;
+        }
+        .ipcrf-hdr-corner {
+            width: 40px;
+            height: 24px;
+        }
+        .ipcrf-hdr-col {
+            height: 24px;
+            vertical-align: middle !important;
+        }
+        .ipcrf-hdr-row {
+            width: 40px;
+            vertical-align: middle !important;
+        }
+
+        /* Resizers */
+        .col-resizer {
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 6px;
+            cursor: col-resize;
+            z-index: 10;
+            background: transparent;
+            transition: background 0.15s;
+        }
+        .col-resizer:hover, .col-resizer.dragging {
+            background: #6366f1;
+        }
+        .row-resizer {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 6px;
+            cursor: row-resize;
+            z-index: 10;
+            background: transparent;
+            transition: background 0.15s;
+        }
+        .row-resizer:hover, .row-resizer.dragging {
+            background: #6366f1;
+        }
+
+        /* Borderless inputs to look exactly like Google Sheets cells */
+        .ipcrf-preview-table input,
+        .ipcrf-preview-table textarea,
+        .ipcrf-preview-table select {
+            width: 100% !important;
+            height: 100% !important;
+            border: none !important;
+            background: transparent !important;
+            outline: none !important;
+            font-family: inherit !important;
+            font-size: inherit !important;
+            font-weight: inherit !important;
+            color: inherit !important;
+            text-align: inherit !important;
+            padding: 2px 4px !important;
+            box-sizing: border-box !important;
+            margin: 0 !important;
+        }
+        .ipcrf-preview-table input:focus,
+        .ipcrf-preview-table textarea:focus,
+        .ipcrf-preview-table select:focus {
+            background: rgba(99, 102, 241, 0.05) !important;
+            box-shadow: inset 0 0 0 2px #6366f1 !important;
+        }
     </style>
 </head>
 <body class="bg-slate-50 font-sans text-slate-900 h-screen overflow-hidden flex" 
@@ -177,9 +325,494 @@
                   let yearMatch = p.year === this.yearFilter;
                   return semMatch && yearMatch;
               });
+          },
+
+          // ─── IPCRF Template & Form filling states ──────────────────────
+          assignedTemplates: [],
+          submissions: [],
+          ipcrfStats: { assigned: 0, drafts: 0, submitted: 0, approved: 0 },
+          loadingIpcrf: false,
+          fillingTemplate: null,
+          submissionId: null,
+          formHtml: "",
+          formFields: [],
+          answers: {},
+          autoSaveInterval: null,
+          savingStatus: "",
+
+          async loadIpcrfData() {
+              this.loadingIpcrf = true;
+              try {
+                  const res = await fetch("/my/dashboard-data");
+                  const data = await res.json();
+                  if (data.error) {
+                      console.error(data.error);
+                  } else {
+                      this.assignedTemplates = data.assigned_templates || [];
+                      this.submissions = data.submissions || [];
+                      this.ipcrfStats = data.stats || { assigned: 0, drafts: 0, submitted: 0, approved: 0 };
+                  }
+              } catch (e) {
+                  console.error("Error loading IPCRF data:", e);
+              }
+              this.loadingIpcrf = false;
+              this.$nextTick(() => {
+                  if (typeof lucide !== "undefined") lucide.createIcons();
+              });
+          },
+
+          async startFillForm(templateId) {
+              this.loadingIpcrf = true;
+              if (this.autoSaveInterval) {
+                  clearInterval(this.autoSaveInterval);
+                  this.autoSaveInterval = null;
+              }
+              try {
+                  const res = await fetch(`/my/templates/${templateId}/fill`);
+                  if (!res.ok) {
+                      const err = await res.json();
+                      alert(err.error || "Access Denied.");
+                      this.loadingIpcrf = false;
+                      return;
+                  }
+                  const data = await res.json();
+                  this.fillingTemplate = data.template;
+                  this.submissionId = data.submission_id;
+                  this.formHtml = data.html_table;
+                  this.formFields = data.fields || [];
+                  
+                  // Initialize answers
+                  this.answers = {};
+                  this.formFields.forEach(f => {
+                      this.answers[f.id] = f.current_value || "";
+                  });
+
+                  this.activeTab = "fillForm";
+                  
+                  // Render inputs into table cells
+                  this.$nextTick(() => {
+                      this.renderFormInputs();
+                      setTimeout(() => {
+                          if (typeof initSpreadsheetResizers === "function") {
+                              initSpreadsheetResizers();
+                          }
+                      }, 50);
+                  });
+
+                  // Start autosave interval every 30 seconds
+                  this.autoSaveInterval = setInterval(() => {
+                      this.saveDraft(true);
+                  }, 30000);
+
+              } catch (e) {
+                  console.error("Error fetching form:", e);
+                  alert("Could not load form. Please try again.");
+              }
+              this.loadingIpcrf = false;
+          },
+
+          renderFormInputs() {
+              document.querySelectorAll(".user-uploaded-picture").forEach(el => el.remove());
+
+              this.formFields.forEach(field => {
+                  const td = document.querySelector(`[data-cell="${field.cell_ref}"]`);
+                  if (!td) return;
+
+                  if (field.field_type === "picture") {
+                      let currentPicData = null;
+                      if (this.answers[field.id]) {
+                          try {
+                              currentPicData = JSON.parse(this.answers[field.id]);
+                          } catch (e) {
+                              currentPicData = { url: this.answers[field.id] };
+                          }
+                      }
+
+                      td.className = "p-0 ipcrf-cell relative cursor-pointer";
+                      td.style.minHeight = "40px";
+
+                      const wrapper = document.createElement("div");
+                      wrapper.className = "flex flex-col items-center justify-center w-full h-full min-h-[40px] text-indigo-400 hover:text-indigo-300 transition-colors p-2";
+                      wrapper.innerHTML = `
+                          <i class="fas fa-image text-sm mb-0.5"></i>
+                          <span style="font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Add Picture</span>
+                      `;
+
+                      const fileInput = document.createElement("input");
+                      fileInput.type = "file";
+                      fileInput.accept = ".png,.jpg,.jpeg";
+                      fileInput.style.display = "none";
+
+                      // Trigger file explorer when clicking the cell
+                      td.addEventListener("click", (e) => {
+                          // Prevent triggering if clicking or dragging the image itself
+                          if (e.target.tagName === "IMG" || e.target.classList.contains("user-uploaded-picture") || e.target.closest("img")) {
+                              return;
+                          }
+                          fileInput.click();
+                      });
+
+                      fileInput.addEventListener("change", async (e) => {
+                          const file = e.target.files[0];
+                          if (!file) return;
+
+                          const formData = new FormData();
+                          formData.append("file", file);
+                          formData.append("_token", "{{ csrf_token() }}");
+
+                          wrapper.innerHTML = `
+                              <i class="fas fa-spinner fa-spin text-sm mb-0.5"></i>
+                              <span style="font-size: 8px; font-weight: 700; text-transform: uppercase;">Uploading...</span>
+                          `;
+
+                          try {
+                              const res = await fetch(`/my/submissions/${this.submissionId}/upload-picture/${field.id}`, {
+                                  method: "POST",
+                                  body: formData,
+                                  headers: {
+                                      "X-Requested-With": "XMLHttpRequest"
+                                  }
+                              });
+                              const data = await res.json();
+                              if (data.success) {
+                                  const initialData = {
+                                      url: data.url,
+                                      cell_ref: field.cell_ref,
+                                      offsetX: 0,
+                                      offsetY: 0,
+                                      width: 120,
+                                      height: 80
+                                  };
+                                  this.answers[field.id] = JSON.stringify(initialData);
+                                  this.saveDraft(true);
+                                  this.renderFormInputs();
+                              } else {
+                                  alert(data.message || "Upload failed");
+                                  this.renderFormInputs();
+                              }
+                          } catch (err) {
+                              console.error(err);
+                              alert("Upload failed due to connection error");
+                              this.renderFormInputs();
+                          }
+                      });
+
+                      wrapper.appendChild(fileInput);
+                      td.appendChild(wrapper);
+
+                      if (currentPicData && currentPicData.url) {
+                          const replaceBtn = document.createElement("button");
+                          replaceBtn.innerHTML = `<i class="fas fa-sync"></i> Replace`;
+                          replaceBtn.className = "absolute top-0 right-0 px-1 py-0.5 text-[8px] font-bold text-white bg-gray-800 bg-opacity-70 hover:bg-opacity-90 rounded z-20 pointer-events-auto";
+                          replaceBtn.addEventListener("click", (e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              fileInput.click();
+                          });
+                          td.appendChild(replaceBtn);
+
+                          const imgEl = document.createElement("img");
+                          imgEl.src = currentPicData.url;
+                          imgEl.className = "user-uploaded-picture";
+                          imgEl.style.position = "absolute";
+                          imgEl.style.width = (currentPicData.width || 120) + "px";
+                          imgEl.style.height = (currentPicData.height || 80) + "px";
+                          imgEl.style.zIndex = "50";
+                          imgEl.style.cursor = "move";
+                          imgEl.style.border = "2px dashed #6366f1";
+                          imgEl.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
+                          imgEl.style.borderRadius = "4px";
+                          imgEl.style.maxWidth = "none";
+
+                          const targetCellRef = currentPicData.cell_ref || field.cell_ref;
+                          const targetTd = document.querySelector(`[data-cell="${targetCellRef}"]`);
+
+                          if (targetTd) {
+                              targetTd.style.position = "relative";
+                              imgEl.style.left = (currentPicData.offsetX || 0) + "px";
+                              imgEl.style.top = (currentPicData.offsetY || 0) + "px";
+                              targetTd.appendChild(imgEl);
+                          } else {
+                              td.appendChild(imgEl);
+                              imgEl.style.left = "0px";
+                              imgEl.style.top = "0px";
+                          }
+
+                          let isDragging = false;
+                          let startX = 0;
+                          let startY = 0;
+                          let initialLeft = 0;
+                          let initialTop = 0;
+                          let currentCellRef = targetCellRef;
+
+                          const onMouseDown = (e) => {
+                              if (e.target !== imgEl) return;
+                              e.preventDefault();
+                              e.stopPropagation();
+
+                              isDragging = true;
+                              startX = e.clientX;
+                              startY = e.clientY;
+                              initialLeft = parseInt(imgEl.style.left) || 0;
+                              initialTop = parseInt(imgEl.style.top) || 0;
+
+                              document.addEventListener("mousemove", onMouseMove);
+                              document.addEventListener("mouseup", onMouseUp);
+                          };
+
+                          const onMouseMove = (e) => {
+                              if (!isDragging) return;
+                              const dx = e.clientX - startX;
+                              const dy = e.clientY - startY;
+                              imgEl.style.left = (initialLeft + dx) + "px";
+                              imgEl.style.top = (initialTop + dy) + "px";
+                          };
+
+                          const onMouseUp = (e) => {
+                              if (!isDragging) return;
+                              isDragging = false;
+
+                              document.removeEventListener("mousemove", onMouseMove);
+                              document.removeEventListener("mouseup", onMouseUp);
+
+                              imgEl.style.display = "none";
+                              const droppedOn = document.elementFromPoint(e.clientX, e.clientY);
+                              imgEl.style.display = "block";
+
+                              const cellTd = droppedOn ? droppedOn.closest("td[data-cell]") : null;
+
+                              if (cellTd) {
+                                  const newCellRef = cellTd.getAttribute("data-cell");
+                                  const cellRect = cellTd.getBoundingClientRect();
+                                  const currentImgRect = imgEl.getBoundingClientRect();
+
+                                  const offsetX = Math.round(currentImgRect.left - cellRect.left);
+                                  const offsetY = Math.round(currentImgRect.top - cellRect.top);
+
+                                  cellTd.style.position = "relative";
+                                  cellTd.appendChild(imgEl);
+
+                                  imgEl.style.left = offsetX + "px";
+                                  imgEl.style.top = offsetY + "px";
+
+                                  currentCellRef = newCellRef;
+
+                                  this.answers[field.id] = JSON.stringify({
+                                      url: currentPicData.url,
+                                      cell_ref: newCellRef,
+                                      offsetX: offsetX,
+                                      offsetY: offsetY,
+                                      width: parseInt(imgEl.style.width),
+                                      height: parseInt(imgEl.style.height)
+                                  });
+
+                                  this.saveDraft(true);
+                              } else {
+                                  imgEl.style.left = initialLeft + "px";
+                                  imgEl.style.top = initialTop + "px";
+                              }
+                          };
+
+                          imgEl.addEventListener("mousedown", onMouseDown);
+                      }
+                      return;
+                  }
+
+                  // Preserve any drawing/image overlays inside the cell
+                  const drawings = td.querySelectorAll("img");
+                  td.innerHTML = ""; // Clear the server-rendered badge
+                  if (drawings.length > 0) {
+                      drawings.forEach(img => td.appendChild(img));
+                  }
+                  td.className = "p-0 ipcrf-cell"; // Set correct class and clear padding
+                  
+                  let inputEl;
+                  const isReadonly = field.field_type.startsWith("autofill_") || field.field_type === "readonly";
+
+                  if (field.field_type === "textarea") {
+                      inputEl = document.createElement("textarea");
+                      inputEl.rows = 2;
+                  } else if (field.field_type === "dropdown") {
+                      inputEl = document.createElement("select");
+                      const optDefault = document.createElement("option");
+                      optDefault.value = "";
+                      optDefault.textContent = "-- Select --";
+                      inputEl.appendChild(optDefault);
+
+                      if (field.field_options && Array.isArray(field.field_options)) {
+                          field.field_options.forEach(opt => {
+                              const o = document.createElement("option");
+                              o.value = opt;
+                              o.textContent = opt;
+                              inputEl.appendChild(o);
+                          });
+                      }
+                  } else if (field.field_type === "rating") {
+                      inputEl = document.createElement("select");
+                      const optDefault = document.createElement("option");
+                      optDefault.value = "";
+                      optDefault.textContent = "-- Select Rating --";
+                      inputEl.appendChild(optDefault);
+
+                      [5, 4, 3, 2, 1].forEach(score => {
+                          const o = document.createElement("option");
+                          o.value = score;
+                          o.textContent = score + " (" + this.ratingLabel(score) + ")";
+                          inputEl.appendChild(o);
+                      });
+                  } else {
+                      inputEl = document.createElement("input");
+                      inputEl.type = field.field_type === "number" ? "number" : "text";
+                      if (field.field_type === "number") {
+                          inputEl.step = "any";
+                      }
+                  }
+
+                  inputEl.name = `field_${field.id}`;
+                  inputEl.value = this.answers[field.id] || "";
+                  if (isReadonly) {
+                      inputEl.readOnly = true;
+                      inputEl.classList.add("cursor-not-allowed", "opacity-75");
+                      inputEl.style.background = "rgba(241, 245, 249, 0.6)"; 
+                  }
+
+                  // Handle change events to keep state synced
+                  const updateVal = (e) => {
+                      this.answers[field.id] = e.target.value;
+                      this.saveDraft(false); // background save
+                  };
+                  inputEl.addEventListener("input", updateVal);
+                  inputEl.addEventListener("change", updateVal);
+
+                  td.appendChild(inputEl);
+              });
+          },
+
+          ratingLabel(score) {
+              const labels = { 5: "Outstanding", 4: "Very Satisfactory", 3: "Satisfactory", 2: "Unsatisfactory", 1: "Poor" };
+              return labels[score] || "";
+          },
+
+          async saveDraft(isSilent = false) {
+              if (!this.fillingTemplate) return;
+              if (!isSilent) this.savingStatus = "Saving draft...";
+              try {
+                  const res = await fetch(`/my/templates/${this.fillingTemplate.id}/draft`, {
+                      method: "POST",
+                      headers: {
+                          "Content-Type": "application/json",
+                          "X-CSRF-TOKEN": "{{ csrf_token() }}",
+                          "X-Requested-With": "XMLHttpRequest"
+                      },
+                      body: JSON.stringify({ answers: this.answers })
+                  });
+                  const data = await res.ok ? await res.json() : {};
+                  if (data.success) {
+                      if (!isSilent) this.savingStatus = "Draft saved successfully";
+                      else this.savingStatus = "Auto-saved at " + new Date().toLocaleTimeString();
+                  } else {
+                      this.savingStatus = "Error auto-saving";
+                  }
+              } catch (e) {
+                  this.savingStatus = "Connection error";
+              }
+              if (!isSilent) {
+                  setTimeout(() => { this.savingStatus = ""; }, 3000);
+              }
+          },
+
+          async submitForm() {
+              if (!this.fillingTemplate) return;
+              
+              // Simple client side validation of required fields
+              let missingRequired = [];
+              this.formFields.forEach(f => {
+                  if (f.is_required && !this.answers[f.id]) {
+                      missingRequired.push(f.field_label || f.cell_ref);
+                  }
+              });
+
+              if (missingRequired.length > 0) {
+                  alert("Requirement Error: Please fill in the following required fields before submitting:\n• " + missingRequired.join("\n• "));
+                  return;
+              }
+
+              if (!confirm("Are you sure you want to submit your IPCRF? Once submitted, it will be locked and sent to the Administrator for review and approval.")) {
+                  return;
+              }
+
+              this.loadingIpcrf = true;
+              try {
+                  const res = await fetch(`/my/templates/${this.fillingTemplate.id}/submit`, {
+                      method: "POST",
+                      headers: {
+                          "Content-Type": "application/json",
+                          "X-CSRF-TOKEN": "{{ csrf_token() }}",
+                          "X-Requested-With": "XMLHttpRequest"
+                      },
+                      body: JSON.stringify({ answers: this.answers })
+                  });
+                  const data = await res.json();
+                  if (data.success) {
+                      alert("Your IPCRF has been submitted successfully for administrator review!");
+                      this.exitForm();
+                  } else {
+                      alert("Error submitting: " + data.message);
+                  }
+              } catch (e) {
+                  alert("Connection error during submission.");
+              }
+              this.loadingIpcrf = false;
+          },
+
+          exitForm() {
+              if (this.autoSaveInterval) {
+                  clearInterval(this.autoSaveInterval);
+                  this.autoSaveInterval = null;
+              }
+              this.fillingTemplate = null;
+              this.submissionId = null;
+              this.formHtml = "";
+              this.formFields = [];
+              this.answers = {};
+              this.activeTab = "ipcrf";
+              this.loadIpcrfData();
+          },
+
+          formatDate(dateStr) {
+              if (!dateStr) return "—";
+              try {
+                  const d = new Date(dateStr);
+                  if (isNaN(d.getTime())) return dateStr;
+                  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+              } catch (e) {
+                  return dateStr;
+              }
+          },
+
+          statusLabel(status) {
+              const labels = {
+                  draft: "Draft",
+                  submitted: "Submitted",
+                  under_review: "Under Review",
+                  approved: "Approved",
+                  rejected: "Rejected"
+              };
+              return labels[status] || status;
+          },
+
+          statusBadgeClass(status) {
+              const classes = {
+                  draft: "bg-slate-100 text-slate-700",
+                  submitted: "bg-blue-100 text-blue-700",
+                  under_review: "bg-amber-100 text-amber-700",
+                  approved: "bg-green-100 text-green-700",
+                  rejected: "bg-red-100 text-red-700"
+              };
+              return classes[status] || "bg-slate-100 text-slate-700";
           }
       }'
-      x-init="$nextTick(() => lucide.createIcons());">
+      x-init="$nextTick(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); loadIpcrfData(); });">
 
     <!-- SIDEBAR -->
     <aside class="fixed left-0 top-0 h-full w-64 sidebar-gradient text-white hidden md:flex flex-col shadow-xl z-20">
@@ -196,32 +829,40 @@
 
         <!-- Navigation Links -->
         <nav class="flex-1 py-6 px-0 space-y-1">
-            <a href="{{ route('userDashboard') }}" 
-                    class="w-full flex items-center gap-3 px-6 py-3.5 text-base transition-all text-left cursor-pointer border-l-4 {{ $activeTab === 'home' ? 'bg-white/10 border-blue-500 text-white font-semibold shadow-sm' : 'border-transparent text-gray-300 hover:bg-white/5 hover:text-white' }}">
+            <button @click="activeTab = 'home'"
+                    class="w-full flex items-center gap-3 px-6 py-3.5 text-base transition-all text-left cursor-pointer border-l-4 focus:outline-none"
+                    :class="activeTab === 'home' ? 'bg-white/10 border-blue-500 text-white font-semibold shadow-sm' : 'border-transparent text-gray-300 hover:bg-white/5 hover:text-white'">
                 <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
                 Dashboard
-            </a>
+            </button>
+            <button @click="activeTab = 'ipcrf'; loadIpcrfData()"
+                    class="w-full flex items-center gap-3 px-6 py-3.5 text-base transition-all text-left cursor-pointer border-l-4 focus:outline-none"
+                    :class="activeTab === 'ipcrf' ? 'bg-white/10 border-blue-500 text-white font-semibold shadow-sm' : 'border-transparent text-gray-300 hover:bg-white/5 hover:text-white'">
+                <i data-lucide="file-spreadsheet" class="w-5 h-5"></i>
+                My IPCRF Forms
+            </button>
             <a href="{{ route('performance.index') }}" 
                     class="w-full flex items-center gap-3 px-6 py-3.5 text-base transition-all text-left cursor-pointer border-l-4 {{ $activeTab === 'performance' ? 'bg-white/10 border-blue-500 text-white font-semibold shadow-sm' : 'border-transparent text-gray-300 hover:bg-white/5 hover:text-white' }}">
                 <i data-lucide="trending-up" class="w-5 h-5"></i>
                 Performance History
             </a>
-            <a href="{{ route('settings') }}" 
-                    class="w-full flex items-center gap-3 px-6 py-3.5 text-base transition-all text-left cursor-pointer border-l-4 {{ $activeTab === 'settings' ? 'bg-white/10 border-blue-500 text-white font-semibold shadow-sm' : 'border-transparent text-gray-300 hover:bg-white/5 hover:text-white' }}">
+            <button @click="activeTab = 'settings'"
+                    class="w-full flex items-center gap-3 px-6 py-3.5 text-base transition-all text-left cursor-pointer border-l-4 focus:outline-none"
+                    :class="activeTab === 'settings' ? 'bg-white/10 border-blue-500 text-white font-semibold shadow-sm' : 'border-transparent text-gray-300 hover:bg-white/5 hover:text-white'">
                 <i data-lucide="settings" class="w-5 h-5"></i>
                 <span>Settings</span>
-            </a>
+            </button>
         </nav>
 
         <!-- User Profile info -->
         <div class="p-4 border-t border-gray-700">
             <div class="flex items-center gap-3 px-4 py-3">
-                <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
                     <i data-lucide="user" class="w-4 h-4 text-white"></i>
                 </div>
                 <div class="flex-1 min-w-0">
-                    <p class="text-sm font-medium truncate text-white">{{ $name }}</p>
-                    <p class="text-xs truncate text-gray-400">User Profile</p>
+                    <p class="text-sm font-semibold truncate text-white">{{ $name }}</p>
+                    <p class="text-xs truncate text-blue-300 font-medium">{{ $dbUser?->position?->name ?? 'No Position Assigned' }}</p>
                 </div>
             </div>
 
@@ -240,7 +881,9 @@
             <h2 class="text-xl font-semibold text-slate-800" x-text="
                 activeTab === 'home' ? 'Dashboard' : 
                 activeTab === 'performance' ? 'Performance History' : 
-                activeTab === 'settings' ? 'Settings' : ''
+                activeTab === 'settings' ? 'Settings' : 
+                activeTab === 'ipcrf' ? 'My IPCRF Forms' : 
+                activeTab === 'fillForm' ? 'Fill IPCRF Template' : ''
             "></h2>
             <div class="flex items-center gap-4">
                 <div class="relative">
@@ -250,6 +893,55 @@
                         <span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white animate-pulse"></span>
                         @endif
                     </button>
+
+                    <!-- NOTIFICATIONS DROPDOWN (positioned absolutely so it overlays content) -->
+                    <div x-show="showNotifications"
+                         x-transition
+                         @click.away="showNotifications = false"
+                         class="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden z-50"
+                         style="display: none;">
+                        <div class="p-4 border-b border-slate-200 flex items-center justify-between">
+                            <h3 class="font-semibold text-slate-800">Announcements</h3>
+                            <form action="{{ route('notifications.markAllAsRead') }}" method="POST" class="m-0">
+                                @csrf
+                                <button type="submit" class="text-xs text-blue-600 hover:text-blue-800 font-medium">Mark read</button>
+                            </form>
+                        </div>
+                        <div class="max-h-96 overflow-y-auto">
+                            @forelse($dbNotices as $notice)
+                                <div class="p-4 border-b border-slate-100 hover:bg-slate-50 transition">
+                                    <div class="flex items-start gap-3">
+                                        <div class="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                            <i data-lucide="bell" class="w-4 h-4"></i>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="font-medium text-slate-800 text-sm">{{ $notice->subject }}</p>
+                                            <p class="text-slate-600 text-xs mt-1">{{ Str::limit($notice->content, 100) }}</p>
+                                            <p class="text-slate-400 text-[10px] mt-2">{{ $notice->posted_at ? $notice->posted_at->diffForHumans() : '' }}</p>
+                                        </div>
+                                        <span class="text-[10px] px-2 py-1 rounded-full font-medium 
+                                            @if($notice->priority === 'High') bg-red-100 text-red-700
+                                            @elseif($notice->priority === 'Medium') bg-yellow-100 text-yellow-700
+                                            @else bg-green-100 text-green-700 @endif">
+                                            {{ $notice->priority }}
+                                        </span>
+                                    </div>
+                                </div>
+                            @empty
+                                <div class="p-4 border-b border-slate-100 bg-blue-50/50 hover:bg-blue-50 transition">
+                                    <div class="flex items-start gap-3">
+                                        <div class="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                            <i data-lucide="bell" class="w-4 h-4"></i>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="font-semibold text-slate-800 text-sm">System Announcement</p>
+                                            <p class="text-slate-600 text-xs mt-1">New IPCRF form templates available</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforelse
+                        </div>
+                    </div>
                 </div>
 
                 <button @click="showLogoutModal = true" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-all flex items-center gap-2 font-medium text-sm cursor-pointer shadow-sm shadow-blue-600/10">
@@ -257,69 +949,6 @@
                 </button>
             </div>
         </header>
-
-        <!-- NOTIFICATIONS DROPDOWN -->
-        <div x-show="showNotifications"
-             x-transition
-             @click.away="showNotifications = false"
-             class="relative z-30"
-             style="display: none;">
-            <div class="absolute right-8 top-2 w-80 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden">
-                <div class="p-4 border-b border-slate-200 flex items-center justify-between">
-                    <h3 class="font-semibold text-slate-800">Announcements</h3>
-                    <form action="{{ route('notifications.markAllAsRead') }}" method="POST" class="m-0">
-                        @csrf
-                        <button type="submit" class="text-xs text-blue-600 hover:text-blue-800 font-medium">Mark read</button>
-                    </form>
-                </div>
-                <div class="max-h-96 overflow-y-auto">
-                    @forelse($dbNotices as $notice)
-                        <div class="p-4 border-b border-slate-100 hover:bg-slate-50 transition">
-                            <div class="flex items-start gap-3">
-                                <div class="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-                                    <i data-lucide="bell" class="w-4 h-4"></i>
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <p class="font-medium text-slate-800 text-sm">{{ $notice->subject }}</p>
-                                    <p class="text-slate-600 text-xs mt-1">{{ Str::limit($notice->content, 100) }}</p>
-                                    <p class="text-slate-400 text-[10px] mt-2">{{ $notice->posted_at ? $notice->posted_at->diffForHumans() : '' }}</p>
-                                </div>
-                                <span class="text-[10px] px-2 py-1 rounded-full font-medium 
-                                    @if($notice->priority === 'High') bg-red-100 text-red-700
-                                    @elseif($notice->priority === 'Medium') bg-yellow-100 text-yellow-700
-                                    @else bg-green-100 text-green-700 @endif">
-                                    {{ $notice->priority }}
-                                </span>
-                            </div>
-                        </div>
-                    @empty
-                        <!-- Static Fallback notices as in original page if DB query is empty -->
-                        <div class="p-4 border-b border-slate-100 bg-blue-50/50 hover:bg-blue-50 transition">
-                            <div class="flex items-start gap-3">
-                                <div class="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-                                    <i data-lucide="bell" class="w-4 h-4"></i>
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <p class="font-semibold text-slate-800 text-sm">System Announcement</p>
-                                    <p class="text-slate-600 text-xs mt-1">New IPCRF form templates available</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="p-4 border-b border-slate-100 bg-blue-50/50 hover:bg-blue-50 transition">
-                            <div class="flex items-start gap-3">
-                                <div class="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-                                    <i data-lucide="calendar" class="w-4 h-4"></i>
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <p class="font-semibold text-slate-800 text-sm">Deadline Update</p>
-                                    <p class="text-slate-600 text-xs mt-1">IPCRF submission deadline extended</p>
-                                </div>
-                            </div>
-                        </div>
-                    @endforelse
-                </div>
-            </div>
-        </div>
 
         <!-- Main Body Content -->
         <main class="flex-1 overflow-y-auto p-6">
@@ -598,6 +1227,15 @@
                                                    class="w-full pl-12 pr-5 py-3.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium text-base {{ $profileEdited ? 'opacity-70 cursor-not-allowed bg-slate-100' : '' }}">
                                         </div>
                                     </div>
+
+                                    <div class="flex flex-col">
+                                        <label class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2.5">Position / Designation</label>
+                                        <div class="relative flex items-center">
+                                            <i data-lucide="briefcase" class="w-5 h-5 text-slate-400 absolute left-4"></i>
+                                            <input type="text" readonly value="{{ $dbUser?->position?->name ?? 'None Assigned' }}" 
+                                                   class="w-full pl-12 pr-5 py-3.5 rounded-xl border border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed opacity-75 focus:outline-none font-medium text-base">
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -739,7 +1377,204 @@
                 </div>
                 </div>
             </div>
+
+            <!-- MY IPCRF FORMS TAB -->
+            <div x-show="activeTab === 'ipcrf'" x-transition class="space-y-6 w-full" style="display: none;">
+                <!-- Header -->
+                <div class="mb-2 flex flex-wrap justify-between items-center gap-3">
+                    <div>
+                        <h1 class="text-3xl font-bold text-slate-800">My IPCRF Forms</h1>
+                        <p class="text-sm text-slate-500 mt-1">Digitized IPCRF workflow for your position: <span class="font-semibold text-blue-600">{{ $dbUser?->position?->name ?? 'None Assigned' }}</span></p>
+                    </div>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="glass-panel p-5 rounded-2xl border border-slate-200/60 flex items-center gap-4">
+                        <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+                            <i data-lucide="file-text" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-500 font-medium uppercase tracking-wider">Assigned</p>
+                            <h4 class="text-2xl font-bold text-slate-800" x-text="ipcrfStats.assigned">0</h4>
+                        </div>
+                    </div>
+                    <div class="glass-panel p-5 rounded-2xl border border-slate-200/60 flex items-center gap-4">
+                        <div class="w-12 h-12 bg-slate-100 text-slate-600 rounded-xl flex items-center justify-center">
+                            <i data-lucide="edit-3" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-500 font-medium uppercase tracking-wider">Drafts</p>
+                            <h4 class="text-2xl font-bold text-slate-800" x-text="ipcrfStats.drafts">0</h4>
+                        </div>
+                    </div>
+                    <div class="glass-panel p-5 rounded-2xl border border-slate-200/60 flex items-center gap-4">
+                        <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center">
+                            <i data-lucide="clock" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-500 font-medium uppercase tracking-wider">Pending</p>
+                            <h4 class="text-2xl font-bold text-slate-800" x-text="ipcrfStats.submitted">0</h4>
+                        </div>
+                    </div>
+                    <div class="glass-panel p-5 rounded-2xl border border-slate-200/60 flex items-center gap-4">
+                        <div class="w-12 h-12 bg-green-50 text-green-600 rounded-xl flex items-center justify-center">
+                            <i data-lucide="check-circle" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-500 font-medium uppercase tracking-wider">Approved</p>
+                            <h4 class="text-2xl font-bold text-slate-800" x-text="ipcrfStats.approved">0</h4>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Left: Assigned templates -->
+                    <div class="lg:col-span-1 glass-panel rounded-2xl shadow-sm p-6 border border-slate-200/60 flex flex-col h-fit">
+                        <div class="flex items-center gap-3 border-b border-slate-100 pb-4 mb-4">
+                            <div class="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
+                                <i data-lucide="sparkles" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-slate-800 text-lg">Assigned Templates</h3>
+                                <p class="text-xs text-slate-500">Templates you can fill out online</p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4 max-h-[400px] overflow-y-auto pr-1">
+                            <template x-if="assignedTemplates.length === 0">
+                                <div class="text-center py-10 text-slate-400">
+                                    <i data-lucide="file-x" class="w-10 h-10 mx-auto mb-2 opacity-40"></i>
+                                    <p class="text-sm font-medium">No templates assigned to your position.</p>
+                                </div>
+                            </template>
+                            <template x-for="template in assignedTemplates" :key="template.id">
+                                <div class="p-4 bg-slate-50 border border-slate-200/60 rounded-xl hover:border-blue-300 transition-all flex flex-col gap-3">
+                                    <div>
+                                        <h4 class="font-bold text-slate-800 text-base" x-text="template.name"></h4>
+                                        <p class="text-xs text-slate-500 mt-1" x-text="template.description || 'Digitized official IPCRF template'"></p>
+                                    </div>
+                                    <div class="flex justify-between items-center text-xs text-slate-400">
+                                        <span><i class="far fa-list-alt mr-1"></i> <span x-text="template.field_count"></span> fillable fields</span>
+                                    </div>
+                                    <button @click="startFillForm(template.id)" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-xl text-sm flex items-center justify-center gap-2 transition active:scale-95 shadow-sm shadow-blue-600/10 cursor-pointer">
+                                        <i data-lucide="pen-tool" class="w-4 h-4"></i> Fill Out Online
+                                    </button>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Right: Submission history & drafts -->
+                    <div class="lg:col-span-2 glass-panel rounded-2xl shadow-sm p-6 border border-slate-200/60 flex flex-col min-h-[300px]">
+                        <div class="flex items-center gap-3 border-b border-slate-100 pb-4 mb-4">
+                            <div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+                                <i data-lucide="history" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-slate-800 text-lg">Submissions & Drafts</h3>
+                                <p class="text-xs text-slate-500">Track the status of your online submissions</p>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto rounded-xl border border-slate-100 flex-1">
+                            <table class="w-full text-left border-collapse text-sm">
+                                <thead>
+                                    <tr class="bg-slate-50 text-slate-500 border-b border-slate-200 text-xs font-semibold uppercase tracking-wider">
+                                        <th class="px-6 py-4">IPCRF Template</th>
+                                        <th class="px-6 py-4">Status</th>
+                                        <th class="px-6 py-4">Last Updated</th>
+                                        <th class="px-6 py-4 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-if="submissions.length === 0">
+                                        <tr>
+                                            <td colspan="4" class="px-6 py-12 text-center text-slate-400">
+                                                <i data-lucide="inbox" class="w-10 h-10 mx-auto mb-3 opacity-40"></i>
+                                                <p class="font-medium text-sm">No submissions or drafts yet.</p>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                    <template x-for="sub in submissions" :key="sub.id">
+                                        <tr class="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                                            <td class="px-6 py-4 font-semibold text-slate-800" x-text="sub.template_name"></td>
+                                            <td class="px-6 py-4">
+                                                <span class="px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider" :class="statusBadgeClass(sub.status)" x-text="sub.status_label"></span>
+                                            </td>
+                                            <td class="px-6 py-4 text-slate-500" x-text="sub.updated_at"></td>
+                                            <td class="px-6 py-4 text-right">
+                                                <div class="flex justify-end gap-2">
+                                                    <template x-if="sub.status === 'draft'">
+                                                        <button @click="startFillForm(sub.template_id)" class="text-blue-600 hover:text-blue-800 font-semibold text-xs flex items-center gap-1 cursor-pointer">
+                                                            <i data-lucide="edit-2" class="w-3.5 h-3.5"></i> Edit Draft
+                                                        </button>
+                                                    </template>
+                                                    <template x-if="sub.status === 'approved'">
+                                                        <a :href="'/my/submissions/' + sub.id + '/download'" class="bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition cursor-pointer">
+                                                            <i data-lucide="download" class="w-3.5 h-3.5"></i> Download XLSX
+                                                        </a>
+                                                    </template>
+                                                    <template x-if="['submitted', 'under_review', 'rejected'].includes(sub.status)">
+                                                        <span class="text-xs text-slate-400 font-medium">Locked (Review)</span>
+                                                    </template>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FORM FILLING TAB -->
+            <div x-show="activeTab === 'fillForm'" x-transition class="space-y-6 w-full h-[calc(100vh-140px)] flex flex-col" style="display: none;">
+                <!-- Header Panel -->
+                <div class="flex flex-wrap items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm flex-shrink-0">
+                    <div class="flex items-center gap-3">
+                        <button @click="exitForm()" class="w-9 h-9 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-lg flex items-center justify-center transition border border-slate-200/40 cursor-pointer">
+                            <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                        </button>
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-800" x-text="fillingTemplate ? fillingTemplate.name : ''"></h2>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span class="text-xs text-slate-400 font-medium flex items-center gap-1">
+                                    <i data-lucide="user" class="w-3.5 h-3.5"></i> Filling as: {{ $name }}
+                                </span>
+                                <span class="text-xs text-slate-300">•</span>
+                                <span class="text-xs font-semibold text-indigo-600 flex items-center gap-1" x-show="savingStatus">
+                                    <i class="fas fa-spinner fa-spin" x-show="savingStatus.includes('Saving')"></i>
+                                    <i data-lucide="cloud-check" class="w-3.5 h-3.5" x-show="savingStatus.includes('saved')"></i>
+                                    <span x-text="savingStatus"></span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button @click="saveDraft(false)" class="px-5 py-2.5 border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 transition active:scale-95 cursor-pointer flex items-center gap-2">
+                            <i data-lucide="save" class="w-4 h-4"></i> Save Draft
+                        </button>
+                        <button @click="submitForm()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-sm transition active:scale-95 shadow-sm shadow-blue-600/10 cursor-pointer flex items-center gap-2">
+                            <i data-lucide="send" class="w-4 h-4"></i> Submit Final IPCRF
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Grid Sheet Content Area -->
+                <div class="flex-1 ipcrf-table-wrapper" x-html="formHtml"></div>
+            </div>
             
+            <!-- LOADING OVERLAY -->
+            <div x-show="loadingIpcrf" x-transition class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50" style="display: none;">
+                <div class="bg-white p-6 rounded-2xl shadow-xl flex items-center gap-3">
+                    <div class="animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div>
+                    <span class="font-bold text-slate-800 text-base">Processing Form...</span>
+                </div>
+            </div>
+            
+        </div>
         </main>
     </div>
 
@@ -819,6 +1654,75 @@
                 }
             @endif
             return true;
+        }
+
+        function initSpreadsheetResizers() {
+            // Column Resizers
+            document.querySelectorAll('.col-resizer').forEach((resizer) => {
+                resizer.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    resizer.classList.add('dragging');
+                    const startX = e.clientX;
+                    const thEl = resizer.closest('.ipcrf-hdr-col');
+                    if (!thEl) return;
+
+                    const colIdx = parseInt(thEl.getAttribute('data-col-idx'));
+
+                    // Retrieve the corresponding <col> in colgroup
+                    // In our table parser we added 1 col at the start, so colIndex in colgroup is colIdx + 1
+                    const colEl = document.querySelector(`.ipcrf-preview-table colgroup col:nth-child(${colIdx + 1})`);
+                    if (!colEl) return;
+
+                    const startWidth = colEl.getBoundingClientRect().width || 80;
+
+                    const onMouseMove = (moveEvent) => {
+                        const dx = moveEvent.clientX - startX;
+                        const newWidth = Math.max(30, startWidth + dx);
+                        colEl.style.width = newWidth + 'px';
+                    };
+
+                    const onMouseUp = () => {
+                        resizer.classList.remove('dragging');
+                        document.removeEventListener('mousemove', onMouseMove);
+                        document.removeEventListener('mouseup', onMouseUp);
+                    };
+
+                    document.addEventListener('mousemove', onMouseMove);
+                    document.addEventListener('mouseup', onMouseUp);
+                });
+            });
+
+            // Row Resizers
+            document.querySelectorAll('.row-resizer').forEach((resizer) => {
+                resizer.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    resizer.classList.add('dragging');
+                    const startY = e.clientY;
+                    const trEl = resizer.closest('tr');
+                    if (!trEl) return;
+
+                    const startHeight = trEl.getBoundingClientRect().height;
+
+                    const onMouseMove = (moveEvent) => {
+                        const dy = moveEvent.clientY - startY;
+                        const newHeight = Math.max(18, startHeight + dy);
+                        trEl.style.height = newHeight + 'px';
+                    };
+
+                    const onMouseUp = () => {
+                        resizer.classList.remove('dragging');
+                        document.removeEventListener('mousemove', onMouseMove);
+                        document.removeEventListener('mouseup', onMouseUp);
+                    };
+
+                    document.addEventListener('mousemove', onMouseMove);
+                    document.addEventListener('mouseup', onMouseUp);
+                });
+            });
         }
     </script>
 </body>

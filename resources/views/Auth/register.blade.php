@@ -406,10 +406,9 @@
                     <p>Sign Up to your DSWD account to continue</p>
                 </div>
 
-             <!-- Change form to not use Laravel routing -->
+             <!-- IPCRF Registration Form -->
 <form id="registerForm">
-    <!-- Keep all your existing form fields exactly the same, just remove @csrf -->
-    
+
     <div class="form-row">
         <div class="form-group">
             <label for="lastname">Lastname</label>
@@ -427,6 +426,27 @@
     </div>
 
     <div class="form-group">
+        <label for="position_id">Position / Designation *</label>
+        <select id="position_id" name="position_id" required>
+            <option value="" disabled selected>Select your position</option>
+            @foreach(\App\Models\Position::active()->orderBy('name')->get() as $pos)
+            <option value="{{ $pos->id }}">{{ $pos->name }}</option>
+            @endforeach
+        </select>
+    </div>
+
+    <div class="form-row">
+        <div class="form-group">
+            <label for="department">Department</label>
+            <input type="text" id="department" name="department" placeholder="e.g. RPMO">
+        </div>
+        <div class="form-group">
+            <label for="office">Office / Division</label>
+            <input type="text" id="office" name="office" placeholder="e.g. Finance Division">
+        </div>
+    </div>
+
+    <div class="form-group">
         <label for="password">Password</label>
         <input type="password" id="password" name="password" required>
     </div>
@@ -434,72 +454,6 @@
     <div class="form-group">
         <label for="password_confirmation">Confirm Password</label>
         <input type="password" id="password_confirmation" name="password_confirmation" required>
-    </div>
-
-    <div class="form-group">
-        <label for="role">Designation</label>
-        <select id="role" name="role" required>
-            <option value="" disabled selected>Select your designation</option>
-            
-            <optgroup label="CITY/ MUNICIPAL OPERATIONS OFFICE">
-                <option value="City/Municipal Links">City/Municipal Links</option>
-                <option value="City/Municipal Roving Bookkeeper">City/Municipal Roving Bookkeeper</option>
-                <option value="Social Welfare Assistant">Social Welfare Assistant</option>
-            </optgroup>
-            
-            <optgroup label="PROVINCIAL OPERATIONS OFFICE">
-                <option value="Provincial Link">Provincial Link</option>
-                <option value="Social Welfare Officer III">Social Welfare Officer III</option>
-                <option value="Systems Coordinators">Systems Coordinators</option>
-                <option value="Cluster Beneficiary Data Officer">Cluster Beneficiary Data Officer</option>
-                <option value="Cluster Compliance Verification Officer">Cluster Compliance Verification Officer</option>
-                <option value="Provincial Roving Bookkeeper">Provincial Roving Bookkeeper</option>
-                <option value="Provincial Monitoring and Evaluation Officer">Provincial Monitoring and Evaluation Officer</option>
-                <option value="Provincial Grievance Officer">Provincial Grievance Officer</option>
-                <option value="Provincial Family Development Session/Capability Building Focal Person">Provincial Family Development Session/Capability Building Focal Person</option>
-                <option value="Provincial Partnership Officer">Provincial Partnership Officer</option>
-                <option value="Administrative Assistant II">Administrative Assistant II</option>
-                <option value="Admin Aide IV">Admin Aide IV</option>
-                <option value="Systems Support Staff">Systems Support Staff</option>
-            </optgroup>
-            
-            <optgroup label="REGIONAL PROGRAM MANAGEMENT OFFICE">
-                <option value="Regional Information Technology Officer II">Regional Information Technology Officer II</option>
-                <option value="Regional Information Technology Officer I">Regional Information Technology Officer I</option>
-                <option value="Regional Compliance Verification Officer">Regional Compliance Verification Officer</option>
-                <option value="Regional Beneficiary Data Officer">Regional Beneficiary Data Officer</option>
-                <option value="Cash Grants Focal">Cash Grants Focal</option>
-                <option value="System Support Staff">System Support Staff</option>
-                <option value="Regional Grievance Officer">Regional Grievance Officer</option>
-                <option value="Information and Communication Technology Administrator">Information and Communication Technology Administrator</option>
-                <option value="Regional Case Manager">Regional Case Manager</option>
-                <option value="Case Management Technical Officer">Case Management Technical Officer</option>
-                <option value="Case Management Technical Staff">Case Management Technical Staff</option>
-                <option value="Family Development Session Focal Person">Family Development Session Focal Person</option>
-                <option value="Family Development Session Technical Officer">Family Development Session Technical Officer</option>
-                <option value="Family Development Session Technical Staff">Family Development Session Technical Staff</option>
-                <option value="Institutional Partnership Development Officer - National Government Agencies">Institutional Partnership Development Officer - National Government Agencies</option>
-                <option value="Institutional Partnership Development Officer - Civil Society Organizations">Institutional Partnership Development Officer - Civil Society Organizations</option>
-                <option value="Institutional Partnership and Support Services Technical Staff">Institutional Partnership and Support Services Technical Staff</option>
-                <option value="MCCT Focal">MCCT Focal</option>
-                <option value="Social Safeguards and Intervention Development Technical Officer">Social Safeguards and Intervention Development Technical Officer</option>
-                <option value="Social Safeguards and Intervention Development Technical Staff">Social Safeguards and Intervention Development Technical Staff</option>
-                <option value="Indigenous People Focal">Indigenous People Focal</option>
-                <option value="Computer Maintenance Technologist II">Computer Maintenance Technologist II</option>
-                <option value="Administrative Aide IV">Administrative Aide IV</option>
-                <option value="Training Specialist II">Training Specialist II</option>
-                <option value="Training Specialist I">Training Specialist I</option>
-                <option value="Knowledge Management Focal">Knowledge Management Focal</option>
-                <option value="Administrative Officer">Administrative Officer</option>
-                <option value="Administrative Officer II">Administrative Officer II</option>
-                <option value="Financial Analyst II">Financial Analyst II</option>
-                <option value="Administrative Assistant II">Administrative Assistant II</option>
-                <option value="Social Welfare Assistant - Admin">Social Welfare Assistant - Admin</option>
-                <option value="Administrative Assistant I">Administrative Assistant I</option>
-                <option value="Regional Monitoring and Evaluation Officer">Regional Monitoring and Evaluation Officer</option>
-                <option value="Monitoring and Evaluation Technical Staff">Monitoring and Evaluation Technical Staff</option>
-            </optgroup>
-        </select>
     </div>
 
     <button type="submit" class="btn-primary">Sign Up</button>
@@ -568,36 +522,36 @@
 
     // Handle form submission with JavaScript
     document.getElementById('registerForm').addEventListener('submit', async function(e) {
-        e.preventDefault(); // Stop normal form submission
-        
-        // Get form data
+        e.preventDefault();
+
+        const posEl  = document.getElementById('position_id');
         const formData = {
-            lastname: document.getElementById('lastname').value.trim(),
-            firstname: document.getElementById('firstname').value.trim(),
-            email: document.getElementById('email').value.trim(),
-            password: document.getElementById('password').value,
+            lastname:              document.getElementById('lastname').value.trim(),
+            firstname:             document.getElementById('firstname').value.trim(),
+            email:                 document.getElementById('email').value.trim(),
+            password:              document.getElementById('password').value,
             password_confirmation: document.getElementById('password_confirmation').value,
-            role: document.getElementById('role').value
+            position_id:           posEl ? posEl.value : '',
+            department:            (document.getElementById('department') || {value:''}).value.trim(),
+            office:                (document.getElementById('office') || {value:''}).value.trim(),
         };
 
-        // Basic validation
-        if (!formData.lastname || !formData.firstname || !formData.email || 
-            !formData.password || !formData.role) {
-            showModal('error', 'Validation Error', 'Please fill in all fields');
+        if (!formData.lastname || !formData.firstname || !formData.email || !formData.password) {
+            showModal('error', 'Validation Error', 'Please fill in all required fields');
             return;
         }
-
         if (formData.password !== formData.password_confirmation) {
             showModal('error', 'Validation Error', 'Passwords do not match');
             return;
         }
 
         try {
-            // Send data to PHP backend
-            const response = await fetch('register.php', {
+            const response = await fetch('{{ route("register") }}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'X-Requested-With': 'XMLHttpRequest',
                 },
                 body: JSON.stringify(formData)
             });
@@ -606,7 +560,6 @@
 
             if (result.success) {
                 showModal('success', 'Registration Successful!', result.message);
-                // Clear form
                 document.getElementById('registerForm').reset();
             } else {
                 showModal('error', 'Registration Failed', result.message);
@@ -617,7 +570,6 @@
             console.error('Error:', error);
         }
     });
-</script>
+    </script>
 </body>
 </html>
-

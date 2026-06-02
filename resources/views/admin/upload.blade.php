@@ -550,7 +550,7 @@
                         <i class="fas fa-cloud-upload-alt"></i>
                     </div>
                     <h3 id="upload-text">Click to upload or drag and drop</h3>
-                    <p>Maximum file size 10MB</p>
+                    <p>Maximum file size 100MB</p>
                     <div class="file-types">
                         <span class="file-type">PDF</span>
                         <span class="file-type">Excel</span>

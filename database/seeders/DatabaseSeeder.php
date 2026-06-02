@@ -16,6 +16,67 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        // 0. Seed Positions
+        $positions = [
+            ["name" => "City/Municipal Links", "department" => "CITY/ MUNICIPAL OPERATIONS OFFICE"],
+            ["name" => "City/Municipal Roving Bookkeeper", "department" => "CITY/ MUNICIPAL OPERATIONS OFFICE"],
+            ["name" => "Social Welfare Assistant", "department" => "CITY/ MUNICIPAL OPERATIONS OFFICE"],
+            ["name" => "Provincial Link", "department" => "PROVINCIAL OPERATIONS OFFICE"],
+            ["name" => "Social Welfare Officer III", "department" => "PROVINCIAL OPERATIONS OFFICE"],
+            ["name" => "Systems Coordinators", "department" => "PROVINCIAL OPERATIONS OFFICE"],
+            ["name" => "Cluster Beneficiary Data Officer", "department" => "PROVINCIAL OPERATIONS OFFICE"],
+            ["name" => "Cluster Compliance Verification Officer", "department" => "PROVINCIAL OPERATIONS OFFICE"],
+            ["name" => "Provincial Roving Bookkeeper", "department" => "PROVINCIAL OPERATIONS OFFICE"],
+            ["name" => "Provincial Monitoring and Evaluation Officer", "department" => "PROVINCIAL OPERATIONS OFFICE"],
+            ["name" => "Provincial Grievance Officer", "department" => "PROVINCIAL OPERATIONS OFFICE"],
+            ["name" => "Provincial Family Development Session/Capability Building Focal Person", "department" => "PROVINCIAL OPERATIONS OFFICE"],
+            ["name" => "Provincial Partnership Officer", "department" => "PROVINCIAL OPERATIONS OFFICE"],
+            ["name" => "Administrative Assistant II", "department" => "PROVINCIAL OPERATIONS OFFICE"],
+            ["name" => "Admin Aide IV", "department" => "PROVINCIAL OPERATIONS OFFICE"],
+            ["name" => "Systems Support Staff", "department" => "PROVINCIAL OPERATIONS OFFICE"],
+            ["name" => "Regional Information Technology Officer II", "department" => "REGIONAL PROGRAM MANAGEMENT OFFICE"],
+            ["name" => "Regional Information Technology Officer I", "department" => "REGIONAL PROGRAM MANAGEMENT OFFICE"],
+            ["name" => "Regional Compliance Verification Officer", "department" => "REGIONAL PROGRAM MANAGEMENT OFFICE"],
+            ["name" => "Regional Beneficiary Data Officer", "department" => "REGIONAL PROGRAM MANAGEMENT OFFICE"],
+            ["name" => "Cash Grants Focal", "department" => "REGIONAL PROGRAM MANAGEMENT OFFICE"],
+            ["name" => "System Support Staff", "department" => "REGIONAL PROGRAM MANAGEMENT OFFICE"],
+            ["name" => "Regional Grievance Officer", "department" => "REGIONAL PROGRAM MANAGEMENT OFFICE"],
+            ["name" => "Information and Communication Technology Administrator", "department" => "REGIONAL PROGRAM MANAGEMENT OFFICE"],
+            ["name" => "Regional Case Manager", "department" => "REGIONAL PROGRAM MANAGEMENT OFFICE"],
+            ["name" => "Case Management Technical Officer", "department" => "REGIONAL PROGRAM MANAGEMENT OFFICE"],
+            ["name" => "Case Management Technical Staff", "department" => "REGIONAL PROGRAM MANAGEMENT OFFICE"],
+            ["name" => "Family Development Session Focal Person", "department" => "REGIONAL PROGRAM MANAGEMENT OFFICE"],
+            ["name" => "Family Development Session Technical Officer", "department" => "REGIONAL PROGRAM MANAGEMENT OFFICE"],
+            ["name" => "Family Development Session Technical Staff", "department" => "REGIONAL PROGRAM MANAGEMENT OFFICE"],
+            ["name" => "Institutional Partnership Development Officer - National Government Agencies", "department" => "REGIONAL PROGRAM MANAGEMENT OFFICE"],
+            ["name" => "Institutional Partnership Development Officer - Civil Society Organizations", "department" => "REGIONAL PROGRAM MANAGEMENT OFFICE"],
+            ["name" => "Institutional Partnership and Support Services Technical Staff", "department" => "REGIONAL PROGRAM MANAGEMENT OFFICE"],
+            ["name" => "MCCT Focal", "department" => "REGIONAL PROGRAM MANAGEMENT OFFICE"],
+            ["name" => "Social Safeguards and Intervention Development Technical Officer", "department" => "REGIONAL PROGRAM MANAGEMENT OFFICE"],
+            ["name" => "Social Safeguards and Intervention Development Technical Staff", "department" => "REGIONAL PROGRAM MANAGEMENT OFFICE"],
+            ["name" => "Indigenous People Focal", "department" => "REGIONAL PROGRAM MANAGEMENT OFFICE"],
+            ["name" => "Computer Maintenance Technologist II", "department" => "REGIONAL PROGRAM MANAGEMENT OFFICE"],
+            ["name" => "Administrative Aide IV", "department" => "REGIONAL PROGRAM MANAGEMENT OFFICE"],
+            ["name" => "Training Specialist II", "department" => "REGIONAL PROGRAM MANAGEMENT OFFICE"],
+            ["name" => "Training Specialist I", "department" => "REGIONAL PROGRAM MANAGEMENT OFFICE"],
+            ["name" => "Knowledge Management Focal", "department" => "REGIONAL PROGRAM MANAGEMENT OFFICE"],
+            ["name" => "Administrative Officer", "department" => "REGIONAL PROGRAM MANAGEMENT OFFICE"],
+            ["name" => "Administrative Officer II", "department" => "REGIONAL PROGRAM MANAGEMENT OFFICE"],
+            ["name" => "Financial Analyst II", "department" => "REGIONAL PROGRAM MANAGEMENT OFFICE"],
+            ["name" => "Administrative Assistant II", "department" => "REGIONAL PROGRAM MANAGEMENT OFFICE"],
+            ["name" => "Social Welfare Assistant - Admin", "department" => "REGIONAL PROGRAM MANAGEMENT OFFICE"],
+            ["name" => "Administrative Assistant I", "department" => "REGIONAL PROGRAM MANAGEMENT OFFICE"],
+            ["name" => "Regional Monitoring and Evaluation Officer", "department" => "REGIONAL PROGRAM MANAGEMENT OFFICE"],
+            ["name" => "Monitoring and Evaluation Technical Staff", "department" => "REGIONAL PROGRAM MANAGEMENT OFFICE"]
+        ];
+
+        foreach ($positions as $pos) {
+            \App\Models\Position::firstOrCreate(
+                ['name' => $pos['name']],
+                ['description' => "Department/Office: " . $pos['department'], 'is_active' => true]
+            );
+        }
+
         // 1. Seed Users
         $superadmin = User::create([
             'firstname' => 'Super',

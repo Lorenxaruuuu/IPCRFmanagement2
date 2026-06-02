@@ -55,6 +55,7 @@ class AuthController extends Controller
 
             // Successful authentication
             Session::put('user', [
+                'id' => $user->id,
                 'employee_id' => $user->employee_id,
                 'name' => $user->name,
                 'role' => $user->role,
@@ -228,6 +229,7 @@ public function store(Request $request)
 
             // Sync with session
             Session::put('user', [
+                'id' => $user->id,
                 'employee_id' => $user->employee_id,
                 'name' => $user->name,
                 'role' => $user->role,

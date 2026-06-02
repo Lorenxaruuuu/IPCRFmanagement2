@@ -24,7 +24,7 @@ class FormController extends Controller
             'title' => 'required|string|max:255',
             'category' => 'required|in:Template,Guidelines,Reference',
             'description' => 'nullable|string',
-            'file' => 'required|file|mimes:pdf,doc,docx,xls,xlsx|max:10240',
+            'file' => 'required|file|mimes:pdf,doc,docx,xls,xlsx|max:102400',
         ]);
 
         $file = $request->file('file');

@@ -251,6 +251,82 @@
                             </table>
                         </div>
                     </div>
+
+                    <!-- PENDING ROLE CHANGES LIST -->
+                    <div class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden flex flex-col mt-6">
+                        <div class="p-6 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                            <div>
+                                <h3 class="text-lg font-bold text-slate-800">Pending Role Changes</h3>
+                                <p class="text-xs text-slate-500">Users requesting to change their current role</p>
+                            </div>
+                            <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
+                                {{ $pendingRoleChanges->count() }} Pending
+                            </span>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="text-xs font-bold text-slate-400 border-b border-slate-100 bg-slate-50/20 uppercase tracking-wider">
+                                        <th class="py-4 px-6 font-semibold">User Details</th>
+                                        <th class="py-4 px-6 font-semibold text-center">Current Role</th>
+                                        <th class="py-4 px-6 font-semibold text-center">Requested Role</th>
+                                        <th class="py-4 px-6 font-semibold text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100 text-sm">
+                                    @forelse($pendingRoleChanges as $user)
+                                        <tr class="hover:bg-slate-50/50 transition-colors">
+                                            <td class="py-4 px-6">
+                                                <div class="font-bold text-slate-800">{{ $user->name }}</div>
+                                                <div class="text-xs text-slate-400 font-mono">{{ $user->employee_id }}</div>
+                                            </td>
+                                            <td class="py-4 px-6 text-center">
+                                                <span class="inline-block px-3 py-1 rounded-full text-xs font-bold capitalize bg-slate-100 text-slate-800 border border-slate-200">
+                                                    {{ $user->role }}
+                                                </span>
+                                            </td>
+                                            <td class="py-4 px-6 text-center">
+                                                <span class="inline-block px-3 py-1 rounded-full text-xs font-bold capitalize bg-indigo-100 text-indigo-800 border border-indigo-200">
+                                                    {{ $user->requested_role }}
+                                                </span>
+                                            </td>
+                                            <td class="py-4 px-6 text-right">
+                                                <div class="flex items-center justify-end gap-2">
+                                                    <!-- Approve -->
+                                                    <form action="{{ route('superadmin.users.approveRole', $user->id) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to approve this role change?')">
+                                                        @csrf
+                                                        <button type="submit" class="inline-flex items-center justify-center p-2 rounded-xl text-emerald-600 hover:bg-emerald-50 border border-transparent hover:border-emerald-200 transition-all" title="Approve Role Change">
+                                                            <i data-lucide="check" class="w-5 h-5"></i>
+                                                        </button>
+                                                    </form>
+                                                    <!-- Reject -->
+                                                    <form action="{{ route('superadmin.users.rejectRole', $user->id) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to reject this role change request?')">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="inline-flex items-center justify-center p-2 rounded-xl text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-all" title="Reject Role Change">
+                                                            <i data-lucide="x" class="w-5 h-5"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="4" class="py-12 text-center text-slate-400">
+                                                <div class="max-w-xs mx-auto space-y-3">
+                                                    <div class="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-300">
+                                                        <i data-lucide="shield-check" class="w-6 h-6"></i>
+                                                    </div>
+                                                    <p class="text-sm font-semibold">No pending role changes</p>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- ACTIVE / APPROVED USERS & STATS -->

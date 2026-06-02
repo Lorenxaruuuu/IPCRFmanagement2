@@ -731,6 +731,97 @@
 
                         <hr class="border-slate-100 my-6">
 
+                        <!-- Role Change Request section -->
+                        <form method="POST" action="{{ route('profile.requestRoleChange') }}">
+                            @csrf
+                            <div>
+                                <h4 class="font-bold text-slate-800 text-lg mb-2">Role Change Request</h4>
+                                <p class="text-slate-500 text-base mb-4">Request a change in your account role. This is subject to admin approval.</p>
+                                
+                                <div class="grid grid-cols-1 gap-6">
+                                    <div class="flex flex-col">
+                                        <label class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2.5">Current Role: <span class="text-blue-600">{{ ucfirst($role) }}</span></label>
+                                        
+                                        @if($dbUser && $dbUser->requested_role)
+                                            <div class="p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl flex items-center gap-3 shadow-sm mb-2">
+                                                <i data-lucide="clock" class="w-5 h-5 text-amber-600"></i>
+                                                <span class="font-medium text-sm">You have a pending request for role: {{ ucfirst($dbUser->requested_role) }}. Please wait for admin approval.</span>
+                                            </div>
+                                        @else
+                                            <div class="relative flex items-center mt-2">
+                                                <select name="requested_role" required class="w-full px-5 py-3.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium text-base font-sans cursor-pointer">
+                                                    <option value="" disabled selected>Select new role</option>
+                                                    <optgroup label="CITY/ MUNICIPAL OPERATIONS OFFICE">
+                                                        <option value="City/Municipal Links">City/Municipal Links</option>
+                                                        <option value="City/Municipal Roving Bookkeeper">City/Municipal Roving Bookkeeper</option>
+                                                        <option value="Social Welfare Assistant">Social Welfare Assistant</option>
+                                                    </optgroup>
+                                                    <optgroup label="PROVINCIAL OPERATIONS OFFICE">
+                                                        <option value="Provincial Link">Provincial Link</option>
+                                                        <option value="Social Welfare Officer III">Social Welfare Officer III</option>
+                                                        <option value="Systems Coordinators">Systems Coordinators</option>
+                                                        <option value="Cluster Beneficiary Data Officer">Cluster Beneficiary Data Officer</option>
+                                                        <option value="Cluster Compliance Verification Officer">Cluster Compliance Verification Officer</option>
+                                                        <option value="Provincial Roving Bookkeeper">Provincial Roving Bookkeeper</option>
+                                                        <option value="Provincial Monitoring and Evaluation Officer">Provincial Monitoring and Evaluation Officer</option>
+                                                        <option value="Provincial Grievance Officer">Provincial Grievance Officer</option>
+                                                        <option value="Provincial Family Development Session/Capability Building Focal Person">Provincial Family Development Session/Capability Building Focal Person</option>
+                                                        <option value="Provincial Partnership Officer">Provincial Partnership Officer</option>
+                                                        <option value="Administrative Assistant II">Administrative Assistant II</option>
+                                                        <option value="Admin Aide IV">Admin Aide IV</option>
+                                                        <option value="Systems Support Staff">Systems Support Staff</option>
+                                                    </optgroup>
+                                                    <optgroup label="REGIONAL PROGRAM MANAGEMENT OFFICE">
+                                                        <option value="Regional Information Technology Officer II">Regional Information Technology Officer II</option>
+                                                        <option value="Regional Information Technology Officer I">Regional Information Technology Officer I</option>
+                                                        <option value="Regional Compliance Verification Officer">Regional Compliance Verification Officer</option>
+                                                        <option value="Regional Beneficiary Data Officer">Regional Beneficiary Data Officer</option>
+                                                        <option value="Cash Grants Focal">Cash Grants Focal</option>
+                                                        <option value="System Support Staff">System Support Staff</option>
+                                                        <option value="Regional Grievance Officer">Regional Grievance Officer</option>
+                                                        <option value="Information and Communication Technology Administrator">Information and Communication Technology Administrator</option>
+                                                        <option value="Regional Case Manager">Regional Case Manager</option>
+                                                        <option value="Case Management Technical Officer">Case Management Technical Officer</option>
+                                                        <option value="Case Management Technical Staff">Case Management Technical Staff</option>
+                                                        <option value="Family Development Session Focal Person">Family Development Session Focal Person</option>
+                                                        <option value="Family Development Session Technical Officer">Family Development Session Technical Officer</option>
+                                                        <option value="Family Development Session Technical Staff">Family Development Session Technical Staff</option>
+                                                        <option value="Institutional Partnership Development Officer - National Government Agencies">Institutional Partnership Development Officer - National Government Agencies</option>
+                                                        <option value="Institutional Partnership Development Officer - Civil Society Organizations">Institutional Partnership Development Officer - Civil Society Organizations</option>
+                                                        <option value="Institutional Partnership and Support Services Technical Staff">Institutional Partnership and Support Services Technical Staff</option>
+                                                        <option value="MCCT Focal">MCCT Focal</option>
+                                                        <option value="Social Safeguards and Intervention Development Technical Officer">Social Safeguards and Intervention Development Technical Officer</option>
+                                                        <option value="Social Safeguards and Intervention Development Technical Staff">Social Safeguards and Intervention Development Technical Staff</option>
+                                                        <option value="Indigenous People Focal">Indigenous People Focal</option>
+                                                        <option value="Computer Maintenance Technologist II">Computer Maintenance Technologist II</option>
+                                                        <option value="Administrative Aide IV">Administrative Aide IV</option>
+                                                        <option value="Training Specialist II">Training Specialist II</option>
+                                                        <option value="Training Specialist I">Training Specialist I</option>
+                                                        <option value="Knowledge Management Focal">Knowledge Management Focal</option>
+                                                        <option value="Administrative Officer">Administrative Officer</option>
+                                                        <option value="Administrative Officer II">Administrative Officer II</option>
+                                                        <option value="Financial Analyst II">Financial Analyst II</option>
+                                                        <option value="Administrative Assistant II">Administrative Assistant II</option>
+                                                        <option value="Social Welfare Assistant - Admin">Social Welfare Assistant - Admin</option>
+                                                        <option value="Administrative Assistant I">Administrative Assistant I</option>
+                                                        <option value="Regional Monitoring and Evaluation Officer">Regional Monitoring and Evaluation Officer</option>
+                                                        <option value="Monitoring and Evaluation Technical Staff">Monitoring and Evaluation Technical Staff</option>
+                                                    </optgroup>
+                                                </select>
+                                            </div>
+                                            <div class="flex justify-end mt-4">
+                                                <button type="submit" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-base shadow-sm transition active:scale-95 cursor-pointer">
+                                                    Submit Request
+                                                </button>
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+
+                        <hr class="border-slate-100 my-6">
+
                         <div class="flex justify-end gap-4">
                             <button type="button" @click="activeTab = 'home'" class="px-6 py-3 border border-slate-200 text-slate-600 rounded-xl font-semibold text-base hover:bg-slate-50 transition active:scale-95 cursor-pointer">Cancel</button>
                             <button type="submit" form="profileForm" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-base shadow-sm transition active:scale-95 cursor-pointer">Save Changes</button>

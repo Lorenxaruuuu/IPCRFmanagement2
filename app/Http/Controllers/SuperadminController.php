@@ -62,7 +62,11 @@ class SuperadminController extends Controller
             'viewers' => User::where('role', 'viewer')->count(),
         ];
 
-        return view('superadmin.dashboard', compact('pendingUsers', 'activeUsers', 'stats'));
+        $pendingRoleChanges = User::whereNotNull('requested_role')
+            ->orderBy('updated_at', 'desc')
+            ->get();
+
+        return view('superadmin.dashboard', compact('pendingUsers', 'activeUsers', 'stats', 'pendingRoleChanges'));
     }
 
     public function approve($id)
@@ -88,6 +92,40 @@ class SuperadminController extends Controller
         $user->delete();
 
         return back()->with('success', 'Registration request for ' . $name . ' has been rejected.');
+    }
+
+    public function approveRoleChange($id)
+    {
+        if (!$this->checkAccess()) {
+            return redirect()->route('login');
+        }
+
+        $user = User::findOrFail($id);
+        if ($user->requested_role) {
+            $newRole = $user->requested_role;
+            $user->update([
+                'role' => $newRole,
+                'requested_role' => null
+            ]);
+            return back()->with('success', 'Role change to ' . $newRole . ' for ' . $user->name . ' has been approved.');
+        }
+
+        return back()->with('error', 'No pending role change request for this user.');
+    }
+
+    public function rejectRoleChange($id)
+    {
+        if (!$this->checkAccess()) {
+            return redirect()->route('login');
+        }
+
+        $user = User::findOrFail($id);
+        if ($user->requested_role) {
+            $user->update(['requested_role' => null]);
+            return back()->with('success', 'Role change request for ' . $user->name . ' has been rejected.');
+        }
+
+        return back()->with('error', 'No pending role change request for this user.');
     }
 
     public function createAdmin(Request $request)

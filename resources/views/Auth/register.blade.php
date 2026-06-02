@@ -385,9 +385,9 @@
         <div class="left-panel">
             <div class="logo-section">
                 <div class="logo">
-                    <img src="{{ asset('images/dswd-logo.png') }}" alt="DSWD Logo">
-                    <img src="{{ asset('images/pantawid-logo.png') }}" alt="Pantawid Logo">
-                    <img src="{{ asset('images/bagong-pilipinas-logo.png') }}" alt="Bagong Pilipinas Logo">
+                    <img src="{{ asset('images/dswd.jpg') }}" alt="DSWD Logo">
+                    <img src="{{ asset('images/pantawid.jpg') }}" alt="Pantawid Logo">
+                    <img src="{{ asset('images/bagong.jpg') }}" alt="Bagong Pilipinas Logo">
                 </div>
             </div>
             

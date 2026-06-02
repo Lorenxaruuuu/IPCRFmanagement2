@@ -137,7 +137,7 @@ class IpcrfController extends Controller
             $userPosition = $currentUser?->position ?? ($sessionUser['position'] ?? 'none');
         }
 
-        return view('admin.dashboard-new', compact(
+        return view('admin.dashboard', compact(
             'stats',
             'announcements',
             'forms',

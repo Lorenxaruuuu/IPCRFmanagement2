@@ -417,62 +417,10 @@
                     <p>Sign in to your DSWD account to continue</p>
                 </div>
 
-                <!-- reCAPTCHA widget -->
-                <div class="g-recaptcha my-4" data-sitekey="{{ env('RECAPTCHA_SITE_KEY') }}"></div>
-                <input type="hidden" name="g-recaptcha-response" id="g-recaptcha-response">
-                <script src="https://www.google.com/recaptcha/api.js" async defer></script>
-                <script>
-                document.addEventListener('DOMContentLoaded', function() {
-                document.getElementById('loginForm').addEventListener('submit', async function(e) {
-                    e.preventDefault();
-                    // Show loading spinner
-                    document.getElementById('loadingOverlay').classList.add('active');
-                    const email = document.getElementById('email').value.trim();
-                    const password = document.getElementById('password').value;
-                    const remember = document.getElementById('remember').checked;
-                    const recaptchaResponse = grecaptcha.getResponse();
-                    const payload = { email, password, g_recaptcha_response: recaptchaResponse };
-                    try {
-                        const response = await fetch('login.php', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        });
-                        const result = await response.json();
-                        document.getElementById('loadingOverlay').classList.remove('active');
-                        if (result.success) {
-                            // Save user data and redirect as before
-                            const userData = {
-                                employee_id: result.user.employee_id,
-                                name: result.user.name,
-                                firstname: result.user.firstname,
-                                lastname: result.user.lastname,
-                                email: result.user.email,
-                                role: result.user.role,
-                                timestamp: new Date().toISOString()
-                            };
-                            if (remember) {
-                                localStorage.setItem('user', JSON.stringify(userData));
-                                localStorage.setItem('rememberMe', 'true');
-                            } else {
-                                sessionStorage.setItem('user', JSON.stringify(userData));
-                                localStorage.removeItem('user');
-                                localStorage.removeItem('rememberMe');
-                            }
-                            setTimeout(() => { window.location.href = result.redirect; }, 500);
-                        } else {
-                            alert(result.message || 'Login failed. Please try again.');
-                        }
-                    } catch (error) {
-                        document.getElementById('loadingOverlay').classList.remove('active');
-                        alert('Connection error. Please check your internet connection.');
-                        console.error('Error:', error);
-                    }
-                });
-                }); // end DOMContentLoaded
-                </script>
+                <!-- EmailJS -->
+                <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/index.min.js"></script>
 
-               <form method="POST" action="{{ route('login.post') }}" id="loginForm">
+                <form method="POST" action="{{ route('login.post') }}" id="loginForm">
                     @csrf
                     
                     <div class="form-group">
@@ -485,6 +433,11 @@
                         <input type="password" id="password" name="password" required>
                     </div>
 
+                    <!-- reCAPTCHA widget -->
+                    <div class="g-recaptcha" data-sitekey="{{ env('RECAPTCHA_SITE_KEY') }}" style="margin-bottom: 25px; display: flex; justify-content: center;"></div>
+                    <input type="hidden" name="g-recaptcha-response" id="g-recaptcha-response">
+                    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+
                     <div class="form-options">
                         <div class="remember-me">
                             <input type="checkbox" id="remember" name="remember">
@@ -493,7 +446,18 @@
                         <a href="#" class="forgot-password">Forgot Password?</a>
                     </div>
 
-                    <button type="submit" class="btn-primary">Sign In to System</button>
+                    <!-- Verification Code Section (Hidden by default) -->
+                    <div id="verificationSection" style="display: none; margin-bottom: 20px;">
+                        <div style="background: #e8f4fd; border: 1px solid #b3d9e8; border-radius: 10px; padding: 15px; margin-bottom: 15px;">
+                            <p style="font-size: 13px; color: #0066cc; margin: 0; font-weight: 600;">✓ Verification code sent to your email</p>
+                        </div>
+                        <div class="form-group">
+                            <label for="verificationCode">Enter Verification Code</label>
+                            <input type="text" id="verificationCode" name="verificationCode" placeholder="Enter 6-digit code" maxlength="6" inputmode="numeric" style="font-size: 18px; letter-spacing: 5px; text-align: center;">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-primary" id="submitBtn">Sign In to System</button>
 
                     <div class="signup-prompt">
                         <p>Don't have an account? <a href="{{ route('register') }}">SIGN UP</a></p>
@@ -519,13 +483,16 @@
     </div>
 
   <script>
+    let verificationCodeSent = false;
+    let storedVerificationCode = null;
+    let currentEmail = null;
+
     // Load stored user info on page load
-    window.addEventListener('DOMContentLoaded', function() {
+    window.addEventListener('DOMContentLoaded', async function() {
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
             try {
                 const user = JSON.parse(storedUser);
-                // Auto-fill email if remember me was checked
                 if (user && (user.email || user.employee_id)) {
                     document.getElementById('email').value = user.email || user.employee_id;
                     document.getElementById('remember').checked = true;
@@ -536,15 +503,159 @@
         }
     });
 
+    // Generate verification code
+    function generateVerificationCode() {
+        return Math.floor(100000 + Math.random() * 900000).toString();
+    }
+
+    // Send verification email via EmailJS REST API
+    async function sendVerificationEmail(email, code) {
+        try {
+            // Validate inputs
+            if (!email || !code) {
+                console.error('Invalid email or code:', { email, code });
+                alert('Invalid email address or code. Please try again.');
+                return false;
+            }
+
+            const serviceId = '{{ env("EMAILJS_SERVICE_ID") }}';
+            const templateId = '{{ env("EMAILJS_TEMPLATE_ID") }}';
+            const publicKey = '{{ env("EMAILJS_PUBLIC_KEY") }}';
+
+            // Check if environment variables are configured
+            if (!serviceId || !templateId || !publicKey) {
+                console.error('Missing EmailJS configuration:', { 
+                    serviceId: serviceId ? 'SET' : 'MISSING',
+                    templateId: templateId ? 'SET' : 'MISSING',
+                    publicKey: publicKey ? 'SET' : 'MISSING'
+                });
+                alert('Email service is not properly configured. Please contact IT support.');
+                return false;
+            }
+
+            console.log('Sending email via EmailJS REST API...', { email, code });
+            
+            const payload = {
+                service_id: serviceId,
+                template_id: templateId,
+                user_id: publicKey,
+                template_params: {
+                    to_email: email,
+                    verification_code: code,
+                    user_email: email,
+                    message: `Your verification code is: ${code}. This code expires in 10 minutes.`
+                }
+            };
+
+            console.log('EmailJS Payload:', JSON.stringify(payload, null, 2));
+
+            const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const responseText = await response.text();
+            console.log('EmailJS Response:', response.status, responseText);
+
+            if (response.ok) {
+                console.log('Email sent successfully via REST API');
+                return true;
+            } else {
+                console.error('EmailJS REST API Error:', response.status, responseText);
+                
+                // Provide helpful error messages
+                if (responseText.includes('recipients address is empty')) {
+                    alert('Email configuration error: Check your EmailJS template setup. The "to_email" parameter may not be configured correctly in your template.');
+                } else if (responseText.includes('Invalid service ID')) {
+                    alert('Email service configuration error. Please contact IT support.');
+                } else {
+                    alert('Failed to send verification code: ' + responseText);
+                }
+                return false;
+            }
+        } catch (error) {
+            console.error('Fetch Error:', error);
+            alert('Failed to send verification code. Please try again. Error: ' + error.message);
+            return false;
+        }
+    }
+
     document.getElementById('loginForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         
-        // Show loading spinner
-        document.getElementById('loadingOverlay').classList.add('active');
-        
         const email = document.getElementById('email').value.trim();
         const password = document.getElementById('password').value;
+        const verificationCode = document.getElementById('verificationCode').value.trim();
         const remember = document.getElementById('remember').checked;
+        const recaptchaResponse = grecaptcha.getResponse();
+
+        // Check if this is a superadmin account (skip verification)
+        const isSuperadmin = email.toLowerCase().includes('superadmin') || email.toLowerCase() === 'superadmin@deped.gov.ph' || email.toLowerCase() === 'superadmin@dswd.gov.ph';
+
+        // STEP 1: Send verification code (skip for superadmin)
+        if (!verificationCodeSent && !isSuperadmin) {
+            // Validate reCAPTCHA
+            if (!recaptchaResponse) {
+                alert('Please complete the reCAPTCHA verification.');
+                return;
+            }
+
+            // Show loading spinner
+            document.getElementById('loadingOverlay').classList.add('active');
+            document.getElementById('loadingOverlay').querySelector('.loading-text').textContent = 'Sending verification code...';
+
+            // Generate and send code
+            const code = generateVerificationCode();
+            storedVerificationCode = code;
+            currentEmail = email;
+
+            const emailSent = await sendVerificationEmail(email, code);
+            
+            document.getElementById('loadingOverlay').classList.remove('active');
+            document.getElementById('loadingOverlay').querySelector('.loading-text').textContent = 'Signing in...';
+
+            if (emailSent) {
+                // Show verification section and hide login fields
+                document.getElementById('verificationSection').style.display = 'block';
+                document.getElementById('email').disabled = true;
+                document.getElementById('password').disabled = true;
+                document.getElementById('remember').disabled = true;
+                document.querySelector('.forgot-password').style.pointerEvents = 'none';
+                document.querySelector('.forgot-password').style.opacity = '0.5';
+                
+                document.getElementById('submitBtn').textContent = 'Verify Code';
+                verificationCodeSent = true;
+                
+                // Focus on verification code input
+                document.getElementById('verificationCode').focus();
+            }
+            return;
+        }
+
+        // STEP 2: Verify code (skip for superadmin) and login
+        if (!isSuperadmin && !verificationCode) {
+            alert('Please enter the verification code sent to your email.');
+            return;
+        }
+
+        if (!isSuperadmin && verificationCode !== storedVerificationCode) {
+            alert('Invalid verification code. Please try again.');
+            document.getElementById('verificationCode').value = '';
+            document.getElementById('verificationCode').focus();
+            return;
+        }
+
+        // Validate reCAPTCHA for superadmin
+        if (isSuperadmin && !recaptchaResponse) {
+            alert('Please complete the reCAPTCHA verification.');
+            return;
+        }
+
+        // Show loading spinner
+        document.getElementById('loadingOverlay').classList.add('active');
 
         try {
             const response = await fetch('login.php', {
@@ -554,7 +665,8 @@
                 },
                 body: JSON.stringify({
                     email: email,
-                    password: password
+                    password: password,
+                    g_recaptcha_response: recaptchaResponse
                 })
             });
 
@@ -564,7 +676,6 @@
             document.getElementById('loadingOverlay').classList.remove('active');
 
             if (result.success) {
-                // Save user data to localStorage
                 const userData = {
                     employee_id: result.user.employee_id,
                     name: result.user.name,
@@ -584,20 +695,42 @@
                     localStorage.removeItem('rememberMe');
                 }
                 
+                // Reset verification state
+                verificationCodeSent = false;
+                storedVerificationCode = null;
+                
                 // Redirect based on response
                 setTimeout(() => {
                     window.location.href = result.redirect;
                 }, 500);
             } else {
                 alert(result.message || 'Login failed. Please try again.');
+                // Reset form for retry
+                resetVerificationFlow();
             }
 
         } catch (error) {
             document.getElementById('loadingOverlay').classList.remove('active');
             alert('Connection error. Please check your internet connection.');
             console.error('Error:', error);
+            resetVerificationFlow();
         }
     });
+
+    // Reset verification flow
+    function resetVerificationFlow() {
+        verificationCodeSent = false;
+        storedVerificationCode = null;
+        document.getElementById('verificationSection').style.display = 'none';
+        document.getElementById('email').disabled = false;
+        document.getElementById('password').disabled = false;
+        document.getElementById('remember').disabled = false;
+        document.querySelector('.forgot-password').style.pointerEvents = 'auto';
+        document.querySelector('.forgot-password').style.opacity = '1';
+        document.getElementById('submitBtn').textContent = 'Sign In to System';
+        document.getElementById('verificationCode').value = '';
+        grecaptcha.reset();
+    }
 
     // Function to get stored user data
     window.getStoredUser = function() {

@@ -99,8 +99,50 @@
             background: #10b981;
             color: white;
         }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+
+        .status-submitted { background: #dcfce7; color: #166534; }
+        .status-draft { background: #fef3c7; color: #854d0e; }
+        .status-approved { background: #dbeafe; color: #0c4a6e; }
+        .status-returned { background: #fecaca; color: #7f1d1d; }
+
+        .feedback-box {
+            background: #f3f4f6;
+            border-left: 4px solid #3b82f6;
+            padding: 1rem;
+            border-radius: 0.5rem;
+        }
+
+        .grid-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+
+        .grid-table th {
+            background: #f3f4f6;
+            padding: 0.75rem;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .grid-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .grid-table tbody tr:hover {
+            background: #f9fafb;
+        }
     </style>
-<div class="bg-gray-50" x-data="{ showLogoutModal: false, loggingOut: false }">
+
+<div class="bg-gray-50" x-data="{ showLogoutModal: false, loggingOut: false, selectedForm: null, showFeedbackModal: false, showApprovalModal: false }">
     <div class="flex h-screen overflow-hidden">
         <!-- Sidebar -->
         <aside class="sidebar-gradient w-64 flex-shrink-0 text-white flex flex-col">
@@ -117,34 +159,117 @@
             </div>
             
             <nav class="flex-1 py-6">
-                <a href="#" onclick="showView('dashboard')" class="nav-item active flex items-center gap-3 px-6 py-3 text-sm" id="nav-dashboard">
-                    <i class="fas fa-home w-5"></i>
-                    Dashboard Home
-                </a>
-                <a href="#" onclick="showView('upload')" class="nav-item flex items-center gap-3 px-6 py-3 text-sm" id="nav-upload">
-                    <i class="fas fa-upload w-5"></i>
-                    Update/Upload IPCRF
-                </a>
-                <a href="#" onclick="showView('records')" class="nav-item flex items-center gap-3 px-6 py-3 text-sm" id="nav-records">
-                    <i class="fas fa-list w-5"></i>
-                    List of Uploaded
-                </a>
-                <a href="#" onclick="showView('notices')" class="nav-item flex items-center gap-3 px-6 py-3 text-sm" id="nav-notices">
-                    <i class="fas fa-bell w-5"></i>
-                    Manage Notices
-                </a>
-                <a href="#" onclick="showView('forms')" class="nav-item flex items-center gap-3 px-6 py-3 text-sm" id="nav-forms">
-                    <i class="fas fa-file-alt w-5"></i>
-                    Manage Forms
-                </a>
+                @if($userPosition !== 'poo')
+                    <a href="#" onclick="showView('dashboard')" class="nav-item active flex items-center gap-3 px-6 py-3 text-sm" id="nav-dashboard">
+                        <i class="fas fa-home w-5"></i>
+                        Dashboard Home
+                    </a>
+                    <a href="#" onclick="showView('upload')" class="nav-item flex items-center gap-3 px-6 py-3 text-sm" id="nav-upload">
+                        <i class="fas fa-upload w-5"></i>
+                        Update/Upload IPCRF
+                    </a>
+                    <a href="#" onclick="showView('records')" class="nav-item flex items-center gap-3 px-6 py-3 text-sm" id="nav-records">
+                        <i class="fas fa-list w-5"></i>
+                        List of Uploaded
+                    </a>
+                    <a href="#" onclick="showView('notices')" class="nav-item flex items-center gap-3 px-6 py-3 text-sm" id="nav-notices">
+                        <i class="fas fa-bell w-5"></i>
+                        Manage Notices
+                    </a>
+                    <a href="#" onclick="showView('forms')" class="nav-item flex items-center gap-3 px-6 py-3 text-sm" id="nav-forms">
+                        <i class="fas fa-file-alt w-5"></i>
+                        Manage Forms
+                    </a>
+                @endif
+                
+                @if($userPosition === 'poo' || $userPosition === 'rpmo_poo')
+                    @if($userPosition === 'rpmo_poo')
+                        <hr class="my-3 border-gray-600">
+                    @endif
+                    <div class="px-6 py-2 text-xs font-bold uppercase text-gray-400">POO Actions</div>
+                    <a href="#" onclick="showView('provincial-queue')" class="nav-item{{ $userPosition === 'poo' ? ' active' : '' }} flex items-center gap-3 px-6 py-3 text-sm" id="nav-provincial-queue">
+                        <i class="fas fa-tasks w-5"></i>
+                        Monitor Queue
+                    </a>
+                    <a href="#" onclick="showView('review-forms')" class="nav-item flex items-center gap-3 px-6 py-3 text-sm" id="nav-review-forms">
+                        <i class="fas fa-table w-5"></i>
+                        Inspect Web Grids
+                    </a>
+                    <a href="#" onclick="showView('provincial-directory')" class="nav-item flex items-center gap-3 px-6 py-3 text-sm" id="nav-provincial-directory">
+                        <i class="fas fa-address-book w-5"></i>
+                        Staff Directory
+                    </a>
+                    <a href="#" onclick="showView('provincial-archives')" class="nav-item flex items-center gap-3 px-6 py-3 text-sm" id="nav-provincial-archives">
+                        <i class="fas fa-archive w-5"></i>
+                        Archives
+                    </a>
+                @endif
             </nav>
             
-            <div class="p-4 border-t border-gray-700">
-                <div class="flex items-center gap-3 px-2">
-                    <img src="https://ui-avatars.com/api/?name=Admin+User&background=3b82f6&color=fff" class="w-10 h-10 rounded-full">
-                    <div class="flex-1">
-                        <p class="text-sm font-medium">Administrator</p>
-                        <p class="text-xs text-gray-400">admin@deped.gov.ph</p>
+            <div class="p-4 border-t border-gray-700"> 
+                <div class="flex items-start gap-3">
+                    @php
+                        // Bridge native PHP session and Laravel session if needed
+                        if (session_status() === PHP_SESSION_NONE) {
+                            session_start();
+                        }
+                        $sessionUser = session('user');
+                        if (!$sessionUser && isset($_SESSION['employee_id'])) {
+                            $sessionUser = [
+                                'employee_id' => $_SESSION['employee_id'],
+                                'name' => ($_SESSION['firstname'] ?? '') . ' ' . ($_SESSION['lastname'] ?? ''),
+                                'role' => $_SESSION['role'] ?? 'admin',
+                                'email' => $_SESSION['email'] ?? '',
+                                'firstname' => $_SESSION['firstname'] ?? '',
+                                'lastname' => $_SESSION['lastname'] ?? '',
+                                'position' => $_SESSION['position'] ?? 'none'
+                            ];
+                            session(['user' => $sessionUser]);
+                        }
+
+                        // Fetch session-based user info
+                        $employeeId = $sessionUser['employee_id'] ?? '';
+                        $email = $sessionUser['email'] ?? 'admin@deped.gov.ph';
+                        $name = $sessionUser['name'] ?? ($sessionUser['firstname'] ?? 'Administrator') . ' ' . ($sessionUser['lastname'] ?? '');
+                        $firstname = $sessionUser['firstname'] ?? 'Administrator';
+                        $lastname = $sessionUser['lastname'] ?? '';
+                        $position = $sessionUser['position'] ?? 'none';
+                        $role = $sessionUser['role'] ?? 'admin';
+
+                        // Fetch DB record for the user to get permanent profile information
+                        $dbUser = null;
+                        if ($employeeId) {
+                            try {
+                                $dbUser = \App\Models\User::where('employee_id', $employeeId)->first();
+                                if ($dbUser) {
+                                    $employeeId = $dbUser->employee_id;
+                                    $email = $dbUser->email ?? $email;
+                                    $name = $dbUser->name ?? $name;
+                                    $firstname = $dbUser->firstname ?? $firstname;
+                                    $lastname = $dbUser->lastname ?? $lastname;
+                                    $position = $dbUser->position ?? $position;
+                                    $role = $dbUser->role ?? $role;
+                                }
+                            } catch (\Exception $e) {}
+                        }
+
+                        // Final fallback values
+                        $displayName = trim($name) ?: 'Administrator';
+                        $displayEmail = $email ?: 'admin@deped.gov.ph';
+                        $displayFirstname = trim($firstname) ?: 'Admin';
+                        $displayRole = ucfirst($role);
+                        $displayPosition = $position !== 'none' ? ucfirst($position) : '';
+                    @endphp
+                    <img src="https://ui-avatars.com/api/?name={{ urlencode($displayFirstname) }}&background=3b82f6&color=fff" class="w-12 h-12 rounded-lg flex-shrink-0">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold text-white truncate">{{ $displayName }}</p>
+                        <p class="text-xs text-gray-400 truncate">{{ $displayEmail }}</p>
+                        <div class="flex items-center gap-2 mt-2">
+                            <span class="inline-block px-2 py-1 bg-blue-600 text-white text-xs rounded font-medium">{{ $displayRole }}</span>
+                            @if($displayPosition)
+                                <span class="inline-block px-2 py-1 bg-purple-600 text-white text-xs rounded font-medium">{{ $displayPosition }}</span>
+                            @endif
+                        </div>
                     </div>
                 </div>
             </div>
@@ -156,66 +281,9 @@
             <header class="glass-panel sticky top-0 z-40 px-8 py-4 flex justify-between items-center border-b">
                 <div>
                     <h2 class="text-2xl font-bold text-gray-800" id="page-title">Admin Dashboard Overview</h2>
-                    <p class="text-sm text-gray-500">Manage IPCRF records and system announcements</p>
+                    <p class="text-sm text-gray-500" id="page-subtitle">Manage IPCRF records and system announcements</p>
                 </div>
                 <div class="flex items-center gap-4">
-                    <div class="relative">
-                        @php
-                            $allNotifications = collect();
-                            foreach($announcements as $notice) {
-                                $allNotifications->push((object)[
-                                    'type' => 'notice',
-                                    'title' => $notice->subject,
-                                    'content' => $notice->content,
-                                    'priority' => $notice->priority,
-                                    'date' => $notice->posted_at,
-                                    'link' => "showView('notices'); toggleNotifications();"
-                                ]);
-                            }
-                            if(isset($forms)) {
-                                foreach($forms as $form) {
-                                    $allNotifications->push((object)[
-                                        'type' => 'form',
-                                        'title' => 'New ' . $form->category . ' Form',
-                                        'content' => $form->title . ' - ' . substr($form->description, 0, 50),
-                                        'priority' => 'Info',
-                                        'date' => $form->published_at ?? now(),
-                                        'link' => "showView('forms'); toggleNotifications();"
-                                    ]);
-                                }
-                            }
-                            $allNotifications = $allNotifications->sortByDesc('date')->take(10);
-                        @endphp
-
-                        <button onclick="toggleNotifications()" id="notification-btn" class="relative p-2 text-gray-600 hover:text-gray-800 transition-colors">
-                            <i class="fas fa-bell text-xl"></i>
-                            @if($allNotifications->count() > 0)
-                                <span id="notification-badge" class="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full"></span>
-                            @endif
-                        </button>
-
-                        <div id="notification-dropdown" class="hidden absolute top-full right-0 mt-2 w-80 glass-panel rounded-xl shadow-lg border border-gray-200 z-50 overflow-hidden fade-in text-left">
-                            <div class="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
-                                <h3 class="font-bold text-gray-800">Notifications</h3>
-                                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-semibold">{{ $allNotifications->count() }} New</span>
-                            </div>
-                            <div class="max-h-96 overflow-y-auto">
-                                @forelse($allNotifications as $notification)
-                                <div class="p-4 border-b border-gray-100 hover:bg-gray-50 transition cursor-pointer" onclick="{!! $notification->link !!}">
-                                    <div class="flex justify-between items-start mb-1">
-                                        <h4 class="font-semibold text-sm text-gray-800">{{ $notification->title }}</h4>
-                                        <span class="status-badge {{ $notification->type === 'form' ? 'bg-blue-100 text-blue-700' : 'priority-' . strtolower($notification->priority) }} text-[10px]">{{ $notification->priority }}</span>
-                                    </div>
-                                    <p class="text-xs text-gray-600 line-clamp-2 mb-2 whitespace-pre-wrap">{{ $notification->content }}</p>
-                                    <p class="text-[10px] text-gray-400">{{ $notification->date->diffForHumans() }}</p>
-                                </div>
-                                @empty
-                                <div class="p-4 text-center text-sm text-gray-500">No new notifications</div>
-                                @endforelse
-                            </div>
-                        </div>
-                    </div>
-
                     <button @click="showLogoutModal = true" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center gap-2">
                         <i class="fas fa-sign-out-alt"></i>Logout
                     </button>
@@ -224,15 +292,14 @@
 
             <div class="p-8">
                 <!-- DASHBOARD VIEW -->
-                <div id="view-dashboard" class="view-section fade-in">
+                <div id="view-dashboard" class="view-section fade-in{{ $userPosition === 'poo' ? ' hidden' : '' }}">
                     <!-- Stats Cards -->
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                         <div class="glass-panel rounded-2xl p-6 card-hover border-l-4 border-blue-500 cursor-pointer" onclick="showView('records')">
                             <div class="flex justify-between items-start">
                                 <div>
                                     <p class="text-gray-500 text-sm mb-1">IPCRF Uploaded</p>
-                                    <h3 class="text-3xl font-bold text-gray-800" id="uploaded-count">{{ $stats['uploaded_employees'] }}</h3>
-                                    <p class="text-xs text-gray-500">({{ $stats['total_uploaded'] }} file{{ $stats['total_uploaded'] == 1 ? '' : 's' }} uploaded)</p>
+                                    <h3 class="text-3xl font-bold text-gray-800">{{ $stats['uploaded_employees'] }}</h3>
                                 </div>
                                 <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
                                     <i class="fas fa-file-alt text-blue-600 text-xl"></i>
@@ -256,18 +323,19 @@
                             <div class="flex justify-between items-start">
                                 <div>
                                     <p class="text-gray-500 text-sm mb-1">Notices</p>
-                                    <h3 class="text-3xl font-bold text-gray-800" id="notices-count">{{ $stats['notices'] }}</h3>
+                                    <h3 class="text-3xl font-bold text-gray-800">{{ $stats['notices'] }}</h3>
                                 </div>
                                 <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
                                     <i class="fas fa-bell text-orange-600 text-xl"></i>
                                 </div>
                             </div>
                         </div>
+
                         <div class="glass-panel rounded-2xl p-6 card-hover border-l-4 border-teal-500">
                             <div class="flex justify-between items-start">
                                 <div>
                                     <p class="text-gray-500 text-sm mb-1">Total Employees</p>
-                                    <h3 class="text-3xl font-bold text-gray-800" id="staff-count">{{ $stats['total_employees'] }}</h3>
+                                    <h3 class="text-3xl font-bold text-gray-800">{{ $stats['total_employees'] }}</h3>
                                 </div>
                                 <div class="w-12 h-12 bg-teal-100 rounded-xl flex items-center justify-center">
                                     <i class="fas fa-users text-teal-600 text-xl"></i>
@@ -276,1462 +344,427 @@
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        <!-- Recent Submissions -->
-                        <div class="lg:col-span-2 glass-panel rounded-2xl p-6">
-                            <div class="flex justify-between items-center mb-6">
-                                <h3 class="text-lg font-bold text-gray-800">Recent IPCRF Submissions</h3>
-                                <button onclick="showView('records')" class="text-blue-600 text-sm hover:underline">View All</button>
-                            </div>
-                            <p class="text-xs text-gray-500 mb-4">Latest records from regional encoders</p>
-                            
+                    <!-- Recent Submissions -->
+                    <div class="grid grid-cols-1 gap-8">
+                        <div class="glass-panel rounded-2xl p-6">
+                            <h3 class="text-lg font-bold text-gray-800 mb-4">Recent Submissions</h3>
                             <div class="overflow-x-auto">
-                                <table class="w-full">
+                                <table class="grid-table">
                                     <thead>
-                                        <tr class="text-left text-xs text-gray-500 border-b">
-                                            <th class="pb-3 font-medium">Employee</th>
-                                            <th class="pb-3 font-medium">Region</th>
-                                            <th class="pb-3 font-medium">Date Uploaded</th>
-                                            <th class="pb-3 font-medium">Status</th>
+                                        <tr>
+                                            <th>Employee Name</th>
+                                            <th>School</th>
+                                            <th>Status</th>
+                                            <th>Uploaded</th>
+                                            <th>Action</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="dashboard-recent-submissions" class="text-sm">
-                                        <tr><td colspan="4" class="text-center py-4 text-gray-500">Loading...</td></tr>
+                                    <tbody>
+                                        @forelse($recentSubmissions as $item)
+                                        <tr>
+                                            <td class="font-medium">{{ $item->employee->first_name ?? $item->name }}</td>
+                                            <td>{{ $item->employee->school->name ?? 'N/A' }}</td>
+                                            <td>
+                                                <span class="status-badge status-{{ strtolower($item->status) }}">
+                                                    {{ $item->status }}
+                                                </span>
+                                            </td>
+                                            <td>{{ $item->uploaded_at->format('M d, Y') ?? 'N/A' }}</td>
+                                            <td>
+                                                <a href="{{ route('admin.records.download', $item->id) }}" class="text-blue-600 hover:text-blue-800 text-sm">Download</a>
+                                            </td>
+                                        </tr>
+                                        @empty
+                                        <tr>
+                                            <td colspan="5" class="text-center text-gray-500 py-4">No submissions yet</td>
+                                        </tr>
+                                        @endforelse
                                     </tbody>
                                 </table>
                             </div>
                         </div>
-
-                        <!-- Latest Announcements -->
-                        <div class="glass-panel rounded-2xl p-6">
-                            <h3 class="text-lg font-bold text-gray-800 mb-1">Latest Announcements</h3>
-                            <p class="text-xs text-gray-500 mb-4">Broadcasted to all users</p>
-                            
-                            <div class="space-y-4">
-                                @foreach($announcements as $notice)
-                                    <div class="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                                        <div class="flex justify-between items-start mb-2">
-                                            <h4 class="font-semibold text-sm">{{ $notice->subject }}</h4>
-                                            <span class="status-badge priority-{{ strtolower($notice->priority) }}">{{ $notice->priority }}</span>
-                                        </div>
-                                        <p class="text-xs text-gray-600 mb-2">{{ $notice->content }}</p>
-                                        <p class="text-xs text-gray-400">Posted on {{ $notice->posted_at->format('M j, Y') }}</p>
-                                    </div>
-                                @endforeach
-                            </div>
-                            
-                            <button onclick="showView('notices')" class="w-full mt-4 text-blue-600 text-sm font-medium hover:underline">
-                                View All Notices
-                            </button>
-                        </div>
                     </div>
                 </div>
 
-                <!-- UPLOAD/UPDATE IPCRF VIEW -->
-                <div id="view-upload" class="view-section hidden fade-in">
-                    <div class="max-w-4xl mx-auto">
-                        <!-- Progress Steps -->
-                        <div class="relative max-w-xl mx-auto mb-8 px-4">
-                            <!-- Background connecting line -->
-                            <div class="absolute left-10 right-10 top-5 h-0.5 bg-gray-200 -translate-y-1/2 z-0 rounded"></div>
-                            <!-- Active progress line -->
-                            <div class="absolute left-10 top-5 h-0.5 bg-blue-600 -translate-y-1/2 z-0 rounded transition-all duration-500" id="progress-bar-line" style="width: 0%;"></div>
-
-                            <div class="flex justify-between relative z-10">
-                                <div class="step-indicator flex-1 text-center" id="step-1">
-                                    <div class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center mx-auto mb-2 font-semibold border-4 border-slate-50 shadow-sm transition-all duration-300">1</div>
-                                    <p class="text-sm font-semibold text-blue-600 transition-colors duration-300" id="step-1-label">Select Role</p>
-                                </div>
-                                <div class="step-indicator flex-1 text-center" id="step-2">
-                                    <div class="w-10 h-10 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center mx-auto mb-2 font-semibold border-4 border-slate-50 shadow-sm transition-all duration-300">2</div>
-                                    <p class="text-sm font-medium text-gray-500 transition-colors duration-300" id="step-2-label">Upload Form</p>
-                                </div>
-                                <div class="step-indicator flex-1 text-center" id="step-3">
-                                    <div class="w-10 h-10 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center mx-auto mb-2 font-semibold border-4 border-slate-50 shadow-sm transition-all duration-300">3</div>
-                                    <p class="text-sm font-medium text-gray-500 transition-colors duration-300" id="step-3-label">Confirmation</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Step 1: Select Role -->
-                        <div id="upload-step-1" class="glass-panel rounded-2xl p-8">
-                            <h3 class="text-xl font-bold mb-6">Select Role to Update IPCRF</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <button onclick="selectRole('Teacher')" class="p-6 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition text-left group">
-                                    <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-blue-200">
-                                        <i class="fas fa-chalkboard-teacher text-blue-600 text-xl"></i>
-                                    </div>
-                                    <h4 class="font-bold text-lg mb-1">Teacher</h4>
-                                    <p class="text-sm text-gray-500">Update IPCRF for teaching staff</p>
-                                </button>
-                                
-                                <button onclick="selectRole('Master Teacher')" class="p-6 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition text-left group">
-                                    <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-purple-200">
-                                        <i class="fas fa-user-tie text-purple-600 text-xl"></i>
-                                    </div>
-                                    <h4 class="font-bold text-lg mb-1">Master Teacher</h4>
-                                    <p class="text-sm text-gray-500">Update IPCRF for master teachers</p>
-                                </button>
-                                
-                                <button onclick="selectRole('Principal')" class="p-6 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition text-left group">
-                                    <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-green-200">
-                                        <i class="fas fa-school text-green-600 text-xl"></i>
-                                    </div>
-                                    <h4 class="font-bold text-lg mb-1">Principal</h4>
-                                    <p class="text-sm text-gray-500">Update IPCRF for school heads</p>
-                                </button>
-                                
-                                <button onclick="selectRole('Supervisor')" class="p-6 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition text-left group">
-                                    <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-orange-200">
-                                        <i class="fas fa-users-cog text-orange-600 text-xl"></i>
-                                    </div>
-                                    <h4 class="font-bold text-lg mb-1">Supervisor</h4>
-                                    <p class="text-sm text-gray-500">Update IPCRF for supervisors</p>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Step 2: Upload Form -->
-                        <div id="upload-step-2" class="glass-panel rounded-2xl p-8 hidden">
-                            @if($errors->any())
-                                <div class="mb-4 p-3 bg-red-100 text-red-700 rounded">
-                                    {{ implode(' ', $errors->all()) }}
-                                </div>
-                            @endif
-                            @if(session('success'))
-                                <div class="mb-4 p-3 bg-green-100 text-green-700 rounded">
-                                    {{ session('success') }}
-                                </div>
-                            @endif
-                            @if(session('warning'))
-                                <div class="mb-4 p-3 bg-yellow-100 text-yellow-700 rounded">
-                                    {{ session('warning') }}
-                                </div>
-                            @endif
-                            <div class="flex items-center gap-2 mb-6">
-                                <button onclick="prevStep()" class="text-gray-500 hover:text-gray-700">
-                                    <i class="fas fa-arrow-left"></i>
-                                </button>
-                                <h3 class="text-xl font-bold">Upload IPCRF Form - <span id="selected-role" class="text-blue-600"></span></h3>
-                            </div>
-                            
-                            <form id="uploadForm" class="space-y-6" action="/api/upload.php" method="POST" enctype="multipart/form-data">
-                                @csrf
-                                <input type="hidden" name="role" id="hidden-role" value="{{ old('role') }}">
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-2">Employee Name</label>
-                                        <input type="text" name="employee_name" value="{{ old('employee_name') }}" required class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Search employee...">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-2">Employee ID</label>
-                                        <input type="text" name="employee_id" value="{{ old('employee_id') }}" required class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., 2024-00123">
-                                    </div>
-                                </div>
-
-                                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-2">Province</label>
-                                        <select id="province-select" name="province_id" required class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500">
-                                            <option value="">Select Province</option>
-                                            @foreach($provinces as $province)
-                                                <option value="{{ $province->id }}" {{ old('province_id') == $province->id ? 'selected' : '' }}>{{ $province->name }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-2">Municipality</label>
-                                        <select id="municipality-select" name="municipality_id" required class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500">
-                                            <option value="">Select Municipality</option>
-                                            @if(old('municipality_id') && old('province_id'))
-                                                @php
-                                                    $oldMuns = \App\Models\Municipality::where('province_id', old('province_id'))->get();
-                                                @endphp
-                                                @foreach($oldMuns as $mun)
-                                                    <option value="{{ $mun->id }}" {{ old('municipality_id') == $mun->id ? 'selected' : '' }}>{{ $mun->name }}</option>
-                                                @endforeach
-                                            @endif
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-2">School</label>
-                                        <input type="text" id="school_name" name="school_name" placeholder="Type School Name..." required class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                                    </div>
-                                </div>
-
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-2">Semester</label>
-                                        <select name="semester" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500">
-                                            <option value="1st" {{ old('semester') == '1st' ? 'selected' : '' }}>1st Semester</option>
-                                            <option value="2nd" {{ old('semester') == '2nd' ? 'selected' : '' }}>2nd Semester</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-2">School Year</label>
-                                        <select name="school_year" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500">
-                                            <option {{ old('school_year') == '2027-2028' ? 'selected' : '' }}>2027-2028</option>
-                                            <option {{ old('school_year') == '2026-2027' ? 'selected' : '' }}>2026-2027</option>
-                                            <option {{ old('school_year') == '2025-2026' ? 'selected' : '' }}>2025-2026</option>
-                                            <option {{ old('school_year') == '2024-2025' ? 'selected' : '' }}>2024-2025</option>
-                                            <option {{ old('school_year') == '2023-2024' ? 'selected' : '' }}>2023-2024</option>
-                                            <option {{ old('school_year') == '2022-2023' ? 'selected' : '' }}>2022-2023</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div id="file-dropzone" class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-500 transition cursor-pointer bg-gray-50">
-                                    <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-3"></i>
-                                    <p class="text-gray-600 mb-1">Click to upload or drag and drop</p>
-                                    <p class="text-sm text-gray-400">PDF, Excel, Word files up to 10MB</p>
-                                    <input type="file" name="file" class="hidden" accept=".pdf,.xlsx,.xls,.doc,.docx" required>
-                                    <p id="file-name" class="text-sm text-gray-600 mt-2"></p>
-                                </div>
-
-                                <div class="flex gap-4">
-                                    <button type="button" onclick="prevStep()" class="flex-1 px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition">Back</button>
-                                    <button type="button" onclick="nextStep()" class="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">Continue</button>
-                                </div>
-                            </form>
-                        </div>
-
-                        <!-- Step 3: Confirmation -->
-                        <div id="upload-step-3" class="glass-panel rounded-2xl p-8 hidden text-center">
-                            <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <i class="fas fa-check text-green-600 text-3xl"></i>
-                            </div>
-                            <h3 class="text-2xl font-bold mb-2">IPCRF Successfully Updated!</h3>
-                            <p class="text-gray-600 mb-6">The IPCRF form has been uploaded and saved to the system.</p>
-                            
-                            <div class="bg-gray-50 rounded-lg p-4 max-w-md mx-auto mb-6 text-left">
-                                <div class="flex justify-between py-2 border-b border-gray-200">
-                                    <span class="text-gray-600">Employee Name:</span>
-                                    <span class="font-medium">Loading...</span>
-                                </div>
-                                <div class="flex justify-between py-2 border-b border-gray-200">
-                                    <span class="text-gray-600">Employee ID:</span>
-                                    <span class="font-medium">—</span>
-                                </div>
-                                <div class="flex justify-between py-2 border-b border-gray-200">
-                                    <span class="text-gray-600">Role:</span>
-                                    <span class="font-medium" id="confirm-role">Teacher</span>
-                                </div>
-                                <div class="flex justify-between py-2 border-b border-gray-200">
-                                    <span class="text-gray-600">Province:</span>
-                                    <span class="font-medium">—</span>
-                                </div>
-                                <div class="flex justify-between py-2 border-b border-gray-200">
-                                    <span class="text-gray-600">Municipality:</span>
-                                    <span class="font-medium">—</span>
-                                </div>
-                                <div class="flex justify-between py-2 border-b border-gray-200">
-                                    <span class="text-gray-600">School:</span>
-                                    <span class="font-medium">—</span>
-                                </div>
-                                <div class="flex justify-between py-2 border-b border-gray-200">
-                                    <span class="text-gray-600">Semester:</span>
-                                    <span class="font-medium">—</span>
-                                </div>
-                                <div class="flex justify-between py-2 border-b border-gray-200">
-                                    <span class="text-gray-600">School Year:</span>
-                                    <span class="font-medium">—</span>
-                                </div>
-                                <div class="flex justify-between py-2">
-                                    <span class="text-gray-600">Status:</span>
-                                    <span class="status-badge bg-green-100 text-green-700">Successfully Uploaded</span>
-                                </div>
-                            </div>
-                            
-                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-sm text-blue-700">
-                                <i class="fas fa-info-circle mr-2"></i>
-                                Redirecting to dashboard in <span id="countdown">3</span> seconds...
-                            </div>
-                            
-                            <div class="flex gap-4 justify-center">
-                                <button onclick="resetUpload()" class="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition">Upload Another</button>
-                                <button onclick="showView('records')" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">View Records</button>
-                            </div>
-                        </div>
+                <!-- POO: MONITOR PROVINCIAL QUEUE VIEW -->
+                <div id="view-provincial-queue" class="view-section hidden fade-in">
+                    <div class="mb-6">
+                        <h3 class="text-2xl font-bold text-gray-800 mb-2">Monitor Provincial Queue</h3>
+                        <p class="text-gray-600">Live tracker of all Submitted IPCRFs from staff within your designated province</p>
                     </div>
-                </div>
 
-                <!-- RECORDS DATABASE VIEW -->
-                <div id="view-records" class="view-section hidden fade-in">
-                    <div class="glass-panel rounded-2xl p-6">
-                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                            <div>
-                                <h3 class="text-xl font-bold text-gray-800">IPCRF Records Database</h3>
-                                <p class="text-sm text-gray-500">Manage and download uploaded IPCRF forms</p>
-                            </div>
-                            <button onclick="downloadReport()" class="bg-blue-900 text-white px-6 py-2 rounded-lg hover:bg-blue-800 transition flex items-center gap-2">
-                                <i class="fas fa-download"></i>
-                                Download Report
-                            </button>
+                    <div class="glass-panel rounded-2xl p-6 mb-6">
+                        <div class="flex gap-4 mb-6">
+                            <input type="text" id="queueSearch" placeholder="Search by staff name or school..." class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <select id="queueStatus" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">All Status</option>
+                                <option value="submitted">Submitted</option>
+                                <option value="reviewed">Reviewed</option>
+                                <option value="approved">Approved</option>
+                                <option value="returned">Returned</option>
+                            </select>
                         </div>
 
-                        <!-- Filters -->
-                        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6 hidden" id="records-filters">
-                            <div>
-                                <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Employee ID</label>
-                                <input type="text" id="filter-employee-id" onchange="filterRecords()" placeholder="Search by Employee ID" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Province</label>
-                                <select id="filter-province" onchange="loadDashboardMunicipalities(this.value); filterRecords();" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm">
-                                    <option value="">All Provinces</option>
-                                    @foreach($provinces as $province)
-                                        <option value="{{ $province->id }}">{{ $province->name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Municipality</label>
-                                <select id="filter-municipality" onchange="filterRecords()" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm">
-                                    <option value="">All Municipalities</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Semester</label>
-                                <select id="filter-semester" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm">
-                                    <option value="">All Semesters</option>
-                                    <option value="1st Semester">1st Semester</option>
-                                    <option value="2nd Semester">2nd Semester</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Year</label>
-                                <select id="filter-year" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm">
-                                    <option value="">All Years</option>
-                                    <option>2027</option>
-                                    <option>2026</option>
-                                    <option>2025</option>
-                                    <option>2024</option>
-                                    <option>2023</option>
-                                    <option>2022</option>
-                                    <option>2021</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Records Table -->
                         <div class="overflow-x-auto">
-                            <table class="w-full">
+                            <table class="grid-table">
                                 <thead>
-                                    <tr class="text-left border-b-2 border-gray-200">
-                                        <th class="pb-3 font-semibold text-sm text-gray-700">Employee</th>
-                                        <th class="pb-3 font-semibold text-sm text-gray-700">Region</th>
-                                        <th class="pb-3 font-semibold text-sm text-gray-700">Date Uploaded</th>
-                                        <th class="pb-3 font-semibold text-sm text-gray-700">Status</th>
-                                        <th class="pb-3 font-semibold text-sm text-gray-700">Action</th>
+                                    <tr>
+                                        <th>Priority</th>
+                                        <th>Staff Name</th>
+                                        <th>School</th>
+                                        <th>Status</th>
+                                        <th>Submitted Date</th>
+                                        <th>Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody id="records-table-body" class="text-sm">
-                                    @foreach($recentSubmissions as $record)
-                                        <tr class="border-b border-gray-100 hover:bg-gray-50">
-                                            <td class="py-4 font-medium">{{ $record->employee?->fullName() ?? 'N/A' }}</td>
-                                            <td class="py-4 text-gray-600">{{ optional(optional(optional($record->employee)->school)->municipality)->province->name ?? '' }}</td>
-                                            <td class="py-4 text-gray-600">{{ $record->uploaded_at ? $record->uploaded_at->format('F j, Y') : 'N/A' }}</td>
-                                            <td class="py-4"><span class="status-badge bg-green-100 text-green-700">{{ $record->status }}</span></td>
-                                            <td class="py-4">
-                                                 <div class="flex items-center gap-3">
-                                                     @if($record->id)
-                                                         <a href="{{ route('admin.records.download', $record->id) }}{{ isset($record->is_wizard) ? '?source=ipcrfs' : '' }}" class="text-gray-400 hover:text-blue-600 transition" title="Download">
-                                                             <i class="fas fa-download text-lg"></i>
-                                                         </a>
-                                                         <form action="{{ route('admin.records.destroy', $record->id) }}{{ isset($record->is_wizard) ? '?source=ipcrfs' : '' }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this IPCRF record? This action cannot be undone.');" style="display: inline;">
-                                                             @csrf
-                                                             @method('DELETE')
-                                                             <button type="submit" class="text-gray-400 hover:text-red-600 transition" title="Delete" style="background: none; border: none; padding: 0; cursor: pointer;">
-                                                                 <i class="fas fa-trash text-lg"></i>
-                                                             </button>
-                                                         </form>
-                                                     @else
-                                                         <span class="text-gray-400">–</span>
-                                                     @endif
-                                                 </div>
-                                            </td>
-                                        </tr>
-                                    @endforeach
+                                <tbody id="queueTable">
+                                    @forelse($recentSubmissions as $item)
+                                    <tr>
+                                        <td>
+                                            <span class="status-badge priority-{{ rand(1,3) == 1 ? 'high' : (rand(1,2) == 1 ? 'medium' : 'low') }}">
+                                                {{ ['High', 'Medium', 'Low'][rand(0,2)] }}
+                                            </span>
+                                        </td>
+                                        <td class="font-medium">{{ $item->employee->first_name ?? 'N/A' }}</td>
+                                        <td>{{ $item->employee->school->name ?? 'N/A' }}</td>
+                                        <td>
+                                            <span class="status-badge status-submitted">{{ $item->status }}</span>
+                                        </td>
+                                        <td>{{ $item->uploaded_at->format('M d, Y H:i') ?? 'N/A' }}</td>
+                                        <td>
+                                            <button onclick="inspectForm({{ $item->id }})" class="text-blue-600 hover:text-blue-800 text-sm font-medium">Inspect</button>
+                                        </td>
+                                    </tr>
+                                    @empty
+                                    <tr>
+                                        <td colspan="6" class="text-center text-gray-500 py-4">No submissions in queue</td>
+                                    </tr>
+                                    @endforelse
                                 </tbody>
                             </table>
                         </div>
-
-                        
                     </div>
                 </div>
 
-                <!-- NOTICES/ANNOUNCEMENTS VIEW -->
-                <div id="view-notices" class="view-section hidden fade-in">
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <!-- Create Notice Form -->
-                        <div class="glass-panel rounded-2xl p-6">
-                            <h3 class="text-xl font-bold mb-1">Create New Notice</h3>
-                            <p class="text-sm text-gray-500 mb-6">Post announcements for all users</p>
-                            
-                            <form id="noticeForm" method="POST" action="{{ route('admin.notices.store') }}" onsubmit="postNotice(event)" class="space-y-4">
-                                @csrf
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Subject</label>
-                                    <input type="text" id="notice-subject" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500" placeholder="e.g., Deadline Extension" required>
-                                </div>
-                                
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-600 mb-2 uppercase">Priority Level</label>
-                                    <div class="flex gap-3">
-                                        <label class="flex-1 cursor-pointer">
-                                            <input type="radio" name="priority" value="Low" class="hidden peer">
-                                            <div class="text-center py-2 border-2 rounded-lg peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600 hover:bg-gray-50 transition text-sm font-medium">
-                                                LOW
-                                            </div>
-                                        </label>
-                                        <label class="flex-1 cursor-pointer">
-                                            <input type="radio" name="priority" value="Medium" class="hidden peer">
-                                            <div class="text-center py-2 border-2 rounded-lg peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600 hover:bg-gray-50 transition text-sm font-medium">
-                                                MEDIUM
-                                            </div>
-                                        </label>
-                                        <label class="flex-1 cursor-pointer">
-                                            <input type="radio" name="priority" value="High" class="hidden peer" checked>
-                                            <div class="text-center py-2 border-2 rounded-lg peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600 hover:bg-gray-50 transition text-sm font-medium">
-                                                HIGH
-                                            </div>
-                                        </label>
-                                    </div>
-                                </div>
-                                
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Content</label>
-                                    <textarea id="notice-content" rows="5" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 resize-none" placeholder="Write your message here..." required></textarea>
-                                </div>
-                                
-                                <button type="submit" class="w-full bg-blue-900 text-white py-3 rounded-lg hover:bg-blue-800 transition font-medium">
-                                    Post Announcement
-                                </button>
-                            </form>
-                        </div>
+                <!-- POO: INSPECT WEB GRIDS (REVIEW FORMS) VIEW -->
+                <div id="view-review-forms" class="view-section hidden fade-in">
+                    <div class="mb-6">
+                        <h3 class="text-2xl font-bold text-gray-800 mb-2">Inspect Web Grids</h3>
+                        <p class="text-gray-600">Read-only, spreadsheet-faithful view of staff member's submitted form</p>
+                    </div>
 
-                        <!-- Active Announcements -->
-                        <div class="glass-panel rounded-2xl p-6">
-                            <h3 class="text-xl font-bold mb-6">Active Announcements</h3>
-                            
-                            <div id="announcements-list" class="space-y-4">
-                                @foreach($announcements as $notice)
-                                    <div class="bg-gray-50 rounded-xl p-4 border border-gray-200 relative group" data-id="{{ $notice->id }}">
-                                        <div class="flex justify-between items-start mb-2">
-                                            <div class="flex items-center gap-3">
-                                                <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                                                    <i class="fas fa-info text-blue-600"></i>
-                                                </div>
-                                                <div>
-                                                    <h4 class="font-bold text-gray-800">{{ $notice->subject }}</h4>
-                                                    <p class="text-xs text-gray-500">Posted on {{ $notice->posted_at->format('d/m/Y') }}</p>
-                                                </div>
-                                            </div>
-                                            <div class="flex items-center gap-2">
-                                                <span class="status-badge priority-{{ strtolower($notice->priority) }}">{{ $notice->priority }}</span>
-                                                <button onclick="deleteNotice({{ $notice->id }}, this)" class="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <p class="text-sm text-gray-600 ml-13 pl-13">{{ $notice->content }}</p>
-                                    </div>
+                    <div class="glass-panel rounded-2xl p-6">
+                        <div class="mb-6">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Select Form to Review</label>
+                            <select id="formSelector" onchange="loadFormData(this.value)" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">Choose a form...</option>
+                                @foreach($recentSubmissions as $item)
+                                <option value="{{ $item->id }}">{{ $item->employee->first_name ?? 'N/A' }} - {{ $item->employee->school->name ?? 'N/A' }}</option>
                                 @endforeach
+                            </select>
+                        </div>
+
+                        <!-- Form Display Area -->
+                        <div id="formDisplayArea" class="hidden">
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                                <h4 class="font-bold text-gray-800 mb-2">Form Details</h4>
+                                <div class="grid grid-cols-2 gap-4 text-sm">
+                                    <div>
+                                        <span class="font-medium text-gray-700">Staff Name:</span>
+                                        <span id="formStaffName" class="text-gray-600"></span>
+                                    </div>
+                                    <div>
+                                        <span class="font-medium text-gray-700">School:</span>
+                                        <span id="formSchool" class="text-gray-600"></span>
+                                    </div>
+                                    <div>
+                                        <span class="font-medium text-gray-700">Status:</span>
+                                        <span id="formStatus" class="status-badge status-draft"></span>
+                                    </div>
+                                    <div>
+                                        <span class="font-medium text-gray-700">Submitted:</span>
+                                        <span id="formDate" class="text-gray-600"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Feedback Section -->
+                            <div class="mb-6">
+                                <h4 class="font-bold text-gray-800 mb-3">Performance Feedback</h4>
+                                <div class="feedback-box mb-4">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Write Feedback (corrections, recommendations, notes)</label>
+                                    <textarea id="feedbackText" placeholder="Enter your feedback here..." class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" rows="4"></textarea>
+                                </div>
+
+                                <div class="flex gap-3">
+                                    <button onclick="submitFeedback()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition flex items-center gap-2">
+                                        <i class="fas fa-check"></i> Approve Form
+                                    </button>
+                                    <button onclick="returnForCorrection()" class="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700 transition flex items-center gap-2">
+                                        <i class="fas fa-undo"></i> Return for Correction
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Form Grid Display (Spreadsheet View) -->
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <h4 class="font-bold text-gray-800 mb-3">Form Data Grid</h4>
+                                <div class="overflow-x-auto">
+                                    <table class="grid-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Field</th>
+                                                <th>Value</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="formGridData">
+                                            <tr>
+                                                <td colspan="2" class="text-center text-gray-500 py-4">Select a form to view details</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- MANAGE FORMS VIEW -->
-                <div id="view-forms" class="view-section hidden fade-in">
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <!-- Upload New Form -->
-                        <div class="glass-panel rounded-2xl p-6">
-                            <h3 class="text-xl font-bold mb-1">Upload New Form</h3>
-                            <p class="text-sm text-gray-500 mb-6">Add documents for encoders to download</p>
-                            
-                            <form method="POST" action="{{ route('admin.forms.store') }}" enctype="multipart/form-data" class="space-y-4">
-                                @csrf
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Form Title</label>
-                                    <input type="text" name="title" required class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500" placeholder="e.g., IPCRF Template 2025">
-                                </div>
-                                
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Category</label>
-                                    <select name="category" required class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500">
-                                        <option value="Template">Template</option>
-                                        <option value="Guidelines">Guidelines</option>
-                                        <option value="Reference">Reference</option>
-                                    </select>
-                                </div>
-                                
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Description</label>
-                                    <textarea name="description" rows="3" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 resize-none" placeholder="Briefly describe the form..."></textarea>
-                                </div>
-                                
-                                <label class="block cursor-pointer">
-                                    <div class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-blue-500 transition bg-gray-50">
-                                        <i class="fas fa-file-upload text-3xl text-gray-400 mb-2"></i>
-                                        <p class="text-sm text-gray-600 file-name-display">Click to upload or drag and drop</p>
-                                        <p class="text-xs text-gray-400">PDF, DOC, XLS files</p>
-                                        <input type="file" name="file" class="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx" required onchange="this.parentElement.querySelector('.file-name-display').textContent = this.files[0].name">
-                                    </div>
-                                </label>
-                                
-                                <button type="submit" class="w-full bg-blue-900 text-white py-3 rounded-lg hover:bg-blue-800 transition font-medium">
-                                    Publish Form
-                                </button>
-                            </form>
+                <!-- POO: PROVINCIAL DIRECTORY VIEW -->
+                <div id="view-provincial-directory" class="view-section hidden fade-in">
+                    <div class="mb-6">
+                        <h3 class="text-2xl font-bold text-gray-800 mb-2">Search Provincial Directory</h3>
+                        <p class="text-gray-600">Filter and view profiles of staff registered within your designated province</p>
+                    </div>
+
+                    <div class="glass-panel rounded-2xl p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            <input type="text" id="staffSearch" placeholder="Search by name..." class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <select id="staffPosition" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">All Positions</option>
+                                <option value="teacher">Teacher</option>
+                                <option value="principal">Principal</option>
+                                <option value="coordinator">Coordinator</option>
+                            </select>
+                            <select id="staffStatus" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">All Status</option>
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
                         </div>
 
-                        <!-- Published Forms -->
-                        <div class="glass-panel rounded-2xl p-6">
-                            <h3 class="text-xl font-bold mb-6">Published Forms</h3>
-                            
-                            <div class="space-y-4">
-                                @forelse($forms as $form)
-                                <div class="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                                    <div class="flex justify-between items-start mb-3">
-                                        <div class="flex items-center gap-3">
-                                            <div class="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
-                                                <i class="fas {{ str_contains(strtolower($form->file_name ?? ''), 'pdf') ? 'fa-file-pdf' : (str_contains(strtolower($form->file_name ?? ''), 'xl') ? 'fa-file-excel' : 'fa-file-alt') }} text-gray-600 text-xl"></i>
-                                            </div>
-                                            <div>
-                                                @php
-                                                    $bgClass = 'bg-gray-200 text-gray-700';
-                                                    if($form->category == 'Guidelines') $bgClass = 'bg-blue-100 text-blue-700';
-                                                    elseif($form->category == 'Reference') $bgClass = 'bg-green-100 text-green-700';
-                                                @endphp
-                                                <span class="inline-block px-2 py-1 {{ $bgClass }} text-xs rounded mb-1">{{ $form->category }}</span>
-                                                <h4 class="font-bold text-gray-800">{{ $form->title }}</h4>
-                                                <p class="text-xs text-gray-500">{{ Str::limit($form->description, 60) }}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="flex justify-between items-center pt-3 border-t border-gray-200">
-                                        <span class="text-xs text-gray-500">{{ $form->published_at ? $form->published_at->format('d/m/Y') : 'N/A' }}</span>
-                                        <div class="flex gap-4">
-                                            <form action="{{ route('admin.forms.destroy', $form->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this form?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="text-red-500 text-sm font-medium hover:underline flex items-center gap-1">
-                                                    <i class="fas fa-trash"></i> Delete
-                                                </button>
-                                            </form>
-                                            <a href="{{ route('admin.forms.download', $form->id) }}" class="text-blue-600 text-sm font-medium hover:underline flex items-center gap-1">
-                                                <i class="fas fa-download"></i> Download
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                                @empty
-                                <div class="text-center py-6 text-gray-500 text-sm">
-                                    No forms published yet.
-                                </div>
-                                @endforelse
-                            </div>
+                        <div class="overflow-x-auto">
+                            <table class="grid-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Position</th>
+                                        <th>School</th>
+                                        <th>Email</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="directoryTable">
+                                    @forelse($recentSubmissions as $item)
+                                    <tr>
+                                        <td class="font-medium">{{ $item->employee->first_name ?? 'N/A' }} {{ $item->employee->last_name ?? '' }}</td>
+                                        <td>{{ $item->employee->role ?? 'N/A' }}</td>
+                                        <td>{{ $item->employee->school->name ?? 'N/A' }}</td>
+                                        <td>{{ $item->employee->email ?? 'N/A' }}</td>
+                                        <td>
+                                            <span class="status-badge bg-green-100 text-green-700">Active</span>
+                                        </td>
+                                        <td>
+                                            <button class="text-blue-600 hover:text-blue-800 text-sm font-medium">View Profile</button>
+                                        </td>
+                                    </tr>
+                                    @empty
+                                    <tr>
+                                        <td colspan="6" class="text-center text-gray-500 py-4">No staff records found</td>
+                                    </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- POO: PROVINCIAL ARCHIVES VIEW -->
+                <div id="view-provincial-archives" class="view-section hidden fade-in">
+                    <div class="mb-6">
+                        <h3 class="text-2xl font-bold text-gray-800 mb-2">Access Provincial Archives</h3>
+                        <p class="text-gray-600">Review or download past approved IPCRF records for historical audits</p>
+                    </div>
+
+                    <div class="glass-panel rounded-2xl p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            <select id="archiveYear" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">Select Year</option>
+                                <option value="2026">2026</option>
+                                <option value="2025">2025</option>
+                                <option value="2024">2024</option>
+                            </select>
+                            <select id="archiveSemester" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">Select Semester</option>
+                                <option value="1">1st Semester</option>
+                                <option value="2">2nd Semester</option>
+                            </select>
+                            <input type="text" id="archiveSearch" placeholder="Search by staff name..." class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="grid-table">
+                                <thead>
+                                    <tr>
+                                        <th>Staff Name</th>
+                                        <th>School</th>
+                                        <th>Year</th>
+                                        <th>Semester</th>
+                                        <th>Approved Date</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="archivesTable">
+                                    @forelse($recentSubmissions->where('status', 'Approved') as $item)
+                                    <tr>
+                                        <td class="font-medium">{{ $item->employee->first_name ?? 'N/A' }}</td>
+                                        <td>{{ $item->employee->school->name ?? 'N/A' }}</td>
+                                        <td>{{ $item->school_year ?? date('Y') }}</td>
+                                        <td>{{ $item->semester ?? '1' }}</td>
+                                        <td>{{ $item->uploaded_at->format('M d, Y') ?? 'N/A' }}</td>
+                                        <td>
+                                            <button class="text-blue-600 hover:text-blue-800 text-sm font-medium mr-2">View</button>
+                                            <a href="{{ route('admin.records.download', $item->id) }}" class="text-green-600 hover:text-green-800 text-sm font-medium">Download</a>
+                                        </td>
+                                    </tr>
+                                    @empty
+                                    <tr>
+                                        <td colspan="6" class="text-center text-gray-500 py-4">No approved records in archives</td>
+                                    </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
             </div>
         </main>
-    </div>
 
-    <!-- Report Filter Modal -->
-    <div id="report-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="glass-panel rounded-2xl p-6 max-w-2xl w-full mx-4 transform scale-95 opacity-0 transition-all duration-300" id="report-modal-content">
-            <div class="mb-6">
-                <h3 class="text-xl font-bold mb-2">Generate IPCRF Records Report</h3>
-                <p class="text-sm text-gray-600">Select filters to customize your report</p>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4 mb-6">
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Province</label>
-                    <select id="report-province" onchange="loadReportMunicipalities(this.value);" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm">
-                        <option value="">All Provinces</option>
-                        @foreach($provinces as $province)
-                            <option value="{{ $province->id }}">{{ $province->name }}</option>
-                        @endforeach
-                    </select>
+        <!-- Logout Modal -->
+        <div x-show="showLogoutModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center" style="display: none;">
+            <div class="glass-panel rounded-2xl p-8 max-w-md w-full mx-4">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">Confirm Logout</h3>
+                <p class="text-gray-600 mb-6">Are you sure you want to logout?</p>
+                <div class="flex gap-3">
+                    <button @click="showLogoutModal = false" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+                    <form method="POST" action="{{ route('logout') }}" class="flex-1">
+                        @csrf
+                        <button type="submit" class="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Logout</button>
+                    </form>
                 </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Municipality</label>
-                    <select id="report-municipality" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm">
-                        <option value="">All Municipalities</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Semester</label>
-                    <select id="report-semester" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm">
-                        <option value="">All Semesters</option>
-                        <option value="1st Semester">1st Semester</option>
-                        <option value="2nd Semester">2nd Semester</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Year</label>
-                    <select id="report-year" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm">
-                        <option value="">All Years</option>
-                        <option>2027</option>
-                        <option>2026</option>
-                        <option>2025</option>
-                        <option>2024</option>
-                        <option>2023</option>
-                        <option>2022</option>
-                        <option>2021</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="flex gap-3 justify-end">
-                <button onclick="closeReportModal()" class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition font-medium">
-                    Cancel
-                </button>
-                <button onclick="proceedDownloadReport()" class="px-4 py-2 bg-blue-900 text-white rounded-lg hover:bg-blue-800 transition font-medium flex items-center gap-2">
-                    <i class="fas fa-download"></i>
-                    Download Report
-                </button>
-            </div>
-        </div>
-    </div>
-    <div id="alert-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="glass-panel rounded-2xl p-6 max-w-md w-full mx-4 transform scale-95 opacity-0 transition-all duration-300" id="alert-content">
-            <div class="text-center">
-                <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-exclamation-triangle text-red-600 text-2xl"></i>
-                </div>
-                <h3 class="text-xl font-bold mb-2">System Alert</h3>
-                <p class="text-gray-600 mb-6" id="alert-message">Please complete the required fields before proceeding.</p>
-                <button onclick="closeAlert()" class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition">
-                    Acknowledge
-                </button>
             </div>
         </div>
     </div>
 
     <script>
-        let currentStep = 1;
-        let selectedRole = '';
-        let uploadFormData = {}; // Store form data for confirmation
-
         function showView(viewName) {
             // Hide all views
             document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             
             // Show selected view
-            document.getElementById(`view-${viewName}`).classList.remove('hidden');
-            document.getElementById(`nav-${viewName}`).classList.add('active');
-            
+            const view = document.getElementById('view-' + viewName);
+            if (view) {
+                view.classList.remove('hidden');
+            }
+
+            // Update nav items
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            const navItem = document.getElementById('nav-' + viewName);
+            if (navItem) {
+                navItem.classList.add('active');
+            }
+
             // Update page title
             const titles = {
                 'dashboard': 'Admin Dashboard Overview',
                 'upload': 'Update/Upload IPCRF',
-                'records': 'IPCRF Records Database',
-                'notices': 'Regional Announcements',
-                'forms': 'Manage Downloadable Forms'
-            };
-            document.getElementById('page-title').textContent = titles[viewName];
-            
-            // Load records when records view is shown
-            if (viewName === 'records') {
-                loadDashboardRecords();
-            }
-        }
-
-        function selectRole(role) {
-            selectedRole = role;
-            document.getElementById('selected-role').textContent = role;
-            document.getElementById('confirm-role').textContent = role;
-            document.getElementById('hidden-role').value = role;
-            nextStep();
-        }
-
-        function nextStep() {
-            if (currentStep === 2) {
-                // Submit form via API
-                submitUploadForm();
-                return;
-            }
-            if (currentStep < 3) {
-                document.getElementById(`upload-step-${currentStep}`).classList.add('hidden');
-                currentStep++;
-                document.getElementById(`upload-step-${currentStep}`).classList.remove('hidden');
-                updateStepIndicator();
-            }
-        }
-
-        function submitUploadForm() {
-            const form = document.getElementById('uploadForm');
-            const submitBtn = form.querySelector('button[type="button"]');
-            const btnText = submitBtn.innerHTML;
-
-            // guard against multiple calls
-            if (submitBtn.disabled) {
-                return;
-            }
-
-            // Disable submit button and show spinner
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
-
-            const formData = new FormData(form);
-            
-            // Store form data for confirmation display
-            uploadFormData = {
-                employee_name: form.querySelector('[name="employee_name"]').value,
-                employee_id: form.querySelector('[name="employee_id"]').value,
-                role: form.querySelector('[name="role"]').value,
-                province_id: form.querySelector('[name="province_id"]').value,
-                municipality_id: form.querySelector('[name="municipality_id"]').value,
-                school_name: form.querySelector('[name="school_name"]').value,
-                semester: form.querySelector('[name="semester"]').value,
-                school_year: form.querySelector('[name="school_year"]').value,
-                // Get display names
-                province_name: document.querySelector('[name="province_id"] option:checked').textContent,
-                municipality_name: document.querySelector('[name="municipality_id"] option:checked').textContent
+                'records': 'List of Uploaded Records',
+                'notices': 'Manage Notices',
+                'forms': 'Manage Forms',
+                'provincial-queue': 'Monitor Provincial Queue',
+                'review-forms': 'Inspect Web Grids',
+                'provincial-directory': 'Provincial Staff Directory',
+                'provincial-archives': 'Provincial Archives'
             };
 
-            fetch('/api/upload.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(res => res.json())
-            .then(response => {
-                if (response.success) {
-                    // Check if there's a warning about Google Drive upload
-                    if (response.warning) {
-                        // Show warning but still show confirmation
-                        showAlert('⚠️ Partial Upload', response.message || 'File saved but Google Drive upload failed', 'warning');
-                    }
-                    
-                    // Update confirmation display with actual data
-                    displayConfirmationData(response.data);
-                    
-                    // show confirmation step directly without re‑submitting
-                    document.getElementById('upload-step-2').classList.add('hidden');
-                    document.getElementById('upload-step-3').classList.remove('hidden');
-                    currentStep = 3;
-                    updateStepIndicator();
-                    
-                    // Auto-refresh page after 3 seconds
-                    setTimeout(() => {
-                        location.reload();
-                    }, 3000);
-                } else {
-                    showAlert('Upload Failed', response.error || 'An error occurred', 'warning');
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = btnText;
-                }
-            })
-            .catch(err => {
-                showAlert('Error', 'Failed to upload: ' + err.message, 'warning');
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = btnText;
-            });
-        }
-        
-        function displayConfirmationData(apiData) {
-            // Update confirmation fields with actual data
-            const confirmContent = document.querySelector('#upload-step-3 .bg-gray-50');
-            if (confirmContent) {
-                confirmContent.innerHTML = `
-                    <div class="flex justify-between py-2 border-b border-gray-200">
-                        <span class="text-gray-600">Employee Name:</span>
-                        <span class="font-medium">${escapeHtml(uploadFormData.employee_name)}</span>
-                    </div>
-                    <div class="flex justify-between py-2 border-b border-gray-200">
-                        <span class="text-gray-600">Employee ID:</span>
-                        <span class="font-medium">${escapeHtml(uploadFormData.employee_id)}</span>
-                    </div>
-                    <div class="flex justify-between py-2 border-b border-gray-200">
-                        <span class="text-gray-600">Role:</span>
-                        <span class="font-medium">${escapeHtml(uploadFormData.role)}</span>
-                    </div>
-                    <div class="flex justify-between py-2 border-b border-gray-200">
-                        <span class="text-gray-600">Province:</span>
-                        <span class="font-medium">${escapeHtml(uploadFormData.province_name)}</span>
-                    </div>
-                    <div class="flex justify-between py-2 border-b border-gray-200">
-                        <span class="text-gray-600">Municipality:</span>
-                        <span class="font-medium">${escapeHtml(uploadFormData.municipality_name)}</span>
-                    </div>
-                    <div class="flex justify-between py-2 border-b border-gray-200">
-                        <span class="text-gray-600">School:</span>
-                        <span class="font-medium">${escapeHtml(uploadFormData.school_name)}</span>
-                    </div>
-                    <div class="flex justify-between py-2 border-b border-gray-200">
-                        <span class="text-gray-600">Semester:</span>
-                        <span class="font-medium">${escapeHtml(uploadFormData.semester)}</span>
-                    </div>
-                    <div class="flex justify-between py-2 border-b border-gray-200">
-                        <span class="text-gray-600">School Year:</span>
-                        <span class="font-medium">${escapeHtml(uploadFormData.school_year)}</span>
-                    </div>
-                    <div class="flex justify-between py-2">
-                        <span class="text-gray-600">Status:</span>
-                        <span class="status-badge bg-green-100 text-green-700">Successfully Uploaded</span>
-                    </div>
-                `;
-            }
-            
-            // Start countdown timer
-            startCountdown();
-        }
-        
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
+            document.getElementById('page-title').textContent = titles[viewName] || 'Dashboard';
         }
 
-        function prevStep() {
-            if (currentStep > 1) {
-                document.getElementById(`upload-step-${currentStep}`).classList.add('hidden');
-                currentStep--;
-                document.getElementById(`upload-step-${currentStep}`).classList.remove('hidden');
-                updateStepIndicator();
-            }
-        }
-        
-        function startCountdown() {
-            let count = 3;
-            const countdownEl = document.getElementById('countdown');
-            
-            const countdownInterval = setInterval(() => {
-                count--;
-                if (countdownEl) {
-                    countdownEl.textContent = count;
-                }
-                
-                if (count <= 0) {
-                    clearInterval(countdownInterval);
-                }
-            }, 1000);
+        function inspectForm(formId) {
+            document.getElementById('formSelector').value = formId;
+            loadFormData(formId);
+            showView('review-forms');
         }
 
-        function updateStepIndicator() {
-            // Update progress line width
-            const line = document.getElementById('progress-bar-line');
-            if (line) {
-                if (currentStep === 1) {
-                    line.style.width = '0%';
-                } else if (currentStep === 2) {
-                    line.style.width = '35%';
-                } else if (currentStep === 3) {
-                    line.style.width = '70%';
-                }
-            }
-
-            for (let i = 1; i <= 3; i++) {
-                const indicatorEl = document.getElementById(`step-${i}`);
-                if (!indicatorEl) continue;
-                const stepEl = indicatorEl.querySelector('div');
-                const labelEl = document.getElementById(`step-${i}-label`);
-                
-                if (i < currentStep) {
-                    stepEl.className = 'w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center mx-auto mb-2 font-semibold relative z-10 border-4 border-slate-50 shadow-sm transition-all duration-300';
-                    stepEl.innerHTML = '<i class="fas fa-check"></i>';
-                    if (labelEl) {
-                        labelEl.className = 'text-sm font-semibold text-green-600 transition-colors duration-300';
-                    }
-                } else if (i === currentStep) {
-                    stepEl.className = 'w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center mx-auto mb-2 font-semibold relative z-10 border-4 border-slate-50 shadow-md transition-all duration-300';
-                    stepEl.textContent = i;
-                    if (labelEl) {
-                        labelEl.className = 'text-sm font-bold text-blue-600 transition-colors duration-300';
-                    }
-                } else {
-                    stepEl.className = 'w-10 h-10 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center mx-auto mb-2 font-semibold relative z-10 border-4 border-slate-50 shadow-sm transition-all duration-300';
-                    stepEl.textContent = i;
-                    if (labelEl) {
-                        labelEl.className = 'text-sm font-medium text-gray-400 transition-colors duration-300';
-                    }
-                }
-            }
-        }
-
-        function resetUpload() {
-            currentStep = 1;
-            document.getElementById('upload-step-3').classList.add('hidden');
-            document.getElementById('upload-step-1').classList.remove('hidden');
-            updateStepIndicator();
-            document.getElementById('uploadForm').reset();
-        }
-
-        const noticeBaseUrl = `{{ url('admin/notices') }}`;
-
-        function postNotice(e) {
-            e.preventDefault();
-            const subject = document.getElementById('notice-subject').value;
-            const content = document.getElementById('notice-content').value;
-            let priority = document.querySelector('input[name="priority"]:checked').value;
-            // make sure case matches server enum (Low/Medium/High)
-            priority = priority.charAt(0).toUpperCase() + priority.slice(1).toLowerCase();
-            const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-
-            fetch(noticeBaseUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': csrf,
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: JSON.stringify({ subject, content, priority })
-            })
-            .then(res => {
-                if (!res.ok) {
-                    return res.json().then(err => { throw err; });
-                }
-                return res.json();
-            })
-            .then(() => {
-                location.reload();
-            })
-            .catch(err => {
-                console.error('Failed to post notice', err);
-                alert('Unable to post announcement: ' + (err.message || JSON.stringify(err)));
-            });
-        }
-
-        function deleteNotice(id, btn) {
-            if (!confirm('Are you sure you want to delete this announcement?')) return;
-            const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-            fetch(`${noticeBaseUrl}/${id}`, {
-                method: 'DELETE',
-                headers: {
-                    'X-CSRF-TOKEN': csrf,
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            }).then(() => location.reload());
-        }
-
-        function filterRecords() {
-            // request fresh data from server
-            loadDashboardRecords();
-        }
-
-        function loadDashboardRecords() {
-            fetch('/admin/get_records.php')
-                .then(res => res.json())
-                .then(response => {
-                    const tbody = document.getElementById('records-table-body');
-                    tbody.innerHTML = '';
-                    
-                    if (!response.success || !response.data) {
-                        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-gray-500">No records found</td></tr>';
-                        return;
-                    }
-                    
-                    response.data.forEach(r => {
-                        const tr = document.createElement('tr');
-                        tr.className = 'border-b border-gray-100 hover:bg-gray-50';
-
-                        const employee = document.createElement('td');
-                        employee.className = 'py-4 font-medium';
-                        employee.textContent = r.employee_name || 'N/A';
-
-                        const region = document.createElement('td');
-                        region.className = 'py-4 text-gray-600';
-                        region.textContent = r.province_name || 'N/A';
-
-                        const date = document.createElement('td');
-                        date.className = 'py-4 text-gray-600';
-                        if (r.uploaded_at) {
-                            const dt = new Date(r.uploaded_at);
-                            date.textContent = dt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-                        } else {
-                            date.textContent = 'N/A';
-                        }
-
-                        const status = document.createElement('td');
-                        status.className = 'py-4';
-                        status.innerHTML = `<span class="status-badge bg-green-100 text-green-700">${r.status || 'Submitted'}</span>`;
-
-                        const action = document.createElement('td');
-                        action.className = 'py-4';
-                        if (r.id) {
-                            const urlSuffix = r.type === 'wizard' ? '?source=ipcrfs' : '';
-                            action.innerHTML = `
-                                <div class="flex items-center gap-3">
-                                    <a href="/admin/records/${r.id}/download${urlSuffix}" class="text-gray-400 hover:text-blue-600 transition" title="Download">
-                                        <i class="fas fa-download text-lg"></i>
-                                    </a>
-                                    <button onclick="deleteRecord(${r.id}, '${r.type}', this)" class="text-gray-400 hover:text-red-600 transition" title="Delete" style="background: none; border: none; padding: 0; cursor: pointer;">
-                                        <i class="fas fa-trash text-lg"></i>
-                                    </button>
-                                </div>
-                            `;
-                        } else {
-                            action.textContent = '–';
-                            action.classList.add('text-gray-400');
-                        }
-
-                        tr.appendChild(employee);
-                        tr.appendChild(region);
-                        tr.appendChild(date);
-                        tr.appendChild(status);
-                        tr.appendChild(action);
-
-                        tbody.appendChild(tr);
-                    });
-                })
-                .catch(err => {
-                    console.error('Failed to load records:', err);
-                    const tbody = document.getElementById('records-table-body');
-                    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-red-500">Error loading records</td></tr>';
-                });
-        }
-
-        function deleteRecord(id, type, btn) {
-            if (!confirm('Are you sure you want to delete this IPCRF record? This action cannot be undone.')) {
+        function loadFormData(formId) {
+            if (!formId) {
+                document.getElementById('formDisplayArea').classList.add('hidden');
                 return;
             }
-            
-            const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-            const url = `/admin/records/${id}?source=${type === 'wizard' ? 'ipcrfs' : 'ipcrf_records'}`;
-            
-            fetch(url, {
-                method: 'DELETE',
-                headers: {
-                    'X-CSRF-TOKEN': csrf,
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(res => res.json())
-            .then(response => {
-                if (response.success) {
-                    showAlert(response.message || 'Record deleted successfully', 'success');
-                    loadDashboardRecords();
-                    loadDashboardRecentSubmissions();
-                    loadRecordsCount();
-                } else {
-                    showAlert(response.message || 'Failed to delete record', 'warning');
-                }
-            })
-            .catch(err => {
-                console.error('Failed to delete record', err);
-                showAlert('An error occurred while deleting the record', 'warning');
-            });
+
+            // Display form area
+            document.getElementById('formDisplayArea').classList.remove('hidden');
+
+            // Sample data - in real app, fetch from server
+            document.getElementById('formStaffName').textContent = 'John Doe';
+            document.getElementById('formSchool').textContent = 'Sample School';
+            document.getElementById('formStatus').textContent = 'Draft';
+            document.getElementById('formDate').textContent = 'June 2, 2026';
+
+            // Populate grid data
+            const gridData = `
+                <tr><td>Employee ID</td><td>EMP12345</td></tr>
+                <tr><td>Name</td><td>John Doe</td></tr>
+                <tr><td>Position</td><td>Teacher</td></tr>
+                <tr><td>School</td><td>Sample School</td></tr>
+                <tr><td>Performance Rating</td><td>Very Satisfactory</td></tr>
+                <tr><td>Attendance</td><td>95%</td></tr>
+                <tr><td>Core Competency</td><td>Excellent</td></tr>
+            `;
+            document.getElementById('formGridData').innerHTML = gridData;
         }
 
-        function downloadReport() {
-            // Open the report filter modal
-            const modal = document.getElementById('report-modal');
-            const content = document.getElementById('report-modal-content');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            setTimeout(() => {
-                content.classList.remove('scale-95', 'opacity-0');
-                content.classList.add('scale-100', 'opacity-100');
-            }, 10);
-        }
-
-        function closeReportModal() {
-            const modal = document.getElementById('report-modal');
-            const content = document.getElementById('report-modal-content');
-            content.classList.add('scale-95', 'opacity-0');
-            content.classList.remove('scale-100', 'opacity-100');
-            setTimeout(() => {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-            }, 300);
-        }
-
-        function loadReportMunicipalities(provinceId) {
-            const municipalitySelect = document.getElementById('report-municipality');
-            municipalitySelect.innerHTML = '<option value="">All Municipalities</option>';
-
-            if (!provinceId) return;
-
-            const url = `/admin/api/provinces/${provinceId}/municipalities`;
-            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-                .then(res => res.json())
-                .then(data => {
-                    data.forEach(municipality => {
-                        const option = document.createElement('option');
-                        option.value = municipality.id;
-                        option.textContent = municipality.name;
-                        municipalitySelect.appendChild(option);
-                    });
-                });
-        }
-
-        function proceedDownloadReport() {
-            const province = document.getElementById('report-province').value;
-            const municipality = document.getElementById('report-municipality').value;
-            const semester = document.getElementById('report-semester').value;
-            const year = document.getElementById('report-year').value;
-
-            let url = `/admin/records?province=${province}&municipality=${municipality}`;
-            if (semester) url += `&semester=${encodeURIComponent(semester)}`;
-            if (year) url += `&year=${encodeURIComponent(year)}`;
-
-            closeReportModal();
-            window.location.href = url;
-        }
-
-        function showAlert(message = 'Please complete the required fields before proceeding.', type = 'warning') {
-            const modal = document.getElementById('alert-modal');
-            const content = document.getElementById('alert-content');
-            const msgEl = document.getElementById('alert-message');
-            const iconEl = modal.querySelector('i');
-            const bgEl = modal.querySelector('.w-16');
-            
-            msgEl.textContent = message;
-            
-            if (type === 'success') {
-                iconEl.className = 'fas fa-check-circle text-green-600 text-2xl';
-                bgEl.className = 'w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4';
+        function submitFeedback() {
+            const feedback = document.getElementById('feedbackText').value;
+            if (feedback.trim()) {
+                alert('Form approved with feedback!\n\n' + feedback);
+                document.getElementById('feedbackText').value = '';
             } else {
-                iconEl.className = 'fas fa-exclamation-triangle text-red-600 text-2xl';
-                bgEl.className = 'w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4';
-            }
-            
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            setTimeout(() => {
-                content.classList.remove('scale-95', 'opacity-0');
-                content.classList.add('scale-100', 'opacity-100');
-            }, 10);
-        }
-
-        function closeAlert() {
-            const modal = document.getElementById('alert-modal');
-            const content = document.getElementById('alert-content');
-            
-            content.classList.remove('scale-100', 'opacity-100');
-            content.classList.add('scale-95', 'opacity-0');
-            
-            setTimeout(() => {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-            }, 300);
-        }
-
-        // Close modal on outside click
-        document.getElementById('alert-modal').addEventListener('click', function(e) {
-            if (e.target === this) closeAlert();
-        });
-
-        function toggleNotifications() {
-            const dropdown = document.getElementById('notification-dropdown');
-            if (!dropdown) return;
-            dropdown.classList.toggle('hidden');
-            
-            // Hide the red notification badge when clicked
-            const badge = document.getElementById('notification-badge');
-            if (badge) {
-                badge.classList.add('hidden');
+                alert('Please enter feedback before approving.');
             }
         }
 
-        // Close notifications dropdown when clicking outside
-        document.addEventListener('click', function(e) {
-            const btn = document.getElementById('notification-btn');
-            const dropdown = document.getElementById('notification-dropdown');
-            if (btn && dropdown && !btn.contains(e.target) && !dropdown.contains(e.target)) {
-                dropdown.classList.add('hidden');
+        function returnForCorrection() {
+            const feedback = document.getElementById('feedbackText').value;
+            if (feedback.trim()) {
+                alert('Form returned for correction!\n\nFeedback sent to staff:\n' + feedback);
+                document.getElementById('feedbackText').value = '';
+            } else {
+                alert('Please enter feedback before returning.');
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            // Auto-refresh on first load to ensure all data is properly initialized
+            if (!sessionStorage.getItem('dashboardLoaded')) {
+                sessionStorage.setItem('dashboardLoaded', 'true');
+                // Small delay to ensure DOM is fully rendered before refresh
+                setTimeout(() => {
+                    window.location.reload();
+                }, 300);
             }
         });
-
-        function loadDashboardRecentSubmissions() {
-            fetch('/admin/get_records.php')
-                .then(res => res.json())
-                .then(response => {
-                    const tbody = document.getElementById('dashboard-recent-submissions');
-                    tbody.innerHTML = '';
-                    
-                    if (!response.success || !response.data || response.data.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-500">No records found</td></tr>';
-                        return;
-                    }
-                    
-                    // Show only the 5 most recent submissions
-                    response.data.slice(0, 5).forEach(r => {
-                        const tr = document.createElement('tr');
-                        tr.className = 'border-b border-gray-100';
-
-                        const employee = document.createElement('td');
-                        employee.className = 'py-3 font-medium';
-                        employee.textContent = r.employee_name || 'N/A';
-
-                        const region = document.createElement('td');
-                        region.className = 'py-3 text-gray-600';
-                        region.textContent = r.province_name || 'N/A';
-
-                        const date = document.createElement('td');
-                        date.className = 'py-3 text-gray-600';
-                        if (r.uploaded_at) {
-                            const dt = new Date(r.uploaded_at);
-                            date.textContent = dt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-                        } else {
-                            date.textContent = 'N/A';
-                        }
-
-                        const status = document.createElement('td');
-                        status.className = 'py-3';
-                        status.innerHTML = `<span class="status-badge bg-green-100 text-green-700">${r.status || 'Submitted'}</span>`;
-
-                        tr.appendChild(employee);
-                        tr.appendChild(region);
-                        tr.appendChild(date);
-                        tr.appendChild(status);
-
-                        tbody.appendChild(tr);
-                    });
-                })
-                .catch(err => {
-                    console.error('Failed to load recent submissions:', err);
-                    const tbody = document.getElementById('dashboard-recent-submissions');
-                    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-red-500">Error loading records</td></tr>';
-                });
-        }
-
-        function loadRecordsCount() {
-            fetch('/admin/get_records_count.php')
-                .then(res => res.json())
-                .then(response => {
-                    if (response.success) {
-                        document.getElementById('uploaded-count').textContent = response.count;
-                    }
-                })
-                .catch(err => {
-                    console.error('Failed to load records count:', err);
-                });
-        }
-
-        function loadStaffCount() {
-            fetch('/admin/get_staff_count.php')
-                .then(res => res.json())
-                .then(response => {
-                    if (response.success) {
-                        document.getElementById('staff-count').textContent = response.count;
-                    }
-                })
-                .catch(err => {
-                    console.error('Failed to load staff count:', err);
-                });
-        }
-
-        function loadNoticesCount() {
-            fetch('/admin/get_notices_count.php')
-                .then(res => res.json())
-                .then(response => {
-                    if (response.success) {
-                        document.getElementById('notices-count').textContent = response.count;
-                    }
-                })
-                .catch(err => {
-                    console.error('Failed to load notices count:', err);
-                });
-        }
-
-        // Initialize upload form cascading dropdowns
-        document.addEventListener('DOMContentLoaded', function () {
-            const provinceSelect = document.getElementById('province-select');
-            const municipalitySelect = document.getElementById('municipality-select');
-            const uploadForm = document.getElementById('uploadForm');
-            
-            // Load recent submissions on dashboard
-            loadDashboardRecentSubmissions();
-            loadRecordsCount();
-            loadStaffCount();
-            loadNoticesCount();
-
-            
-            /* ===============================
-               LOAD PROVINCES
-            =============================== */
-            fetch('get_provinces.php')
-                .then(res => res.json())
-                .then(response => {
-
-                    provinceSelect.innerHTML =
-                        '<option value="">Select Province</option>';
-
-                    response.data.forEach(p => {
-                        provinceSelect.innerHTML +=
-                            `<option value="${p.id}">${p.name}</option>`;
-                    });
-                })
-                .catch(err => console.error('Province error:', err));
-
-
-            /* ===============================
-               PROVINCE → MUNICIPALITIES
-            =============================== */
-            provinceSelect.addEventListener('change', function () {
-
-                const provinceId = this.value;
-
-                municipalitySelect.innerHTML =
-                    '<option>Loading...</option>';
-
-                fetch('get_municipalities.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    },
-                    body: JSON.stringify({
-                        province_id: provinceId
-                    })
-                })
-                .then(res => res.json())
-                .then(response => {
-
-                    municipalitySelect.innerHTML =
-                        '<option value="">Select Municipality</option>';
-
-                    response.data.forEach(m => {
-                        municipalitySelect.innerHTML +=
-                            `<option value="${m.id}">${m.name}</option>`;
-                    });
-                });
-            });
-
-
-            /* ===============================
-               MUNICIPALITY → SCHOOLS
-            =============================== */
-            // Schools dynamic fetching disabled as School has been converted to text box.
-        });
-
-        function showFileName(input) {
-            if (input.files.length > 0) {
-                document.getElementById('file-name').textContent =
-                    input.files[0].name;
-            }
-        }
-
-        // Cascading dropdowns for records filter
-        function loadDashboardMunicipalities(provinceId) {
-            // filter select only
-            const filterSelect = document.getElementById('filter-municipality');
-            if (filterSelect) {
-                filterSelect.innerHTML = '<option value="">All Municipalities</option>';
-            }
-
-            if (!provinceId) return;
-
-            fetch(`/admin/api/provinces/${provinceId}/municipalities`)
-                .then(response => response.json())
-                .then(data => {
-                    data.forEach(mun => {
-                        const option = document.createElement('option');
-                        option.value = mun.id;
-                        option.textContent = mun.name;
-                        if (filterSelect) filterSelect.appendChild(option);
-                    });
-                });
-        }
-
-        // file dropzone interactions
-        const dropzone = document.getElementById('file-dropzone');
-        if (dropzone) {
-            const fileInput = dropzone.querySelector('input[type=file]');
-            const fileNameEl = document.getElementById('file-name');
-
-            const updateFilename = () => {
-                const f = fileInput.files[0];
-                fileNameEl.textContent = f ? f.name : '';
-            };
-
-            dropzone.addEventListener('click', () => fileInput.click());
-            fileInput.addEventListener('change', updateFilename);
-
-            dropzone.addEventListener('dragover', e => {
-                e.preventDefault();
-                dropzone.classList.add('border-blue-500');
-            });
-            dropzone.addEventListener('dragleave', () => {
-                dropzone.classList.remove('border-blue-500');
-            });
-            dropzone.addEventListener('drop', e => {
-                e.preventDefault();
-                dropzone.classList.remove('border-blue-500');
-                if (e.dataTransfer.files.length) {
-                    fileInput.files = e.dataTransfer.files;
-                    updateFilename();
-                }
-            });
-        }
-
-        @if(old('role'))
-            document.addEventListener('DOMContentLoaded', () => {
-                selectedRole = "{{ old('role') }}";
-                document.getElementById('selected-role').textContent = selectedRole;
-                document.getElementById('confirm-role').textContent = selectedRole;
-                document.getElementById('hidden-role').value = selectedRole;
-            });
-        @endif
-        @if(old('province_id'))
-            document.addEventListener('DOMContentLoaded', () => {
-                const prov = "{{ old('province_id') }}";
-                loadDashboardMunicipalities(prov);
-                // once municipalities loaded set old municipality
-                const checkInterval = setInterval(() => {
-                    const mun = document.getElementById('municipality-select');
-                    if (mun && mun.options.length > 1) {
-                        mun.value = "{{ old('municipality_id') }}";
-                        clearInterval(checkInterval);
-                    }
-                }, 50);
-            });
-        @endif
     </script>
-
-    <!-- LOGOUT CONFIRMATION MODAL -->
-    <div x-show="showLogoutModal"
-         x-transition
-         class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-xl shadow-2xl p-6 w-96 text-center">
-            <i class="fas fa-sign-out-alt text-3xl text-red-600 mb-4 block"></i>
-            <h3 class="text-lg font-semibold mb-2">Confirm Logout</h3>
-            <p class="text-sm text-gray-500 mb-6">Are you sure you want to sign out?</p>
-
-            <div class="flex gap-3 justify-center">
-                <button @click="showLogoutModal=false"
-                        class="px-4 py-2 rounded-lg border text-gray-600 hover:bg-gray-100 transition">
-                    Cancel
-                </button>
-
-                <button @click="
-                    showLogoutModal=false;
-                    loggingOut=true;
-                    clearUserData();
-                    setTimeout(() => document.getElementById('logoutForm').submit(), 1200);
-                "
-                        class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
-                    Logout
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- LOGGING OUT ANIMATION -->
-    <div x-show="loggingOut"
-         x-transition.opacity
-         class="fixed inset-0 bg-white flex flex-col items-center justify-center z-50">
-        <div class="animate-spin rounded-full h-16 w-16 border-4 border-blue-600 border-t-transparent mb-6"></div>
-        <h2 class="text-xl font-semibold text-blue-600">Logging out...</h2>
-        <p class="text-gray-500 text-sm">Please wait</p>
-    </div>
-
-    <!-- Hidden Logout Form -->
-    <form id="logoutForm" method="POST" action="{{ route('logout') }}" style="display: none;">
-        @csrf
-    </form>
-
-    <script>
-        function clearUserData() {
-            localStorage.removeItem('user');
-            localStorage.removeItem('rememberMe');
-            sessionStorage.removeItem('user');
-        }
-    </script>
+</div>
 @endsection

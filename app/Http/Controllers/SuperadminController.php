@@ -139,6 +139,7 @@ class SuperadminController extends Controller
             'lastname' => 'required|string|max:255',
             'employee_id' => 'required|string|unique:users,employee_id',
             'password' => 'required|string|min:8|confirmed',
+            'position' => 'required|in:rpmo,poo,rpmo_poo,none',
         ]);
 
         $user = User::create([
@@ -149,6 +150,7 @@ class SuperadminController extends Controller
             'email' => $request->employee_id . '@dswd.gov.ph',
             'password' => Hash::make($request->password),
             'role' => 'admin',
+            'position' => $request->position,
             'approved' => true,
         ]);
 

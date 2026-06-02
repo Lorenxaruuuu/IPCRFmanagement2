@@ -60,7 +60,8 @@ class AuthController extends Controller
                 'role' => $user->role,
                 'email' => $user->email,
                 'firstname' => $user->firstname,
-                'lastname' => $user->lastname
+                'lastname' => $user->lastname,
+                'position' => $user->position
             ]);
 
             if ($user->role === 'superadmin') {

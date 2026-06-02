@@ -322,6 +322,17 @@ $user->role !== 'encoder') bg-blue-100 text-blue-800 border border-blue-200
                                 </div>
 
                                 <div class="space-y-1">
+                                    <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Position</label>
+                                    <select name="position" required class="w-full bg-slate-800 border border-slate-700/80 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-blue-500 transition-colors">
+                                        <option value="" class="bg-slate-800 text-slate-100">Select Position</option>
+                                        <option value="rpmo" class="bg-slate-800 text-slate-100">RPMO (Regional Program Management Officer)</option>
+                                        <option value="poo" class="bg-slate-800 text-slate-100">POO (Provincial Operations Officer)</option>
+                                        <option value="rpmo_poo" class="bg-slate-800 text-slate-100">RPMO & POO</option>
+                                        <option value="none" class="bg-slate-800 text-slate-100">None</option>
+                                    </select>
+                                </div>
+
+                                <div class="space-y-1">
                                     <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Password</label>
                                     <input type="password" name="password" required class="w-full bg-slate-800 border border-slate-700/80 rounded-xl px-3 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors" placeholder="Minimum 8 characters">
                                 </div>
@@ -697,6 +708,17 @@ $user->role !== 'encoder') bg-blue-100 text-blue-800 border border-blue-200
                 <div class="space-y-1">
                     <label class="text-xs font-semibold text-slate-500">Employee ID</label>
                     <input type="text" name="employee_id" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-colors" placeholder="e.g. ADMIN-99">
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-xs font-semibold text-slate-500">Position</label>
+                    <select name="position" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition-colors">
+                        <option value="">Select Position</option>
+                        <option value="rpmo">RPMO (Regional Program Management Officer)</option>
+                        <option value="poo">POO (Provincial Operations Officer)</option>
+                        <option value="rpmo_poo">RPMO & POO</option>
+                        <option value="none">None</option>
+                    </select>
                 </div>
 
                 <div class="space-y-1">

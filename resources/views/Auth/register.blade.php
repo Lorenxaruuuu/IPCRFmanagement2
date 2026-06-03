@@ -435,15 +435,19 @@
         </select>
     </div>
 
-    <div class="form-row">
-        <div class="form-group">
-            <label for="department">Department</label>
-            <input type="text" id="department" name="department" placeholder="e.g. RPMO">
-        </div>
-        <div class="form-group">
-            <label for="office">Office / Division</label>
-            <input type="text" id="office" name="office" placeholder="e.g. Finance Division">
-        </div>
+    <div class="form-group">
+        <label for="assigned_province">Assigned Province</label>
+        <select id="assigned_province" name="assigned_province">
+            <option value="" disabled selected>Select your assigned province</option>
+            @foreach(\App\Models\Province::orderBy('name')->get() as $prov)
+            <option value="{{ $prov->name }}">{{ $prov->name }}</option>
+            @endforeach
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="office">Office / Division</label>
+        <input type="text" id="office" name="office" placeholder="e.g. Finance Division">
     </div>
 
     <div class="form-group">
@@ -512,13 +516,17 @@
         modal.classList.remove('show');
     }
 
-    // Close modal when clicking outside
-    window.onclick = function(event) {
-        const modal = document.getElementById('responseModal');
-        if (event.target === modal) {
+    document.getElementById('responseModal').addEventListener('click', function(event) {
+        if (event.target === this) {
             closeModal();
         }
-    }
+    });
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeModal();
+        }
+    });
 
     // Handle form submission with JavaScript
     document.getElementById('registerForm').addEventListener('submit', async function(e) {
@@ -532,7 +540,7 @@
             password:              document.getElementById('password').value,
             password_confirmation: document.getElementById('password_confirmation').value,
             position_id:           posEl ? posEl.value : '',
-            department:            (document.getElementById('department') || {value:''}).value.trim(),
+            assigned_province:     (document.getElementById('assigned_province') || {value:''}).value.trim(),
             office:                (document.getElementById('office') || {value:''}).value.trim(),
         };
 
@@ -546,28 +554,34 @@
         }
 
         try {
-            const response = await fetch('{{ route("register") }}', {
+            const response = await fetch('{{ route("register.post") }}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': 'application/json',
                     'X-CSRF-TOKEN': '{{ csrf_token() }}',
                     'X-Requested-With': 'XMLHttpRequest',
                 },
                 body: JSON.stringify(formData)
             });
 
-            const result = await response.json();
+            let result;
+            try {
+                result = await response.json();
+            } catch (parseError) {
+                showModal('error', 'Registration Failed', 'The server returned an unexpected response. Please try again later.');
+                return;
+            }
 
             if (result.success) {
                 showModal('success', 'Registration Successful!', result.message);
                 document.getElementById('registerForm').reset();
             } else {
-                showModal('error', 'Registration Failed', result.message);
+                showModal('error', 'Registration Failed', result.message || 'Something went wrong. Please review your details and try again.');
             }
 
         } catch (error) {
-            showModal('error', 'Error', 'Could not connect to server. Please try again.');
-            console.error('Error:', error);
+            showModal('error', 'Connection Error', 'Could not connect to the server. Please check your internet connection and try again.');
         }
     });
     </script>

@@ -37,6 +37,7 @@ class User extends Authenticatable
     'position_id',
     'department',
     'office',
+    'assigned_province',
 ];
     /**
      * The attributes that should be hidden for serialization.
@@ -63,7 +64,22 @@ class User extends Authenticatable
 
     public function position(): BelongsTo
     {
-        return $this->belongsTo(Position::class);
+        return $this->belongsTo(Position::class, 'position_id');
+    }
+
+    /** Job title / designation (avoids conflict with admin `position` column: rpmo, poo, etc.) */
+    public function jobPosition(): BelongsTo
+    {
+        return $this->belongsTo(Position::class, 'position_id');
+    }
+
+    public function adminPositionType(): string
+    {
+        $raw = $this->getAttributes()['position'] ?? null;
+
+        return is_string($raw) && in_array($raw, ['rpmo', 'poo', 'rpmo_poo', 'none'], true)
+            ? ($raw === 'none' ? 'rpmo' : $raw)
+            : 'rpmo';
     }
 
     public function submissions()

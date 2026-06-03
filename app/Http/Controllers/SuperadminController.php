@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
+use App\Models\Province;
 
 class SuperadminController extends Controller
 {
@@ -66,7 +67,9 @@ class SuperadminController extends Controller
             ->orderBy('updated_at', 'desc')
             ->get();
 
-        return view('superadmin.dashboard', compact('pendingUsers', 'activeUsers', 'stats', 'pendingRoleChanges'));
+        $provinces = Province::orderBy('name')->pluck('name');
+
+        return view('superadmin.dashboard', compact('pendingUsers', 'activeUsers', 'stats', 'pendingRoleChanges', 'provinces'));
     }
 
     public function approve($id)
@@ -140,6 +143,7 @@ class SuperadminController extends Controller
             'employee_id' => 'required|string|unique:users,employee_id',
             'password' => 'required|string|min:8|confirmed',
             'position' => 'required|in:rpmo,poo,rpmo_poo,none',
+            'assigned_province' => 'nullable|string|max:255',
         ]);
 
         $user = User::create([
@@ -151,6 +155,7 @@ class SuperadminController extends Controller
             'password' => Hash::make($request->password),
             'role' => 'admin',
             'position' => $request->position,
+            'assigned_province' => $request->assigned_province,
             'approved' => true,
         ]);
 

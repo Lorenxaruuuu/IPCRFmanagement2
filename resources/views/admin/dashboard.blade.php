@@ -163,6 +163,13 @@
                     <i class="fas fa-file-alt w-5"></i>
                     Manage Forms
                 </a>
+                @if(isset($userPosition) && $userPosition === 'rpmo_poo')
+                <div class="px-4 mt-4 mb-2"><p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Provincial (POO)</p></div>
+                <a href="{{ route('admin.poo.dashboard') }}" class="nav-item flex items-center gap-3 px-6 py-3 text-sm">
+                    <i class="fas fa-map-marked-alt w-5"></i>
+                    POO Admin Dashboard
+                </a>
+                @endif
             </nav>
             
             <div class="p-4 border-t border-gray-700">

@@ -11,6 +11,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->alias([
+            'rpmo.admin' => \App\Http\Middleware\EnsureRpmoAdmin::class,
+            'poo.admin'  => \App\Http\Middleware\EnsurePooAdmin::class,
+        ]);
         $middleware->append(\App\Http\Middleware\AllowAllHeaders::class);
         $middleware->validateCsrfTokens(except: [
             'register.php',

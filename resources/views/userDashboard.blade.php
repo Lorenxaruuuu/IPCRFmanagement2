@@ -841,11 +841,12 @@
                 <i data-lucide="file-spreadsheet" class="w-5 h-5"></i>
                 My IPCRF Forms
             </button>
-            <a href="{{ route('performance.index') }}" 
-                    class="w-full flex items-center gap-3 px-6 py-3.5 text-base transition-all text-left cursor-pointer border-l-4 {{ $activeTab === 'performance' ? 'bg-white/10 border-blue-500 text-white font-semibold shadow-sm' : 'border-transparent text-gray-300 hover:bg-white/5 hover:text-white' }}">
+            <button type="button" @click="activeTab = 'performance'"
+                    class="w-full flex items-center gap-3 px-6 py-3.5 text-base transition-all text-left cursor-pointer border-l-4 focus:outline-none"
+                    :class="activeTab === 'performance' ? 'bg-white/10 border-blue-500 text-white font-semibold shadow-sm' : 'border-transparent text-gray-300 hover:bg-white/5 hover:text-white'">
                 <i data-lucide="trending-up" class="w-5 h-5"></i>
                 Performance History
-            </a>
+            </button>
             <button @click="activeTab = 'settings'"
                     class="w-full flex items-center gap-3 px-6 py-3.5 text-base transition-all text-left cursor-pointer border-l-4 focus:outline-none"
                     :class="activeTab === 'settings' ? 'bg-white/10 border-blue-500 text-white font-semibold shadow-sm' : 'border-transparent text-gray-300 hover:bg-white/5 hover:text-white'">

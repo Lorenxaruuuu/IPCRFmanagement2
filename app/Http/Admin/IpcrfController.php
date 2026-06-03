@@ -10,6 +10,7 @@ use App\Models\Province;
 use App\Models\Notice;
 use App\Models\Form;
 use App\Services\GoogleDriveService;
+use App\Support\AdminPosition;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Http;
@@ -112,13 +113,22 @@ class IpcrfController extends Controller
 
         // Current admin user info
         $currentUser = null;
+        $userPosition = AdminPosition::RPMO;
         $sessionUser = session('user');
         if ($sessionUser) {
             $currentUser = \App\Models\User::find($sessionUser['id'] ?? 0)
                 ?? (object)['name' => $sessionUser['name'] ?? 'Administrator', 'email' => $sessionUser['email'] ?? ''];
+            if ($currentUser instanceof \App\Models\User) {
+                $userPosition = $currentUser->adminPositionType();
+            }
+        }
+
+        if (AdminPosition::isPooOnly($userPosition)) {
+            return redirect()->route('admin.poo.dashboard');
         }
 
         return view('admin.dashboard', compact(
+            'userPosition',
             'stats', 'announcements', 'forms', 'recentSubmissions', 'provinces',
             'currentUser', 'positions', 'ipcrf_templates', 'ipcrf_submissions', 'managed_users'
         ));

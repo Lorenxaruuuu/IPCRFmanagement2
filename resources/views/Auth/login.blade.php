@@ -381,9 +381,139 @@
             margin-top: 20px;
             font-size: 16px;
         }
+
+        /* Alert Modal */
+        .alert-modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.55);
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            animation: fadeIn 0.25s ease;
+        }
+
+        .alert-modal.show {
+            display: flex;
+        }
+
+        .alert-modal-content {
+            background: #fff;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+            padding: 28px 30px 24px;
+            max-width: 420px;
+            width: 100%;
+            animation: slideDown 0.3s ease;
+        }
+
+        .alert-modal-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        .alert-modal.error .alert-modal-icon {
+            background: #fde8ea;
+            color: #cb2431;
+        }
+
+        .alert-modal.success .alert-modal-icon {
+            background: #e6f4ea;
+            color: #22863a;
+        }
+
+        .alert-modal.info .alert-modal-icon {
+            background: #e8f4fd;
+            color: #0066cc;
+        }
+
+        .alert-modal-header h2 {
+            margin: 0 0 10px;
+            font-size: 22px;
+            color: #1a1a1a;
+            font-weight: 700;
+        }
+
+        .alert-modal.error .alert-modal-header h2 {
+            color: #cb2431;
+        }
+
+        .alert-modal.success .alert-modal-header h2 {
+            color: #22863a;
+        }
+
+        .alert-modal-body p {
+            margin: 0;
+            color: #555;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .alert-modal-footer {
+            margin-top: 24px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .alert-modal-btn {
+            padding: 11px 24px;
+            border: none;
+            border-radius: 8px;
+            background: #1e3a5f;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s ease, transform 0.2s ease;
+        }
+
+        .alert-modal-btn:hover {
+            background: #2a4a73;
+            transform: translateY(-1px);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-30px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
     </style>
 </head>
 <body>
+    <div id="alertModal" class="alert-modal" role="dialog" aria-modal="true" aria-labelledby="alertModalTitle">
+        <div class="alert-modal-content">
+            <div class="alert-modal-icon" id="alertModalIcon" aria-hidden="true">!</div>
+            <div class="alert-modal-header">
+                <h2 id="alertModalTitle">Notice</h2>
+            </div>
+            <div class="alert-modal-body">
+                <p id="alertModalMessage"></p>
+            </div>
+            <div class="alert-modal-footer">
+                <button type="button" class="alert-modal-btn" id="alertModalCloseBtn">OK</button>
+            </div>
+        </div>
+    </div>
+
     <div class="loading-overlay" id="loadingOverlay">
         <div style="text-align: center;">
             <div class="spinner"></div>
@@ -487,6 +617,46 @@
     let storedVerificationCode = null;
     let currentEmail = null;
 
+    function showModal(type, title, message) {
+        const modal = document.getElementById('alertModal');
+        const icon = document.getElementById('alertModalIcon');
+        const titleEl = document.getElementById('alertModalTitle');
+        const messageEl = document.getElementById('alertModalMessage');
+
+        modal.classList.remove('error', 'success', 'info');
+        modal.classList.add(type === 'success' ? 'success' : type === 'info' ? 'info' : 'error');
+
+        titleEl.textContent = title;
+        messageEl.textContent = message;
+
+        if (type === 'success') {
+            icon.textContent = '✓';
+        } else if (type === 'info') {
+            icon.textContent = 'i';
+        } else {
+            icon.textContent = '✕';
+        }
+
+        modal.classList.add('show');
+        document.getElementById('alertModalCloseBtn').focus();
+    }
+
+    function closeModal() {
+        document.getElementById('alertModal').classList.remove('show');
+    }
+
+    document.getElementById('alertModalCloseBtn').addEventListener('click', closeModal);
+    document.getElementById('alertModal').addEventListener('click', function(event) {
+        if (event.target === this) {
+            closeModal();
+        }
+    });
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeModal();
+        }
+    });
+
     // Load stored user info on page load
     window.addEventListener('DOMContentLoaded', async function() {
         const storedUser = localStorage.getItem('user');
@@ -498,7 +668,9 @@
                     document.getElementById('remember').checked = true;
                 }
             } catch (e) {
-                console.error('Error parsing stored user data:', e);
+                localStorage.removeItem('user');
+                localStorage.removeItem('rememberMe');
+                showModal('info', 'Saved Session Cleared', 'Your saved sign-in data was invalid and has been cleared. Please sign in again.');
             }
         }
     });
@@ -513,8 +685,7 @@
         try {
             // Validate inputs
             if (!email || !code) {
-                console.error('Invalid email or code:', { email, code });
-                alert('Invalid email address or code. Please try again.');
+                showModal('error', 'Verification Failed', 'Invalid email address or verification code. Please try again.');
                 return false;
             }
 
@@ -522,19 +693,11 @@
             const templateId = '{{ env("EMAILJS_TEMPLATE_ID") }}';
             const publicKey = '{{ env("EMAILJS_PUBLIC_KEY") }}';
 
-            // Check if environment variables are configured
             if (!serviceId || !templateId || !publicKey) {
-                console.error('Missing EmailJS configuration:', { 
-                    serviceId: serviceId ? 'SET' : 'MISSING',
-                    templateId: templateId ? 'SET' : 'MISSING',
-                    publicKey: publicKey ? 'SET' : 'MISSING'
-                });
-                alert('Email service is not properly configured. Please contact IT support.');
+                showModal('error', 'Email Service Unavailable', 'The verification email service is not configured. Please contact IT support at itsupport@dswd.gov.ph.');
                 return false;
             }
 
-            console.log('Sending email via EmailJS REST API...', { email, code });
-            
             const payload = {
                 service_id: serviceId,
                 template_id: templateId,
@@ -547,8 +710,6 @@
                 }
             };
 
-            console.log('EmailJS Payload:', JSON.stringify(payload, null, 2));
-
             const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
                 method: 'POST',
                 headers: {
@@ -558,27 +719,22 @@
             });
 
             const responseText = await response.text();
-            console.log('EmailJS Response:', response.status, responseText);
 
             if (response.ok) {
-                console.log('Email sent successfully via REST API');
                 return true;
-            } else {
-                console.error('EmailJS REST API Error:', response.status, responseText);
-                
-                // Provide helpful error messages
-                if (responseText.includes('recipients address is empty')) {
-                    alert('Email configuration error: Check your EmailJS template setup. The "to_email" parameter may not be configured correctly in your template.');
-                } else if (responseText.includes('Invalid service ID')) {
-                    alert('Email service configuration error. Please contact IT support.');
-                } else {
-                    alert('Failed to send verification code: ' + responseText);
-                }
-                return false;
             }
+
+            let errorMessage = 'We could not send the verification code to your email. Please try again.';
+            if (responseText.includes('recipients address is empty')) {
+                errorMessage = 'Email delivery is misconfigured. Please contact IT support.';
+            } else if (responseText.includes('Invalid service ID')) {
+                errorMessage = 'The email service is not set up correctly. Please contact IT support.';
+            }
+
+            showModal('error', 'Verification Email Failed', errorMessage);
+            return false;
         } catch (error) {
-            console.error('Fetch Error:', error);
-            alert('Failed to send verification code. Please try again. Error: ' + error.message);
+            showModal('error', 'Network Error', 'Failed to send the verification code. Please check your connection and try again.');
             return false;
         }
     }
@@ -599,7 +755,7 @@
         if (!verificationCodeSent && !isSuperadmin) {
             // Validate reCAPTCHA
             if (!recaptchaResponse) {
-                alert('Please complete the reCAPTCHA verification.');
+                showModal('error', 'reCAPTCHA Required', 'Please complete the reCAPTCHA verification before continuing.');
                 return;
             }
 
@@ -637,20 +793,19 @@
 
         // STEP 2: Verify code (skip for superadmin) and login
         if (!isSuperadmin && !verificationCode) {
-            alert('Please enter the verification code sent to your email.');
+            showModal('error', 'Verification Code Required', 'Please enter the 6-digit code sent to your email.');
             return;
         }
 
         if (!isSuperadmin && verificationCode !== storedVerificationCode) {
-            alert('Invalid verification code. Please try again.');
+            showModal('error', 'Invalid Code', 'The verification code you entered is incorrect. Please try again.');
             document.getElementById('verificationCode').value = '';
             document.getElementById('verificationCode').focus();
             return;
         }
 
-        // Validate reCAPTCHA for superadmin
         if (isSuperadmin && !recaptchaResponse) {
-            alert('Please complete the reCAPTCHA verification.');
+            showModal('error', 'reCAPTCHA Required', 'Please complete the reCAPTCHA verification before continuing.');
             return;
         }
 
@@ -658,10 +813,11 @@
         document.getElementById('loadingOverlay').classList.add('active');
 
         try {
-            const response = await fetch('login.php', {
+            const response = await fetch('{{ url("login.php") }}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': 'application/json',
                 },
                 body: JSON.stringify({
                     email: email,
@@ -670,9 +826,16 @@
                 })
             });
 
-            const result = await response.json();
-            
-            // Hide loading spinner
+            let result;
+            try {
+                result = await response.json();
+            } catch (parseError) {
+                document.getElementById('loadingOverlay').classList.remove('active');
+                showModal('error', 'Sign In Failed', 'The server returned an unexpected response. Please try again later.');
+                resetVerificationFlow();
+                return;
+            }
+
             document.getElementById('loadingOverlay').classList.remove('active');
 
             if (result.success) {
@@ -704,15 +867,13 @@
                     window.location.href = result.redirect;
                 }, 500);
             } else {
-                alert(result.message || 'Login failed. Please try again.');
-                // Reset form for retry
+                showModal('error', 'Sign In Failed', result.message || 'Login failed. Please check your credentials and try again.');
                 resetVerificationFlow();
             }
 
         } catch (error) {
             document.getElementById('loadingOverlay').classList.remove('active');
-            alert('Connection error. Please check your internet connection.');
-            console.error('Error:', error);
+            showModal('error', 'Connection Error', 'Unable to reach the server. Please check your internet connection and try again.');
             resetVerificationFlow();
         }
     });

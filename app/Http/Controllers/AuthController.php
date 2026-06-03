@@ -18,6 +18,10 @@ class AuthController extends Controller
                 if ($user['role'] === 'superadmin') {
                     return redirect()->route('superadmin.dashboard');
                 } elseif ($user['role'] === 'admin') {
+                    $admin = User::find($user['id'] ?? 0);
+                    if ($admin && $admin->adminPositionType() === 'poo') {
+                        return redirect()->route('admin.poo.dashboard');
+                    }
                     return redirect('/admins');
                 } elseif ($user['role'] === 'encoder') {
                     return redirect('/encoder');
@@ -67,6 +71,13 @@ class AuthController extends Controller
 
             if ($user->role === 'superadmin') {
                 return redirect()->route('superadmin.dashboard');
+            } elseif ($user->role === 'admin') {
+                if ($user->adminPositionType() === 'poo') {
+                    return redirect()->route('admin.poo.dashboard');
+                }
+                return redirect('/admins');
+            } elseif ($user->role === 'encoder') {
+                return redirect('/encoder');
             }
 
             return redirect()->route('userDashboard');

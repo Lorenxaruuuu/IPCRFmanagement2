@@ -17,6 +17,13 @@ use App\Http\Controllers\GoogleDriveAuthController;
 use App\Http\Controllers\SuperadminController;
 
 Route::get('/admins', function () {
+    $sessionUser = session('user');
+    if ($sessionUser && ($sessionUser['role'] ?? '') === 'admin') {
+        $admin = \App\Models\User::find($sessionUser['id'] ?? 0);
+        if ($admin && \App\Support\AdminPosition::isPooOnly($admin->adminPositionType())) {
+            return redirect()->route('admin.poo.dashboard');
+        }
+    }
     return redirect()->route('admin.dashboard');
 });
 
@@ -37,6 +44,10 @@ Route::get('/', function () {
             if ($user['role'] === 'superadmin') {
                 return redirect()->route('superadmin.dashboard');
             } elseif ($user['role'] === 'admin') {
+                $admin = \App\Models\User::find($user['id'] ?? 0);
+                if ($admin && \App\Support\AdminPosition::isPooOnly($admin->adminPositionType())) {
+                    return redirect()->route('admin.poo.dashboard');
+                }
                 return redirect('/admins');
             } elseif ($user['role'] === 'encoder') {
                 return redirect('/encoder');
@@ -68,7 +79,20 @@ Route::post('/upload', [IpcrfController::class, 'store'])->name('upload.store');
 
 Route::prefix('admin')->name('admin.')->group(function () {
 
-    // Dashboard
+    // POO Admin only (provincial quality control)
+    Route::middleware('poo.admin')->prefix('poo')->group(function () {
+        Route::get('/dashboard', [\App\Http\Admin\PooAdminController::class, 'dashboard'])->name('poo.dashboard');
+        Route::get('/queue', [\App\Http\Admin\PooAdminController::class, 'provincialQueue'])->name('poo.queue');
+        Route::get('/staff', [\App\Http\Admin\PooAdminController::class, 'staffDirectory'])->name('poo.staff');
+        Route::get('/archives', [\App\Http\Admin\PooAdminController::class, 'archives'])->name('poo.archives');
+        Route::get('/submissions/{id}/inspect', [\App\Http\Admin\PooAdminController::class, 'inspectSubmission'])->name('poo.submissions.inspect');
+        Route::get('/submissions/{id}/download', [\App\Http\Admin\PooAdminController::class, 'download'])->name('poo.submissions.download');
+        Route::post('/submissions/{id}/return', [\App\Http\Admin\PooAdminController::class, 'returnForCorrection'])->name('poo.submissions.return');
+        Route::post('/submissions/{id}/approve', [\App\Http\Admin\PooAdminController::class, 'approve'])->name('poo.submissions.approve');
+    });
+
+    // RPMO Admin only (regional management)
+    Route::middleware('rpmo.admin')->group(function () {
     Route::get('/dashboard', [IpcrfController::class, 'dashboard'])->name('dashboard');
 
     // Upload - Single page, no steps
@@ -129,6 +153,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::post('/positions',         [AdminPositionController::class, 'store'])->name('positions.store');
     Route::put('/positions/{id}',     [AdminPositionController::class, 'update'])->name('positions.update');
     Route::delete('/positions/{id}',  [AdminPositionController::class, 'destroy'])->name('positions.destroy');
+    });
 });
 
 // ─── User Form-Filling Routes ─────────────────────────────────────────────────
@@ -161,6 +186,7 @@ Route::get('/notifications', function () {
 
 Route::post('/profile/update', [AuthController::class, 'updateProfile'])->name('profile.update');
 Route::post('/profile/change-password', [AuthController::class, 'changePassword'])->name('profile.changePassword');
+Route::post('/profile/request-role-change', [AuthController::class, 'requestRoleChange'])->name('profile.requestRoleChange');
 
 Route::post('/register.php', function () {
     $data = request()->json()->all();
@@ -216,8 +242,19 @@ Route::post('/login.php', function () {
         $email .= '@dswd.gov.ph';
     }
     
-    $user = DB::table('users')
-        ->where('email', $email)
+    // Verify Google reCAPTCHA
+    $recaptchaResponse = $data['g_recaptcha_response'] ?? '';
+    $recaptchaSecret = env('RECAPTCHA_SECRET_KEY');
+    if (empty($recaptchaResponse) || empty($recaptchaSecret)) {
+        return response()->json(['success' => false, 'message' => 'reCAPTCHA verification failed.']);
+    }
+    $verifyResponse = file_get_contents('https://www.google.com/recaptcha/api/siteverify?secret=' . $recaptchaSecret . '&response=' . $recaptchaResponse);
+    $captchaResult = json_decode($verifyResponse);
+    if (!$captchaResult->success) {
+        return response()->json(['success' => false, 'message' => 'reCAPTCHA verification failed.']);
+    }
+    
+    $user = \App\Models\User::where('email', $email)
         ->orWhere('email', $raw_input)
         ->orWhere('employee_id', $email)
         ->orWhere('employee_id', $raw_input)
@@ -238,7 +275,8 @@ Route::post('/login.php', function () {
         'role' => $user->role,
         'email' => $user->email,
         'firstname' => $user->firstname,
-        'lastname' => $user->lastname
+        'lastname' => $user->lastname,
+        'position' => $user->position
     ]);
     
     $redirectUrl = '/home';
@@ -248,6 +286,9 @@ Route::post('/login.php', function () {
             break;
         case 'admin':
             $redirectUrl = '/admins';
+            if ($user->adminPositionType() === 'poo') {
+                $redirectUrl = '/admin/poo/dashboard';
+            }
             break;
         case 'superadmin':
             $redirectUrl = '/superadmin/dashboard2';

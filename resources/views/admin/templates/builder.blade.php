@@ -21,7 +21,14 @@ body{font-family:'Inter',sans-serif;background:#0f172a;color:#f1f5f9;margin:0;ov
 
 /* ── Table ───────────────────────────────────────────────────────────── */
 .ipcrf-preview-table{border-collapse:collapse;min-width:100%;font-size:11px;color:#1e293b;}
-.ipcrf-preview-table td{border:1px solid #cbd5e1;padding:2px 4px;vertical-align:middle;cursor:pointer;position:relative;overflow:hidden;white-space:nowrap;}
+/* Default cell border – overridden per-cell by data-border-* attributes via JS */
+.ipcrf-preview-table td.ipcrf-cell{
+    border-top:1px solid #94a3b8;
+    border-right:1px solid #94a3b8;
+    border-bottom:1px solid #94a3b8;
+    border-left:1px solid #94a3b8;
+    padding:2px 4px;vertical-align:middle;cursor:pointer;position:relative;overflow:hidden;white-space:nowrap;
+}
 .ipcrf-preview-table td.ipcrf-cell:hover{background:rgba(99,102,241,.07)!important;outline:2px solid rgba(99,102,241,.3);z-index:1;}
 .ipcrf-preview-table td.selected-cell{outline:2px solid #f59e0b!important;background:rgba(245,158,11,.06)!important;z-index:2;}
 .ipcrf-preview-table td.multi-selected-cell{background:rgba(59,130,246,.12)!important;outline:2px solid rgba(59,130,246,.6)!important;z-index:3;}
@@ -29,11 +36,18 @@ body{font-family:'Inter',sans-serif;background:#0f172a;color:#f1f5f9;margin:0;ov
 .ipcrf-preview-table td.editing-cell{background:#fffbeb!important;z-index:10;}
 .ipcrf-preview-table td.col-highlighted{background:rgba(99,102,241,.06)!important;}
 .ipcrf-preview-table td.row-highlighted{background:rgba(16,185,129,.06)!important;}
+/* Border-none helpers */
+.ipcrf-preview-table td.ipcrf-cell.no-border-top   {border-top:1px solid transparent!important;}
+.ipcrf-preview-table td.ipcrf-cell.no-border-right  {border-right:1px solid transparent!important;}
+.ipcrf-preview-table td.ipcrf-cell.no-border-bottom {border-bottom:1px solid transparent!important;}
+.ipcrf-preview-table td.ipcrf-cell.no-border-left   {border-left:1px solid transparent!important;}
 
 /* field badges */
 .field-badge{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .field-badge.autofill_name,.field-badge.autofill_position,.field-badge.autofill_department,
-.field-badge.autofill_date,.field-badge.autofill_division_chief,.field-badge.autofill_approving_authority{background:#d1fae5;color:#065f46;}
+.field-badge.autofill_date,.field-badge.autofill_division_chief,.field-badge.autofill_approving_authority,
+.field-badge.autofill_division_chief_position,.field-badge.autofill_approving_authority_position,
+.field-badge.autofill_division_chief_signature,.field-badge.autofill_approving_authority_signature{background:#d1fae5;color:#065f46;}
 .field-badge.date{background:#cffafe;color:#164e63;}
 .field-badge.text,.field-badge.number,.field-badge.textarea{background:#dbeafe;color:#1e40af;}
 .field-badge.rating{background:#fef3c7;color:#92400e;}
@@ -41,6 +55,7 @@ body{font-family:'Inter',sans-serif;background:#0f172a;color:#f1f5f9;margin:0;ov
 .field-badge.signature{background:#fce7f3;color:#9d174d;}
 .field-badge.readonly{background:#f1f5f9;color:#475569;}
 .field-badge.picture{background:#e0f2fe;color:#0369a1;}
+.field-badge.calculated_mean{background:#f3e8ff;color:#6b21a8;}
 
 /* ── Side-panel controls ─────────────────────────────────────────────── */
 .sp-label{font-size:10px;font-weight:700;color:#64748b;display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.06em;}
@@ -65,6 +80,9 @@ body{font-family:'Inter',sans-serif;background:#0f172a;color:#f1f5f9;margin:0;ov
 .btn-sm{padding:4px 10px;font-size:11px;}
 .btn-merge{background:rgba(59,130,246,.14);color:#60a5fa;border:1px solid rgba(59,130,246,.3);}
 .btn-merge:hover{background:rgba(59,130,246,.25);}
+.btn-undo{background:rgba(255,255,255,.04);color:#94a3b8;border:1px solid rgba(255,255,255,.1);}
+.btn-undo:hover:not(:disabled){background:rgba(99,102,241,.12);color:#a5b4fc;border-color:rgba(99,102,241,.4);}
+.btn-undo:disabled{opacity:.3;cursor:not-allowed;}
 
 /* ── Tabs ────────────────────────────────────────────────────────────── */
 .tab-row{display:flex;border-bottom:1px solid rgba(255,255,255,.06);background:#1e293b;flex-shrink:0;}
@@ -119,6 +137,16 @@ body{font-family:'Inter',sans-serif;background:#0f172a;color:#f1f5f9;margin:0;ov
 .struct-btn.del:hover{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:#ef4444;}
 .struct-btn.merge-action{border-color:rgba(59,130,246,.3);color:#60a5fa;}
 .struct-btn.merge-action:hover{background:rgba(59,130,246,.15);border-color:#3b82f6;}
+.struct-btn.border-btn{border-color:rgba(251,191,36,.25);color:#fbbf24;}
+.struct-btn.border-btn:hover{background:rgba(251,191,36,.12);border-color:#fbbf24;}
+.struct-btn.border-none-btn{border-color:rgba(100,116,139,.3);color:#64748b;}
+.struct-btn.border-none-btn:hover{background:rgba(239,68,68,.1);border-color:#ef4444;color:#ef4444;}
+/* Format buttons (Bold / Italic / Underline) */
+.struct-btn.fmt-btn{border-color:rgba(167,139,250,.3);color:#a78bfa;}
+.struct-btn.fmt-btn:hover{background:rgba(167,139,250,.14);border-color:#a78bfa;color:#c4b5fd;}
+.struct-btn.fmt-btn.active-fmt{background:rgba(167,139,250,.22)!important;border-color:#a78bfa!important;color:#c4b5fd!important;}
+/* Ctrl+RightClick merge-select highlight */
+.ipcrf-preview-table td.merge-select-cell{background:rgba(139,92,246,.18)!important;outline:2px dashed rgba(139,92,246,.8)!important;z-index:4;}
 .struct-hint{font-size:10px;color:#334155;margin-left:auto;}
 
 /* ── Resize popup ────────────────────────────────────────────────────── */
@@ -154,12 +182,19 @@ body{font-family:'Inter',sans-serif;background:#0f172a;color:#f1f5f9;margin:0;ov
                 <p style="font-size:14px;font-weight:700;color:#f1f5f9;margin:0;">{{ $template->name }}</p>
                 <p style="font-size:11px;color:#475569;margin:0;">
                     Click → assign field &nbsp;·&nbsp; Double-click → edit text &nbsp;·&nbsp;
-                    Drag / Shift+click → select range &nbsp;·&nbsp; Click header → resize &nbsp;·&nbsp; Right-click header → add/delete
+                    Drag / Shift+click / Ctrl+click → multi-select &nbsp;·&nbsp; Click header → resize &nbsp;·&nbsp; Right-click header → add/delete
                 </p>
             </div>
         </div>
         <div style="display:flex;align-items:center;gap:10px;">
             <span style="font-size:11px;color:#64748b;" x-text="mappedFields.length + ' field(s) mapped'"></span>
+            {{-- Undo / Redo --}}
+            <button class="btn btn-undo btn-sm" @click="undo()" :disabled="_historyIdx <= 0" title="Undo (Ctrl+Z)">
+                <i class="fas fa-undo"></i>
+            </button>
+            <button class="btn btn-undo btn-sm" @click="redo()" :disabled="_historyIdx >= _history.length - 1" title="Redo (Ctrl+Shift+Z)">
+                <i class="fas fa-redo"></i>
+            </button>
             <button class="btn btn-ghost btn-sm" @click="tab='positions'"><i class="fas fa-id-badge"></i> Positions</button>
             <button class="btn btn-success" @click="saveAll()">
                 <span x-show="!saving"><i class="fas fa-save"></i> Save All</span>
@@ -202,6 +237,69 @@ body{font-family:'Inter',sans-serif;background:#0f172a;color:#f1f5f9;margin:0;ov
             </div>
         </template>
 
+        {{-- Border controls (show when 1+ cell selected) --}}
+        <template x-if="selectedCell || selectedCells.length >= 1">
+            <div style="display:flex;align-items:center;gap:4px;">
+                <div class="struct-sep"></div>
+                <span class="struct-lbl" style="color:#fbbf24;"><i class="fas fa-border-all" style="margin-right:3px;"></i>Borders</span>
+                <button class="struct-btn border-btn" title="All Borders" @click="applyBorder('all')">
+                    <i class="fas fa-border-all"></i> All
+                </button>
+                <button class="struct-btn border-btn" title="Border Top" @click="applyBorder('top')">
+                    <i class="fas fa-border-top"></i> Top
+                </button>
+                <button class="struct-btn border-btn" title="Border Bottom" @click="applyBorder('bottom')">
+                    <i class="fas fa-border-bottom"></i> Bottom
+                </button>
+                <button class="struct-btn border-btn" title="Border Left" @click="applyBorder('left')">
+                    <i class="fas fa-border-left"></i> Left
+                </button>
+                <button class="struct-btn border-btn" title="Border Right" @click="applyBorder('right')">
+                    <i class="fas fa-border-right"></i> Right
+                </button>
+                <button class="struct-btn border-none-btn" title="Remove All Borders" @click="applyBorder('none')">
+                    <i class="fas fa-border-none"></i> None
+                </button>
+            </div>
+        </template>
+
+        {{-- Text Formatting: Bold / Italic / Underline (show when 1+ cell selected) --}}
+        <template x-if="selectedCell || selectedCells.length >= 1">
+            <div style="display:flex;align-items:center;gap:4px;">
+                <div class="struct-sep"></div>
+                <span class="struct-lbl" style="color:#a78bfa;"><i class="fas fa-font" style="margin-right:3px;"></i>Format</span>
+                <button class="struct-btn fmt-btn" :class="{'active-fmt': _activeFmt.bold}"
+                        title="Bold (Ctrl+B)" @click="applyFormat('bold')">
+                    <b>B</b>
+                </button>
+                <button class="struct-btn fmt-btn" :class="{'active-fmt': _activeFmt.italic}"
+                        title="Italic (Ctrl+I)" @click="applyFormat('italic')">
+                    <i>I</i>
+                </button>
+                <button class="struct-btn fmt-btn" :class="{'active-fmt': _activeFmt.underline}"
+                        title="Underline (Ctrl+U)" @click="applyFormat('underline')">
+                    <span style="text-decoration:underline;">U</span>
+                </button>
+            </div>
+        </template>
+
+        {{-- Alignment controls (show when 1+ cell selected) --}}
+        <template x-if="selectedCell || selectedCells.length >= 1">
+            <div style="display:flex;align-items:center;gap:4px;">
+                <div class="struct-sep"></div>
+                <span class="struct-lbl" style="color:#60a5fa;"><i class="fas fa-align-left" style="margin-right:3px;"></i>Align</span>
+                <button class="struct-btn fmt-btn" title="Align Left" @click="applyAlignment('left')">
+                    <i class="fas fa-align-left"></i>
+                </button>
+                <button class="struct-btn fmt-btn" title="Align Center" @click="applyAlignment('center')">
+                    <i class="fas fa-align-center"></i>
+                </button>
+                <button class="struct-btn fmt-btn" title="Align Right" @click="applyAlignment('right')">
+                    <i class="fas fa-align-right"></i>
+                </button>
+            </div>
+        </template>
+
         {{-- Resize panel (shown when a header is clicked) --}}
         <template x-if="activeHdrType">
             <div class="resize-panel">
@@ -216,9 +314,9 @@ body{font-family:'Inter',sans-serif;background:#0f172a;color:#f1f5f9;margin:0;ov
             </div>
         </template>
 
-        <span class="struct-hint" x-show="!activeHdrType && selectedCells.length < 2">
+        <span class="struct-hint" x-show="!activeHdrType && !selectedCell && selectedCells.length < 1">
             <i class="fas fa-info-circle" style="margin-right:3px;"></i>
-            Click col/row header to resize · Drag to select range · Merge selected cells
+            Drag / Shift+click / Ctrl+click → select · Ctrl+Right-click → free-pick for merge · B/I/U format
         </span>
     </div>
 
@@ -273,7 +371,11 @@ body{font-family:'Inter',sans-serif;background:#0f172a;color:#f1f5f9;margin:0;ov
                             <div class="ft-option" :class="{active:currentFieldType==='autofill_department'}"           @click="currentFieldType='autofill_department'"><i class="fas fa-building"></i>Department</div>
                             <div class="ft-option" :class="{active:currentFieldType==='autofill_date'}"                 @click="currentFieldType='autofill_date'"><i class="fas fa-calendar-day"></i>Date Signed</div>
                             <div class="ft-option" :class="{active:currentFieldType==='autofill_division_chief'}"       @click="currentFieldType='autofill_division_chief'"><i class="fas fa-user-tie"></i>Division Chief</div>
+                            <div class="ft-option" :class="{active:currentFieldType==='autofill_division_chief_position'}" @click="currentFieldType='autofill_division_chief_position'"><i class="fas fa-briefcase"></i>Div. Chief Position</div>
+                            <div class="ft-option" :class="{active:currentFieldType==='autofill_division_chief_signature'}" @click="currentFieldType='autofill_division_chief_signature'"><i class="fas fa-signature"></i>Div. Chief Signature</div>
                             <div class="ft-option" :class="{active:currentFieldType==='autofill_approving_authority'}"  @click="currentFieldType='autofill_approving_authority'"><i class="fas fa-stamp"></i>Approving Auth.</div>
+                            <div class="ft-option" :class="{active:currentFieldType==='autofill_approving_authority_position'}" @click="currentFieldType='autofill_approving_authority_position'"><i class="fas fa-briefcase"></i>Appr. Auth Position</div>
+                            <div class="ft-option" :class="{active:currentFieldType==='autofill_approving_authority_signature'}" @click="currentFieldType='autofill_approving_authority_signature'"><i class="fas fa-signature"></i>Appr. Auth Signature</div>
 
                             <span class="ft-section-title">Input Fields</span>
                             <div class="ft-option" :class="{active:currentFieldType==='date'}"      @click="currentFieldType='date'"><i class="fas fa-calendar-alt"></i>Date Picker</div>
@@ -284,12 +386,13 @@ body{font-family:'Inter',sans-serif;background:#0f172a;color:#f1f5f9;margin:0;ov
                             <div class="ft-option" :class="{active:currentFieldType==='dropdown'}"  @click="currentFieldType='dropdown'"><i class="fas fa-chevron-down"></i>Dropdown</div>
                             <div class="ft-option" :class="{active:currentFieldType==='signature'}" @click="currentFieldType='signature'"><i class="fas fa-signature"></i>Signature</div>
                             <div class="ft-option" :class="{active:currentFieldType==='readonly'}"  @click="currentFieldType='readonly'"><i class="fas fa-lock"></i>Read-Only</div>
+                            <div class="ft-option" :class="{active:currentFieldType==='calculated_mean'}" @click="currentFieldType='calculated_mean'"><i class="fas fa-calculator"></i>Calculated Mean</div>
 
                             <span class="ft-section-title">Media</span>
                             <div class="ft-option" style="grid-column:1/-1;"
                                  :class="{active:currentFieldType==='picture'}"
                                  @click="currentFieldType='picture'; $nextTick(()=>{ if(selectedCell) triggerPictureUpload(); })">
-                                <i class="fas fa-folder-open"></i>Add Picture (opens file manager)
+                                 <i class="fas fa-folder-open"></i>Add Picture (opens file manager)
                             </div>
                         </div>
 
@@ -300,6 +403,10 @@ body{font-family:'Inter',sans-serif;background:#0f172a;color:#f1f5f9;margin:0;ov
                         <div x-show="currentFieldType==='dropdown'" style="margin-bottom:10px;">
                             <label class="sp-label">Options <span style="font-weight:400;text-transform:none;">(one per line)</span></label>
                             <textarea class="sp-input" rows="3" x-model="currentDropdownOptions" style="resize:vertical;"></textarea>
+                        </div>
+                        <div x-show="currentFieldType==='calculated_mean'" style="margin-bottom:10px;">
+                            <label class="sp-label">Target Cells <span style="font-weight:400;text-transform:none;">(comma-separated, e.g. D10,E10,F10)</span></label>
+                            <input type="text" class="sp-input" placeholder="e.g., D10,E10,F10" x-model="currentMeanTargets">
                         </div>
                         <div style="margin-bottom:14px;display:flex;align-items:center;gap:8px;">
                             <input type="checkbox" id="req-chk" x-model="currentRequired" style="accent-color:#6366f1;">
@@ -406,6 +513,12 @@ body{font-family:'Inter',sans-serif;background:#0f172a;color:#f1f5f9;margin:0;ov
                 <div class="ctx-item del" @click="deleteRowAt(ctxMenu.index)"><i class="fas fa-trash" style="width:14px;"></i> Delete This Row</div>
             </div>
         </template>
+        <template x-if="ctxMenu.type==='cell'">
+            <div>
+                <div class="ctx-item" @click="addCell('left')"><i class="fas fa-arrow-left" style="color:#10b981;width:14px;"></i> Add Cell Left</div>
+                <div class="ctx-item" @click="addCell('right')"><i class="fas fa-arrow-right" style="color:#10b981;width:14px;"></i> Add Cell Right</div>
+            </div>
+        </template>
     </div>
 
     {{-- ── TOAST ── --}}
@@ -448,6 +561,7 @@ function builderApp() {
         currentFieldLabel: '',
         currentRequired: false,
         currentDropdownOptions: '',
+        currentMeanTargets: '',
 
         /* multi-cell selection */
         selectedCells:     [],    // [{ref, td}]
@@ -473,16 +587,43 @@ function builderApp() {
         /* inline edit guard */
         _editingRef: null,
 
+        /* active format state for toolbar button highlight */
+        _activeFmt: { bold: false, italic: false, underline: false },
+
+        /* ─── Undo / Redo history ────────────────────────────────────────── */
+        _history:    [],   // array of { tableHTML, mappedFields, hiddenCells }
+        _historyIdx: -1,   // current position in _history
+
         /* ─── Init ──────────────────────────────────────────────────────── */
         init() {
             this.setupEventDelegation();
             this.refreshCellHighlights();
             setTimeout(() => {
                 if (typeof initSpreadsheetResizers === 'function') initSpreadsheetResizers();
-            }, 60);
+                /* Push the very first snapshot so Undo has a baseline */
+                this._pushHistory();
+            }, 80);
             document.addEventListener('contextmenu', e => e.preventDefault());
             document.addEventListener('mouseup',     e => this._onDocMouseUp(e));
             document.addEventListener('click',       ()=> this.hideCtxMenu());
+            /* ── Keyboard shortcuts: Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y / Ctrl+B/I/U ── */
+            document.addEventListener('keydown', e => {
+                if (this._editingRef) return;          // let inline editor handle its own keys
+                const ctrl = e.ctrlKey || e.metaKey;
+                if (ctrl && !e.shiftKey && e.key.toLowerCase() === 'z') {
+                    e.preventDefault(); this.undo();
+                } else if (ctrl && e.shiftKey && e.key.toLowerCase() === 'z') {
+                    e.preventDefault(); this.redo();
+                } else if (ctrl && !e.shiftKey && e.key.toLowerCase() === 'y') {
+                    e.preventDefault(); this.redo();
+                } else if (ctrl && e.key.toLowerCase() === 'b') {
+                    e.preventDefault(); this.applyFormat('bold');
+                } else if (ctrl && e.key.toLowerCase() === 'i') {
+                    e.preventDefault(); this.applyFormat('italic');
+                } else if (ctrl && e.key.toLowerCase() === 'u') {
+                    e.preventDefault(); this.applyFormat('underline');
+                }
+            });
         },
 
         /* ─── Event Delegation on #sheet-area ──────────────────────────── */
@@ -490,15 +631,54 @@ function builderApp() {
             const sheet = document.getElementById('sheet-area');
             if (!sheet) return;
 
-            /* Right-click: context menu on row/col headers */
+            /* Right-click: (a) Ctrl+RightClick on data cell = toggle merge-select
+                             (b) Plain right-click on header  = show add/del context menu */
             sheet.addEventListener('contextmenu', e => {
                 const td = e.target.closest('td');
                 if (!td) return;
                 e.preventDefault(); e.stopPropagation();
+
+                /* ── Ctrl + Right-Click: free-pick cell for merging ── */
+                if ((e.ctrlKey || e.metaKey) && td.classList.contains('ipcrf-cell')) {
+                    const ref = td.getAttribute('data-cell');
+                    if (!ref) return;
+                    const existIdx = this.selectedCells.findIndex(c => c.ref === ref);
+                    if (existIdx >= 0) {
+                        // Already in selection — deselect
+                        td.classList.remove('merge-select-cell', 'multi-selected-cell');
+                        this.selectedCells.splice(existIdx, 1);
+                    } else {
+                        // Add to selection
+                        td.classList.remove('selected-cell');
+                        td.classList.add('merge-select-cell');
+                        this.selectedCells.push({ ref, td });
+                        // Fold any existing single-selection in
+                        if (this.selectedCell && this.selectedCell !== ref) {
+                            const prevTd = document.querySelector('[data-cell="' + this.selectedCell + '"]');
+                            if (prevTd) {
+                                prevTd.classList.remove('selected-cell');
+                                prevTd.classList.add('merge-select-cell');
+                                if (!this.selectedCells.find(c => c.ref === this.selectedCell))
+                                    this.selectedCells.push({ ref: this.selectedCell, td: prevTd });
+                            }
+                            this.selectedCell = null;
+                        }
+                    }
+                    this.selectedMergedCell = null;
+                    return;
+                }
+
+                /* ── Plain right-click on column/row header ── */
                 if (td.classList.contains('ipcrf-hdr-col')) {
                     this.showCtxMenu(e.clientX, e.clientY, 'col', +td.getAttribute('data-col-idx'));
                 } else if (td.classList.contains('ipcrf-hdr-row')) {
                     this.showCtxMenu(e.clientX, e.clientY, 'row', +td.getAttribute('data-row-idx'));
+                } else if (td.classList.contains('ipcrf-cell')) {
+                    const ref = td.getAttribute('data-cell');
+                    if (ref) {
+                        this.selectCell(ref, td);
+                        this.showCtxMenu(e.clientX, e.clientY, 'cell', ref);
+                    }
                 }
             });
 
@@ -532,11 +712,51 @@ function builderApp() {
                 const ref = td.getAttribute('data-cell');
                 if (!ref) return;
 
+                this.clearHdrSelection();
+                this.hideCtxMenu();
+
+                /* ── Ctrl+Click: toggle this cell in/out of multi-selection ── */
+                if (e.ctrlKey || e.metaKey) {
+                    e.preventDefault();
+                    this._isDragging  = false;
+                    this._dragMoved   = false;
+                    this._dragStartTd = null;
+                    const existIdx = this.selectedCells.findIndex(c => c.ref === ref);
+                    if (existIdx >= 0) {
+                        // Deselect this cell
+                        td.classList.remove('multi-selected-cell');
+                        this.selectedCells.splice(existIdx, 1);
+                    } else {
+                        // Add this cell to selection
+                        td.classList.add('multi-selected-cell');
+                        td.classList.remove('selected-cell');
+                        this.selectedCells.push({ ref, td });
+                        // If we had a single selected cell, fold it into the multi-select
+                        if (this.selectedCell && this.selectedCell !== ref) {
+                            const prevTd = document.querySelector('[data-cell="' + this.selectedCell + '"]');
+                            if (prevTd) {
+                                prevTd.classList.remove('selected-cell');
+                                prevTd.classList.add('multi-selected-cell');
+                                if (!this.selectedCells.find(c => c.ref === this.selectedCell))
+                                    this.selectedCells.push({ ref: this.selectedCell, td: prevTd });
+                            }
+                        }
+                        this.selectedCell = null;
+                    }
+                    // Recompute anchor for possible future shift-extend
+                    this.selectionAnchor = this.selectedCells.length
+                        ? { ref: this.selectedCells[this.selectedCells.length - 1].ref,
+                            row: +this.selectedCells[this.selectedCells.length - 1].td.getAttribute('data-row'),
+                            col: +this.selectedCells[this.selectedCells.length - 1].td.getAttribute('data-col') }
+                        : null;
+                    this.selectedMergedCell = null;
+                    return;
+                }
+
+                /* ── Normal drag-select ── */
                 this._isDragging  = true;
                 this._dragMoved   = false;
                 this._dragStartTd = td;
-                this.clearHdrSelection();
-                this.hideCtxMenu();
 
                 if (e.shiftKey && this.selectionAnchor) {
                     this.extendSelectionTo(ref, td);
@@ -707,6 +927,7 @@ function builderApp() {
         mergeCells() {
             if (this.selectedCells.length < 2) { this.showToast('Select 2+ cells first', 'info'); return; }
             if (!this.isRectangularSelection()) { this.showToast('Selected cells must form a rectangle', 'info'); return; }
+            this._pushHistory();
 
             const rows = this.selectedCells.map(c => +c.td.getAttribute('data-row'));
             const cols = this.selectedCells.map(c => +c.td.getAttribute('data-col'));
@@ -757,6 +978,7 @@ function builderApp() {
         unmergeCells() {
             const pRef = this.selectedMergedCell || this.selectedCell;
             if (!pRef) { this.showToast('Select a merged cell first', 'info'); return; }
+            this._pushHistory();
             const pTd = document.querySelector('[data-cell="' + pRef + '"]');
             if (!pTd) return;
 
@@ -774,7 +996,7 @@ function builderApp() {
                     newTd.setAttribute('data-row',  hc.rowNum);
                     newTd.setAttribute('data-col',  hc.colNum);
                     newTd.setAttribute('data-text', hc.text);
-                    newTd.style.cssText = 'border:1px solid #cbd5e1;padding:2px 4px;vertical-align:middle;cursor:pointer;white-space:nowrap;overflow:hidden;position:relative;';
+                    newTd.style.cssText = 'padding:2px 4px;vertical-align:middle;cursor:pointer;white-space:nowrap;overflow:hidden;position:relative;';
                     newTd.innerHTML = hc.html;
                     /* insert at correct position by col */
                     const cells = Array.from(tr.querySelectorAll('td'));
@@ -809,6 +1031,136 @@ function builderApp() {
             } catch(e) { console.error('Unmerge persist error:', e); }
         },
 
+        /* ─── Border Editing ──────────────────────────────────────────────── */
+        applyBorder(side) {
+            /* Collect target TDs: multi-selection, or single selected cell */
+            const targets = this.selectedCells.length > 0
+                ? this.selectedCells.map(c => c.td)
+                : (this.selectedCell ? [document.querySelector('[data-cell="' + this.selectedCell + '"]')] : []);
+            if (!targets.length) { this.showToast('Select cell(s) first', 'info'); return; }
+            this._pushHistory();
+
+            const SOLID = '1px solid #1e293b';   // visible border
+            const NONE  = '1px solid transparent'; // invisible border (keeps layout stable)
+
+            targets.forEach(td => {
+                if (!td) return;
+                switch (side) {
+                    case 'all':
+                        td.style.borderTop    = SOLID;
+                        td.style.borderRight  = SOLID;
+                        td.style.borderBottom = SOLID;
+                        td.style.borderLeft   = SOLID;
+                        break;
+                    case 'top':
+                        td.style.borderTop = SOLID;
+                        break;
+                    case 'bottom':
+                        td.style.borderBottom = SOLID;
+                        break;
+                    case 'left':
+                        td.style.borderLeft = SOLID;
+                        break;
+                    case 'right':
+                        td.style.borderRight = SOLID;
+                        break;
+                    case 'none':
+                        td.style.borderTop    = NONE;
+                        td.style.borderRight  = NONE;
+                        td.style.borderBottom = NONE;
+                        td.style.borderLeft   = NONE;
+                        break;
+                }
+            });
+
+            const count = targets.length;
+            const label = { all:'All Borders', top:'Border Top', bottom:'Border Bottom', left:'Border Left', right:'Border Right', none:'No Border' }[side];
+            this.showToast(`${label} applied to ${count} cell${count > 1 ? 's' : ''}`, 'success');
+        },
+
+        /* ─── Text Formatting: Bold / Italic / Underline ──────────────────── */
+        applyFormat(type) {
+            const targets = this.selectedCells.length > 0
+                ? this.selectedCells.map(c => c.td)
+                : (this.selectedCell ? [document.querySelector('[data-cell="' + this.selectedCell + '"]')] : []);
+            if (!targets.length) { this.showToast('Select cell(s) first', 'info'); return; }
+
+            /* Determine if ALL targets already have the format — if so, toggle it OFF */
+            const isAllActive = targets.every(td => {
+                if (!td) return false;
+                if (type === 'bold')      return td.style.fontWeight === 'bold' || td.style.fontWeight === '700';
+                if (type === 'italic')    return td.style.fontStyle === 'italic';
+                if (type === 'underline') return td.style.textDecoration.includes('underline');
+                return false;
+            });
+
+            this._pushHistory();
+
+            targets.forEach(td => {
+                if (!td) return;
+                if (type === 'bold') {
+                    td.style.fontWeight = isAllActive ? '' : 'bold';
+                } else if (type === 'italic') {
+                    td.style.fontStyle = isAllActive ? '' : 'italic';
+                } else if (type === 'underline') {
+                    // Preserve existing line-through if any
+                    if (isAllActive) {
+                        td.style.textDecoration = td.style.textDecoration.replace('underline', '').trim() || '';
+                    } else {
+                        td.style.textDecoration = td.style.textDecoration
+                            ? td.style.textDecoration + ' underline'
+                            : 'underline';
+                    }
+                }
+            });
+
+            /* Update toolbar highlight state based on the first selected cell */
+            const sample = targets[0];
+            if (sample) {
+                this._activeFmt = {
+                    bold:      sample.style.fontWeight === 'bold' || sample.style.fontWeight === '700',
+                    italic:    sample.style.fontStyle === 'italic',
+                    underline: sample.style.textDecoration.includes('underline'),
+                };
+            }
+
+            const label = { bold:'Bold', italic:'Italic', underline:'Underline' }[type];
+            const state = isAllActive ? 'removed' : 'applied';
+            this.showToast(`${label} ${state} on ${targets.length} cell${targets.length > 1 ? 's' : ''}`, 'success');
+        },
+
+        async applyAlignment(align) {
+            const targets = this.selectedCells.length > 0
+                ? this.selectedCells.map(c => c.td)
+                : (this.selectedCell ? [document.querySelector('[data-cell="' + this.selectedCell + '"]')] : []);
+            if (!targets.length) { this.showToast('Select cell(s) first', 'info'); return; }
+
+            this._pushHistory();
+
+            targets.forEach(td => {
+                if (!td) return;
+                td.style.textAlign = align;
+            });
+
+            for (const td of targets) {
+                if (!td) continue;
+                const cellRef = td.getAttribute('data-cell');
+                if (cellRef) {
+                    try {
+                        await fetch('/admin/templates/' + TEMPLATE_ID + '/cell-align', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'X-Requested-With': 'XMLHttpRequest' },
+                            body: JSON.stringify({ cell_ref: cellRef, align }),
+                        });
+                    } catch (e) {
+                        console.error('Failed to save alignment:', e);
+                    }
+                }
+            }
+
+            this.showToast(`Alignment set to ${align}`, 'success');
+        },
+
         /* ─── Row/Column Add-Delete ───────────────────────────────────────── */
         promptAddRow(dir) {
             const ref = this.selectedCell;
@@ -838,6 +1190,7 @@ function builderApp() {
         addRowAt(rowIdx, dir) {
             const tbody    = document.querySelector('.ipcrf-preview-table tbody');
             if (!tbody) return;
+            this._pushHistory();
             const totalCols = document.querySelectorAll('.ipcrf-hdr-col').length;
             const label    = dir === 'below' ? rowIdx + 0.5 : rowIdx - 0.5;
             const newTr    = this._buildNewRow(label, totalCols);
@@ -850,7 +1203,7 @@ function builderApp() {
         },
         deleteRowAt(rowIdx) {
             const tr = this._findRowTr(rowIdx);
-            if (tr) tr.remove();
+            if (tr) { this._pushHistory(); tr.remove(); }
             this.hideCtxMenu();
             this.showToast('Row deleted — Save All to persist', 'success');
         },
@@ -858,6 +1211,7 @@ function builderApp() {
         addColAt(colIdx, dir) {
             const table = document.querySelector('.ipcrf-preview-table');
             if (!table) return;
+            this._pushHistory();
             const domIdx = dir === 'right' ? colIdx + 1 : colIdx;
             const newLetter = this.colIdxToLetter(domIdx);
 
@@ -888,7 +1242,7 @@ function builderApp() {
                     td.setAttribute('data-row',  rNum);
                     td.setAttribute('data-col',  domIdx);
                     td.setAttribute('data-text', '');
-                    td.style.cssText = 'border:1px solid #cbd5e1;padding:2px 4px;vertical-align:middle;cursor:pointer;white-space:nowrap;overflow:hidden;position:relative;';
+                    td.style.cssText = 'padding:2px 4px;vertical-align:middle;cursor:pointer;white-space:nowrap;overflow:hidden;position:relative;';
                     tr.insertBefore(td, refCell);
                 }
             });
@@ -900,6 +1254,7 @@ function builderApp() {
         deleteColAt(colIdx) {
             const table = document.querySelector('.ipcrf-preview-table');
             if (!table) return;
+            this._pushHistory();
             const cols = table.querySelectorAll('colgroup col');
             if (cols[colIdx]) cols[colIdx].remove();
             table.querySelectorAll('tbody tr').forEach(tr => {
@@ -908,6 +1263,163 @@ function builderApp() {
             });
             this.hideCtxMenu();
             this.showToast('Column deleted — Save All to persist', 'success');
+        },
+
+        addCell(direction) {
+            const ref = this.selectedCell;
+            if (!ref) { this.showToast('Select a cell first', 'info'); return; }
+
+            const td = document.querySelector('[data-cell="' + ref + '"]');
+            if (!td) return;
+
+            const tr = td.closest('tr');
+            if (!tr) return;
+
+            this._pushHistory();
+
+            const curRow = parseInt(td.getAttribute('data-row'));
+            const curCol = parseInt(td.getAttribute('data-col'));
+
+            // Insertion index determines where the new TD goes:
+            // if direction is 'left', it goes before 'td' (same column index)
+            // if direction is 'right', it goes after 'td' (column index + 1)
+            const insertColIdx = direction === 'left' ? curCol : curCol + 1;
+
+            // 1. Increment column index of all TDs in this row that are at or to the right of the insertion point
+            const rowCells = Array.from(tr.querySelectorAll('td.ipcrf-cell'));
+            rowCells.forEach(cell => {
+                const cIdx = parseInt(cell.getAttribute('data-col'));
+                if (cIdx >= insertColIdx) {
+                    const newColIdx = cIdx + 1;
+                    const newLetter = this.colIdxToLetter(newColIdx);
+                    const oldCellRef = cell.getAttribute('data-cell');
+                    const newCellRef = newLetter + curRow;
+                    
+                    cell.setAttribute('data-col', newColIdx);
+                    cell.setAttribute('data-cell', newCellRef);
+                    
+                    // Update any mapped fields
+                    this.mappedFields.forEach(f => {
+                        if (f.cell_ref === oldCellRef) {
+                            f.cell_ref = newCellRef;
+                        }
+                    });
+                    
+                    // Rename the badge text if mapped
+                    const badge = cell.querySelector('.field-badge');
+                    if (badge) {
+                        const existing = this.mappedFields.find(f => f.cell_ref === newCellRef);
+                        if (existing) {
+                            badge.innerHTML = '<i class="fas ' + this.fieldTypeIcon(existing.field_type) + '" style="font-size:8px;"></i> ' + (existing.field_label || existing.field_type).substring(0, 20);
+                        }
+                    }
+                }
+            });
+
+            // 2. Create the new TD
+            const newTd = document.createElement('td');
+            newTd.className = 'ipcrf-cell';
+            const newLetter = this.colIdxToLetter(insertColIdx);
+            newTd.setAttribute('data-cell', newLetter + curRow);
+            newTd.setAttribute('data-row', curRow);
+            newTd.setAttribute('data-col', insertColIdx);
+            newTd.setAttribute('data-text', '');
+            newTd.style.cssText = 'padding:2px 4px;vertical-align:middle;cursor:pointer;white-space:nowrap;overflow:hidden;position:relative;';
+
+            // 3. Insert the new TD in the DOM
+            const nextCell = tr.querySelector(`td.ipcrf-cell[data-col="${insertColIdx + 1}"]`);
+            if (nextCell) {
+                tr.insertBefore(newTd, nextCell);
+            } else {
+                tr.appendChild(newTd);
+            }
+
+            // 4. Update the template total_cols if this row exceeds current total_cols
+            const totalCellsInRow = tr.querySelectorAll('td.ipcrf-cell').length;
+            const currentTotalCols = document.querySelectorAll('.ipcrf-hdr-col').length;
+            if (totalCellsInRow > currentTotalCols) {
+                const hdrTr = document.querySelector('.ipcrf-preview-table tbody tr');
+                if (hdrTr) {
+                    const nextHdr = this.colIdxToLetter(totalCellsInRow);
+                    const th = document.createElement('td');
+                    th.className = 'ipcrf-hdr-col';
+                    th.setAttribute('data-col-idx', totalCellsInRow);
+                    th.innerHTML = nextHdr + '<div class="col-resizer"></div>';
+                    hdrTr.appendChild(th);
+                }
+                const colgroup = document.querySelector('.ipcrf-preview-table colgroup');
+                if (colgroup) {
+                    const newCol = document.createElement('col');
+                    newCol.style.width = '80px';
+                    colgroup.appendChild(newCol);
+                }
+                setTimeout(() => { if (typeof initSpreadsheetResizers === 'function') initSpreadsheetResizers(); }, 60);
+            }
+
+            this.hideCtxMenu();
+            this.selectedCell = null;
+            this.showToast('Cell inserted — Save All to persist', 'success');
+        },
+
+        serializeSheetData() {
+            const rows = [];
+            const trs = Array.from(document.querySelectorAll('.ipcrf-preview-table tbody tr')).slice(1);
+            
+            trs.forEach((tr) => {
+                const rowCells = [];
+                const tds = Array.from(tr.querySelectorAll('td')).slice(1);
+                
+                tds.forEach((td) => {
+                    const cellRef = td.getAttribute('data-cell') || '';
+                    const rowNum = td.getAttribute('data-row') || '1';
+                    const colNum = td.getAttribute('data-col') || '1';
+                    const val = td.getAttribute('data-text') || '';
+                    const rowspan = td.getAttribute('rowspan') ? parseInt(td.getAttribute('rowspan')) : 1;
+                    const colspan = td.getAttribute('colspan') ? parseInt(td.getAttribute('colspan')) : 1;
+                    
+                    const style = {};
+                    const styleAttr = td.getAttribute('style') || '';
+                    
+                    if (styleAttr.includes('font-weight:bold')) style.bold = true;
+                    if (styleAttr.includes('font-style:italic')) style.italic = true;
+                    if (styleAttr.includes('text-decoration:underline')) style.underline = true;
+                    if (styleAttr.includes('text-align:center')) style.h_align = 'center';
+                    else if (styleAttr.includes('text-align:right')) style.h_align = 'right';
+                    else if (styleAttr.includes('text-align:left')) style.h_align = 'left';
+                    
+                    const bgMatch = styleAttr.match(/background-color:\s*(#[0-9a-fA-F]+)/);
+                    if (bgMatch) style.bg_color = bgMatch[1];
+                    
+                    const sizeMatch = styleAttr.match(/font-size:\s*([0-9.]+)pt/);
+                    if (sizeMatch) style.font_size = parseFloat(sizeMatch[1]);
+                    
+                    const drawings = [];
+                    td.querySelectorAll('img').forEach(img => {
+                        drawings.push({
+                            url: img.src,
+                            width: parseInt(img.style.width) || 120,
+                            height: parseInt(img.style.height) || 60,
+                            offsetX: parseInt(img.style.left) || 0,
+                            offsetY: parseInt(img.style.top) || 0,
+                        });
+                    });
+                    
+                    rowCells.push({
+                        cell_ref: cellRef,
+                        row: parseInt(rowNum),
+                        col: parseInt(colNum),
+                        value: val,
+                        raw_value: val,
+                        rowspan: rowspan,
+                        colspan: colspan,
+                        hidden: td.classList.contains('hidden') || td.style.display === 'none',
+                        style: style,
+                        drawings: drawings.length > 0 ? drawings : undefined
+                    });
+                });
+                rows.push(rowCells);
+            });
+            return rows;
         },
 
         _buildNewRow(label, totalCols) {
@@ -926,7 +1438,7 @@ function builderApp() {
                 td.setAttribute('data-row',  label);
                 td.setAttribute('data-col',  c);
                 td.setAttribute('data-text', '');
-                td.style.cssText = 'border:1px solid #cbd5e1;padding:2px 4px;vertical-align:middle;cursor:pointer;white-space:nowrap;overflow:hidden;position:relative;';
+                td.style.cssText = 'padding:2px 4px;vertical-align:middle;cursor:pointer;white-space:nowrap;overflow:hidden;position:relative;';
                 tr.appendChild(td);
             }
             return tr;
@@ -965,12 +1477,14 @@ function builderApp() {
                 this.currentFieldType       = existing.field_type;
                 this.currentFieldLabel      = existing.field_label || '';
                 this.currentRequired        = existing.is_required || false;
-                this.currentDropdownOptions = existing.field_options ? existing.field_options.join('\n') : '';
+                this.currentDropdownOptions = (existing.field_type === 'dropdown' && existing.field_options) ? existing.field_options.join('\n') : '';
+                this.currentMeanTargets     = (existing.field_type === 'calculated_mean' && existing.field_options) ? (existing.field_options.targets || '') : '';
             } else {
                 this.currentFieldType       = 'text';
                 this.currentFieldLabel      = '';
                 this.currentRequired        = false;
                 this.currentDropdownOptions = '';
+                this.currentMeanTargets     = '';
             }
         },
 
@@ -1001,6 +1515,7 @@ function builderApp() {
                 td.classList.remove('editing-cell');
                 const newVal = input.value;
                 if (save && newVal !== originalText) {
+                    this._pushHistory();   // snapshot before mutating DOM
                     td.setAttribute('data-text', newVal);
                     td.innerHTML = '';
                     clonedImgs.forEach(img => td.appendChild(img.cloneNode(true)));
@@ -1026,6 +1541,67 @@ function builderApp() {
                     body: JSON.stringify({ cell_ref: ref, value }),
                 });
             } catch(e) { console.error(e); }
+        },
+
+        /* ─── Undo / Redo ─────────────────────────────────────────────────── */
+        _snapshotState() {
+            const table = document.querySelector('.ipcrf-preview-table');
+            return {
+                tableHTML:    table ? table.outerHTML : '',
+                mappedFields: JSON.parse(JSON.stringify(this.mappedFields)),
+                hiddenCells:  JSON.parse(JSON.stringify(_hiddenCells)),
+            };
+        },
+
+        _pushHistory() {
+            /* Trim any future states (branching) */
+            if (this._historyIdx < this._history.length - 1) {
+                this._history.splice(this._historyIdx + 1);
+            }
+            this._history.push(this._snapshotState());
+            this._historyIdx = this._history.length - 1;
+            /* Cap at 50 snapshots to avoid memory bloat */
+            if (this._history.length > 50) {
+                this._history.shift();
+                this._historyIdx = this._history.length - 1;
+            }
+        },
+
+        _restoreState(state) {
+            const container = document.getElementById('sheet-area');
+            if (!container || !state || !state.tableHTML) return;
+            /* Replace table HTML */
+            container.innerHTML = state.tableHTML;
+            /* Restore Alpine-reactive state */
+            this.mappedFields = JSON.parse(JSON.stringify(state.mappedFields));
+            /* Restore _hiddenCells global */
+            Object.keys(_hiddenCells).forEach(k => delete _hiddenCells[k]);
+            Object.assign(_hiddenCells, JSON.parse(JSON.stringify(state.hiddenCells)));
+            /* Clear selection */
+            this.selectedCell       = null;
+            this.selectedCells      = [];
+            this.selectedMergedCell = null;
+            this.selectionAnchor    = null;
+            this.activeHdrType      = null;
+            /* Reinit drag-resizers (they use direct listeners, not delegation) */
+            setTimeout(() => {
+                if (typeof initSpreadsheetResizers === 'function') initSpreadsheetResizers();
+                this.refreshCellHighlights();
+            }, 30);
+        },
+
+        undo() {
+            if (this._historyIdx <= 0) { this.showToast('Nothing to undo', 'info'); return; }
+            this._historyIdx--;
+            this._restoreState(this._history[this._historyIdx]);
+            this.showToast('Undo ←', 'info');
+        },
+
+        redo() {
+            if (this._historyIdx >= this._history.length - 1) { this.showToast('Nothing to redo', 'info'); return; }
+            this._historyIdx++;
+            this._restoreState(this._history[this._historyIdx]);
+            this.showToast('Redo →', 'info');
         },
 
         /* ─── Picture Upload ─────────────────────────────────────────────── */
@@ -1066,9 +1642,14 @@ function builderApp() {
         /* ─── Field Assignment ───────────────────────────────────────────── */
         assignField() {
             if (!this.selectedCell) return;
-            const opts = this.currentDropdownOptions
-                ? this.currentDropdownOptions.split('\n').map(s => s.trim()).filter(Boolean)
-                : null;
+            let opts = null;
+            if (this.currentFieldType === 'dropdown') {
+                opts = this.currentDropdownOptions
+                    ? this.currentDropdownOptions.split('\n').map(s => s.trim()).filter(Boolean)
+                    : null;
+            } else if (this.currentFieldType === 'calculated_mean') {
+                opts = { targets: this.currentMeanTargets || '' };
+            }
             const field = { cell_ref: this.selectedCell, field_type: this.currentFieldType, field_label: this.currentFieldLabel, is_required: this.currentRequired, field_options: opts };
             const idx = this.mappedFields.findIndex(f => f.cell_ref === this.selectedCell);
             if (idx >= 0) this.mappedFields[idx] = field; else this.mappedFields.push(field);
@@ -1104,10 +1685,10 @@ function builderApp() {
 
         /* ─── Icons & Labels ─────────────────────────────────────────────── */
         fieldTypeIcon(t) {
-            return { autofill_name:'fa-user', autofill_position:'fa-briefcase', autofill_department:'fa-building', autofill_date:'fa-calendar-day', autofill_division_chief:'fa-user-tie', autofill_approving_authority:'fa-stamp', date:'fa-calendar-alt', text:'fa-font', number:'fa-hashtag', textarea:'fa-align-left', rating:'fa-star', dropdown:'fa-chevron-down', signature:'fa-signature', readonly:'fa-lock', picture:'fa-image' }[t] || 'fa-square';
+            return { autofill_name:'fa-user', autofill_position:'fa-briefcase', autofill_department:'fa-building', autofill_date:'fa-calendar-day', autofill_division_chief:'fa-user-tie', autofill_division_chief_position:'fa-briefcase', autofill_division_chief_signature:'fa-signature', autofill_approving_authority:'fa-stamp', autofill_approving_authority_position:'fa-briefcase', autofill_approving_authority_signature:'fa-signature', date:'fa-calendar-alt', text:'fa-font', number:'fa-hashtag', textarea:'fa-align-left', rating:'fa-star', dropdown:'fa-chevron-down', signature:'fa-signature', readonly:'fa-lock', picture:'fa-image', calculated_mean:'fa-calculator' }[t] || 'fa-square';
         },
         fieldTypeLabel(t) {
-            return { autofill_name:'Auto-Fill: Employee Name', autofill_position:'Auto-Fill: Position', autofill_department:'Auto-Fill: Department', autofill_date:'Auto-Fill: Date Signed', autofill_division_chief:'Auto-Fill: Division Chief', autofill_approving_authority:'Auto-Fill: Approving Authority', date:'Date Picker', text:'Text Input', number:'Number Input', textarea:'Text Area', rating:'Rating', dropdown:'Dropdown', signature:'Signature', readonly:'Read-Only', picture:'Embedded Image' }[t] || t;
+            return { autofill_name:'Auto-Fill: Employee Name', autofill_position:'Auto-Fill: Position', autofill_department:'Auto-Fill: Department', autofill_date:'Auto-Fill: Date Signed', autofill_division_chief:'Auto-Fill: Division Chief Name', autofill_division_chief_position:'Auto-Fill: Div. Chief Position', autofill_division_chief_signature:'Auto-Fill: Div. Chief Signature', autofill_approving_authority:'Auto-Fill: Approving Authority Name', autofill_approving_authority_position:'Auto-Fill: Appr. Auth. Position', autofill_approving_authority_signature:'Auto-Fill: Appr. Auth. Signature', date:'Date Picker', text:'Text Input', number:'Number Input', textarea:'Text Area', rating:'Rating', dropdown:'Dropdown', signature:'Signature', readonly:'Read-Only', picture:'Embedded Image', calculated_mean:'Calculated Mean' }[t] || t;
         },
 
         /* ─── Context Menu ───────────────────────────────────────────────── */
@@ -1122,13 +1703,28 @@ function builderApp() {
         async saveAll() {
             this.saving = true;
             try {
+                // 1. Save Layout
+                const sheetRows = this.serializeSheetData();
+                const layoutRes = await fetch('/admin/templates/' + TEMPLATE_ID + '/save-layout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'X-Requested-With': 'XMLHttpRequest' },
+                    body: JSON.stringify({ rows: sheetRows }),
+                });
+                const layoutData = await layoutRes.json();
+                if (!layoutData.success) {
+                    this.showToast(layoutData.message || 'Layout save error', 'error');
+                    this.saving = false;
+                    return;
+                }
+
+                // 2. Save Fields
                 const r = await fetch('/admin/templates/' + TEMPLATE_ID + '/fields', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'X-Requested-With': 'XMLHttpRequest' },
                     body: JSON.stringify({ fields: this.mappedFields }),
                 });
                 const d = await r.json();
-                if (d.success) this.showToast('All field mappings saved!', 'success');
+                if (d.success) this.showToast('All fields and layout saved!', 'success');
                 else           this.showToast(d.message || 'Save error', 'error');
             } catch { this.showToast('Network error', 'error'); }
             this.saving = false;

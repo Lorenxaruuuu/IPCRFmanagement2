@@ -46,7 +46,7 @@ class AdminPosition
         }
 
         return $user->assigned_province
-            ?? $user->region
+            ?? $user->province
             ?? $user->office
             ?? null;
     }
@@ -59,7 +59,7 @@ class AdminPosition
 
         return $query->where(function ($q) use ($province) {
             $q->where('assigned_province', $province)
-                ->orWhere('region', $province)
+                ->orWhere('province', $province)
                 ->orWhere('office', 'like', '%' . $province . '%');
         });
     }

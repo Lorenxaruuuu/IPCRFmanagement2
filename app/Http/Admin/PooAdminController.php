@@ -36,7 +36,7 @@ class PooAdminController extends Controller
         });
 
         $stats = [
-            'pending_queue'  => (clone $submissionQuery)->whereIn('status', ['submitted', 'under_review'])->count(),
+            'pending_queue'  => (clone $submissionQuery)->whereIn('status', ['rpmo_approved', 'under_review'])->count(),
             'approved'       => (clone $submissionQuery)->where('status', 'approved')->count(),
             'provincial_staff' => (clone $staffQuery)->count(),
             'archived'       => (clone $submissionQuery)->where('status', 'approved')->count(),
@@ -68,6 +68,8 @@ class PooAdminController extends Controller
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
+        } else {
+            $query->whereIn('status', ['rpmo_approved', 'under_review']);
         }
         if ($request->filled('date')) {
             $query->whereDate('submitted_at', $request->date);
@@ -86,7 +88,7 @@ class PooAdminController extends Controller
 
         $pendingCount = 0;
         if ($province) {
-            $pendingCount = IpcrfSubmission::whereIn('status', ['submitted', 'under_review'])
+            $pendingCount = IpcrfSubmission::whereIn('status', ['rpmo_approved', 'under_review'])
                 ->whereHas('user', fn ($q) => AdminPosition::scopeUsersInProvince($q, $province))
                 ->count();
         }
@@ -137,7 +139,7 @@ class PooAdminController extends Controller
                 'position'    => $u->jobPosition?->name ?? '—',
                 'department'  => $u->department ?? '—',
                 'office'      => $u->office ?? '—',
-                'province'    => $u->assigned_province ?? $u->region ?? $u->office ?? '—',
+                'province'    => $u->assigned_province ?? $u->province ?? $u->office ?? '—',
             ]),
             'province' => $province,
         ]);
@@ -207,7 +209,7 @@ class PooAdminController extends Controller
         ];
 
         $fields = $template->fields->map(function ($f) use ($answers, $autofillValues) {
-            $value = $f->field_type && str_starts_with($f->field_type, 'autofill_')
+            $value = $f->isAutofill()
                 ? ($autofillValues[$f->field_type] ?? '')
                 : ($answers[$f->id]?->value ?? '');
 
@@ -222,7 +224,7 @@ class PooAdminController extends Controller
 
         $fullPath = Storage::disk('private')->path($template->file_path);
         $parsed = $this->parser->parse($fullPath);
-        $htmlTable = $this->parser->toHtmlTable($parsed, $fields, false);
+        $htmlTable = $this->parser->toHtmlTable($parsed, $fields, false, true);
 
         return response()->json([
             'submission' => array_merge($this->formatSubmissionRow($submission), [
@@ -243,8 +245,8 @@ class PooAdminController extends Controller
         $submission = IpcrfSubmission::with('user')->findOrFail($id);
         $this->assertSubmissionInProvince($submission, $province);
 
-        if (!in_array($submission->status, ['submitted', 'under_review', 'rejected'], true)) {
-            return response()->json(['success' => false, 'message' => 'Only submitted forms can be returned for correction.'], 422);
+        if (!in_array($submission->status, ['rpmo_approved', 'under_review', 'rejected'], true)) {
+            return response()->json(['success' => false, 'message' => 'Only active forms can be returned for correction.'], 422);
         }
 
         $submission->update([
@@ -272,7 +274,7 @@ class PooAdminController extends Controller
         $submission = IpcrfSubmission::with('user')->findOrFail($id);
         $this->assertSubmissionInProvince($submission, $province);
 
-        if (!in_array($submission->status, ['submitted', 'under_review'], true)) {
+        if (!in_array($submission->status, ['rpmo_approved', 'under_review'], true)) {
             return response()->json(['success' => false, 'message' => 'This submission cannot be approved in its current state.'], 422);
         }
 
@@ -326,7 +328,7 @@ class PooAdminController extends Controller
 
         $user = $submission->user;
         $inProvince = ($user->assigned_province === $province)
-            || ($user->region === $province)
+            || ($user->province === $province)
             || (is_string($user->office) && str_contains($user->office, $province));
 
         abort_unless($inProvince, 403, 'This submission is outside your designated province.');

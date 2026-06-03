@@ -1045,7 +1045,7 @@
                                 <tr class="border-b border-gray-100 hover:bg-gray-50 transition">
                                     <td class="px-6 py-4">
                                         <div class="font-medium text-gray-800">{{ $sub->user?->name ?? 'Unknown' }}</div>
-                                        <div class="text-xs text-gray-500">{{ $sub->user?->position?->name ?? 'No position' }}</div>
+                                        <div class="text-xs text-gray-500">{{ $sub->user?->jobPosition?->name ?? 'No position' }}</div>
                                     </td>
                                     <td class="px-6 py-4 text-gray-600">{{ $sub->template?->name ?? '—' }}</td>
                                     <td class="px-6 py-4 text-gray-500">{{ $sub->submitted_at ? $sub->submitted_at->format('M j, Y') : ($sub->updated_at ? $sub->updated_at->format('M j, Y') : '—') }}</td>
@@ -1129,7 +1129,7 @@
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 text-gray-600">{{ $mu->email }}</td>
-                                    <td class="px-6 py-4 text-gray-600">{{ $mu->position?->name ?? '—' }}</td>
+                                    <td class="px-6 py-4 text-gray-600">{{ $mu->jobPosition?->name ?? '—' }}</td>
                                     <td class="px-6 py-4">
                                         <span class="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold {{ $mu->role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600' }}">
                                             {{ ucfirst($mu->role) }}
@@ -2062,42 +2062,53 @@
         });
 
         function loadDashboardRecentSubmissions() {
-            fetch('/admin/get_records.php')
-                .then(res => res.json())
+            fetch('/admin/api/recent-submissions')
+                .then(res => {
+                    if (!res.ok) throw new Error('HTTP ' + res.status);
+                    return res.json();
+                })
                 .then(response => {
                     const tbody = document.getElementById('dashboard-recent-submissions');
                     tbody.innerHTML = '';
                     
                     if (!response.success || !response.data || response.data.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-500">No records found</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-400"><i class="fas fa-inbox text-3xl mb-2 block"></i>No submissions yet</td></tr>';
                         return;
                     }
                     
-                    // Show only the 5 most recent submissions
+                    const statusColors = {
+                        'draft':        'bg-gray-100 text-gray-600',
+                        'submitted':    'bg-blue-100 text-blue-700',
+                        'under_review': 'bg-yellow-100 text-yellow-700',
+                        'approved':     'bg-green-100 text-green-700',
+                        'rejected':     'bg-red-100 text-red-700',
+                    };
+
                     response.data.slice(0, 5).forEach(r => {
                         const tr = document.createElement('tr');
-                        tr.className = 'border-b border-gray-100';
+                        tr.className = 'border-b border-gray-100 hover:bg-gray-50 transition';
 
                         const employee = document.createElement('td');
                         employee.className = 'py-3 font-medium';
-                        employee.textContent = r.employee_name || 'N/A';
+                        employee.innerHTML = `<div class="font-semibold">${r.employee_name || 'N/A'}</div><div class="text-xs text-gray-400">${r.template_name || ''}</div>`;
 
                         const region = document.createElement('td');
-                        region.className = 'py-3 text-gray-600';
+                        region.className = 'py-3 text-gray-600 text-sm';
                         region.textContent = r.province_name || 'N/A';
 
                         const date = document.createElement('td');
-                        date.className = 'py-3 text-gray-600';
+                        date.className = 'py-3 text-gray-600 text-sm';
                         if (r.uploaded_at) {
                             const dt = new Date(r.uploaded_at);
-                            date.textContent = dt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                            date.textContent = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                         } else {
                             date.textContent = 'N/A';
                         }
 
                         const status = document.createElement('td');
                         status.className = 'py-3';
-                        status.innerHTML = `<span class="status-badge bg-green-100 text-green-700">${r.status || 'Submitted'}</span>`;
+                        const colorClass = statusColors[r.status_raw] || 'bg-gray-100 text-gray-600';
+                        status.innerHTML = `<span class="status-badge ${colorClass}">${r.status || 'Submitted'}</span>`;
 
                         tr.appendChild(employee);
                         tr.appendChild(region);
@@ -2110,9 +2121,10 @@
                 .catch(err => {
                     console.error('Failed to load recent submissions:', err);
                     const tbody = document.getElementById('dashboard-recent-submissions');
-                    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-red-500">Error loading records</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-red-500"><i class="fas fa-exclamation-circle mr-1"></i>Error loading records: ' + err.message + '</td></tr>';
                 });
         }
+
 
         function loadRecordsCount() {
             fetch('/admin/get_records_count.php')
@@ -2164,6 +2176,12 @@
             loadRecordsCount();
             loadStaffCount();
             loadNoticesCount();
+
+            // Handle hash fragments on load
+            const hash = window.location.hash.substring(1);
+            if (hash && ['dashboard', 'templates', 'submissions', 'users', 'positions', 'upload', 'records', 'notices', 'forms'].includes(hash)) {
+                showView(hash);
+            }
 
             
             /* ===============================

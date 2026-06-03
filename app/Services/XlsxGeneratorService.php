@@ -30,13 +30,38 @@ class XlsxGeneratorService
         // Load all fields and answers
         $fields  = $template->fields()->get()->keyBy('id');
         $answers = $submission->answers()->with('field')->get()->keyBy('template_field_id');
+        $sheetData = $template->sheet_data ?? [];
+
+        // Build a map of cell_ref to style alignment
+        $alignmentMap = [];
+        foreach ($sheetData as $row) {
+            foreach ($row as $cell) {
+                if (isset($cell['cell_ref']) && isset($cell['style']['h_align'])) {
+                    $alignmentMap[$cell['cell_ref']] = $cell['style']['h_align'];
+                }
+            }
+        }
 
         foreach ($fields as $field) {
             $cellRef = $field->cell_ref;
             $value   = '';
 
-            // Handle picture field (draggable overlay)
-            if ($field->field_type === 'picture') {
+            // Handle horizontal alignment
+            if (isset($alignmentMap[$cellRef])) {
+                $align = $alignmentMap[$cellRef];
+                $alignValue = match ($align) {
+                    'left' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT,
+                    'right' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT,
+                    'center' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                    default => null,
+                };
+                if ($alignValue) {
+                    $worksheet->getStyle($cellRef)->getAlignment()->setHorizontal($alignValue);
+                }
+            }
+
+            // Handle picture and signature fields (draggable image overlays)
+            if (in_array($field->field_type, ['picture', 'signature', 'autofill_division_chief_signature', 'autofill_approving_authority_signature'], true)) {
                 if (isset($answers[$field->id])) {
                     $data = json_decode($answers[$field->id]->value, true);
                     if ($data && !empty($data['url']) && !empty($data['cell_ref'])) {
@@ -47,7 +72,7 @@ class XlsxGeneratorService
                         if (file_exists($localPath)) {
                             try {
                                 $drawing = new \PhpOffice\PhpSpreadsheet\Worksheet\Drawing();
-                                $drawing->setName($field->field_label ?: 'User Picture');
+                                $drawing->setName($field->field_label ?: 'User Image');
                                 $drawing->setPath($localPath);
                                 $drawing->setCoordinates($data['cell_ref']);
                                 $drawing->setOffsetX($data['offsetX'] ?? 0);
@@ -56,7 +81,7 @@ class XlsxGeneratorService
                                 if (!empty($data['height'])) $drawing->setHeight($data['height']);
                                 $drawing->setWorksheet($worksheet);
                             } catch (\Exception $e) {
-                                \Log::error('Failed to inject user picture: ' . $e->getMessage());
+                                \Log::error('Failed to inject user image: ' . $e->getMessage());
                             }
                         }
                     }
@@ -70,12 +95,18 @@ class XlsxGeneratorService
                 $value = $answers[$field->id]->value ?? '';
             }
 
-            if ($field->field_type === 'signature') {
-                // For signature, write the name as text (canvas signatures future enhancement)
-                $value = $user->full_name ?? $user->name;
-            }
-
             $worksheet->setCellValue($cellRef, $value);
+
+            // Enable wrap text and auto row height (stretch downward) for text fields
+            if (in_array($field->field_type, [
+                'text', 'textarea', 'autofill_name', 'autofill_position', 'autofill_department',
+                'autofill_division_chief', 'autofill_approving_authority',
+                'autofill_division_chief_position', 'autofill_approving_authority_position'
+            ], true)) {
+                $worksheet->getStyle($cellRef)->getAlignment()->setWrapText(true);
+                $rowNum = Coordinate::coordinateFromString($cellRef)[1];
+                $worksheet->getRowDimension($rowNum)->setRowHeight(-1);
+            }
         }
 
         // Write to a temp file
@@ -115,7 +146,7 @@ class XlsxGeneratorService
     {
         return match ($type) {
             'autofill_name'       => $user->full_name ?? $user->name ?? '',
-            'autofill_position'   => $user->position?->name ?? '',
+            'autofill_position'   => $user->jobPosition?->name ?? '',
             'autofill_department' => $user->department ?? $user->office ?? '',
             'autofill_date'       => Carbon::now()->format('F d, Y'),
             default               => '',

@@ -66,7 +66,7 @@
     $birthday = ($dbUser && $dbUser->birthday) ? $dbUser->birthday : session('profile_birthday', 'January 15, 1990');
     $gender = ($dbUser && $dbUser->gender) ? $dbUser->gender : session('profile_gender', 'Male');
     $address = ($dbUser && $dbUser->address) ? $dbUser->address : session('profile_address', '123 Main Street, Davao City');
-    $region = ($dbUser && $dbUser->region) ? $dbUser->region : session('profile_region', 'Region XI (Davao)');
+    $region = ($dbUser && $dbUser->province) ? $dbUser->province : session('profile_region', 'Region XI (Davao)');
     
     // Format birthday to YYYY-MM-DD for standard HTML5 date input calendar picker
     $birthdayInputVal = '';
@@ -256,7 +256,6 @@
 
         /* Borderless inputs to look exactly like Google Sheets cells */
         .ipcrf-preview-table input,
-        .ipcrf-preview-table textarea,
         .ipcrf-preview-table select {
             width: 100% !important;
             height: 100% !important;
@@ -271,6 +270,22 @@
             padding: 2px 4px !important;
             box-sizing: border-box !important;
             margin: 0 !important;
+        }
+        .ipcrf-preview-table textarea {
+            width: 100% !important;
+            border: none !important;
+            background: transparent !important;
+            outline: none !important;
+            font-family: inherit !important;
+            font-size: inherit !important;
+            font-weight: inherit !important;
+            color: inherit !important;
+            text-align: inherit !important;
+            padding: 2px 4px !important;
+            box-sizing: border-box !important;
+            margin: 0 !important;
+            resize: none !important;
+            overflow: hidden !important;
         }
         .ipcrf-preview-table input:focus,
         .ipcrf-preview-table textarea:focus,
@@ -339,6 +354,7 @@
           answers: {},
           autoSaveInterval: null,
           savingStatus: "",
+          meanFields: [],
 
           async loadIpcrfData() {
               this.loadingIpcrf = true;
@@ -418,7 +434,10 @@
                   const td = document.querySelector(`[data-cell="${field.cell_ref}"]`);
                   if (!td) return;
 
-                  if (field.field_type === "picture") {
+                  const isReadonly = field.field_type.startsWith("autofill_") || field.field_type === "readonly" || field.field_type === "calculated_mean";
+
+                  const isImageField = ["picture", "signature", "autofill_division_chief_signature", "autofill_approving_authority_signature"].includes(field.field_type);
+                  if (isImageField) {
                       let currentPicData = null;
                       if (this.answers[field.id]) {
                           try {
@@ -428,23 +447,33 @@
                           }
                       }
 
-                      td.className = "p-0 ipcrf-cell relative cursor-pointer";
+                      td.className = "p-0 ipcrf-cell relative" + (isReadonly ? "" : " cursor-pointer");
                       td.style.minHeight = "40px";
 
                       const wrapper = document.createElement("div");
-                      wrapper.className = "flex flex-col items-center justify-center w-full h-full min-h-[40px] text-indigo-400 hover:text-indigo-300 transition-colors p-2";
-                      wrapper.innerHTML = `
-                          <i class="fas fa-image text-sm mb-0.5"></i>
-                          <span style="font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Add Picture</span>
-                      `;
+                      if (isReadonly) {
+                          wrapper.className = "flex flex-col items-center justify-center w-full h-full min-h-[40px] text-slate-300 p-2";
+                          wrapper.innerHTML = `
+                              <span style="font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color:#94a3b8;">[Pending Sig]</span>
+                          `;
+                      } else {
+                          wrapper.className = "flex flex-col items-center justify-center w-full h-full min-h-[40px] text-indigo-400 hover:text-indigo-300 transition-colors p-2";
+                          const label = field.field_type.includes("signature") ? "Add Signature" : "Add Picture";
+                          const icon = field.field_type.includes("signature") ? "fa-signature" : "fa-image";
+                          wrapper.innerHTML = `
+                              <i class="fas ${icon} text-sm mb-0.5"></i>
+                              <span style="font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">${label}</span>
+                          `;
+                      }
 
                       const fileInput = document.createElement("input");
                       fileInput.type = "file";
-                      fileInput.accept = ".png,.jpg,.jpeg";
+                      fileInput.accept = field.field_type.includes("signature") ? ".png" : ".png,.jpg,.jpeg";
                       fileInput.style.display = "none";
 
                       // Trigger file explorer when clicking the cell
                       td.addEventListener("click", (e) => {
+                          if (isReadonly) return;
                           // Prevent triggering if clicking or dragging the image itself
                           if (e.target.tagName === "IMG" || e.target.classList.contains("user-uploaded-picture") || e.target.closest("img")) {
                               return;
@@ -481,7 +510,7 @@
                                       offsetX: 0,
                                       offsetY: 0,
                                       width: 120,
-                                      height: 80
+                                      height: field.field_type.includes("signature") ? 60 : 80
                                   };
                                   this.answers[field.id] = JSON.stringify(initialData);
                                   this.saveDraft(true);
@@ -501,26 +530,32 @@
                       td.appendChild(wrapper);
 
                       if (currentPicData && currentPicData.url) {
-                          const replaceBtn = document.createElement("button");
-                          replaceBtn.innerHTML = `<i class="fas fa-sync"></i> Replace`;
-                          replaceBtn.className = "absolute top-0 right-0 px-1 py-0.5 text-[8px] font-bold text-white bg-gray-800 bg-opacity-70 hover:bg-opacity-90 rounded z-20 pointer-events-auto";
-                          replaceBtn.addEventListener("click", (e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              fileInput.click();
-                          });
-                          td.appendChild(replaceBtn);
+                          if (!isReadonly) {
+                              const replaceBtn = document.createElement("button");
+                              replaceBtn.innerHTML = `<i class="fas fa-sync"></i> Replace`;
+                              replaceBtn.className = "absolute top-0 right-0 px-1 py-0.5 text-[8px] font-bold text-white bg-gray-800 bg-opacity-70 hover:bg-opacity-90 rounded z-20 pointer-events-auto";
+                              replaceBtn.addEventListener("click", (e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  fileInput.click();
+                              });
+                              td.appendChild(replaceBtn);
+                          }
 
                           const imgEl = document.createElement("img");
                           imgEl.src = currentPicData.url;
                           imgEl.className = "user-uploaded-picture";
                           imgEl.style.position = "absolute";
                           imgEl.style.width = (currentPicData.width || 120) + "px";
-                          imgEl.style.height = (currentPicData.height || 80) + "px";
+                          imgEl.style.height = (currentPicData.height || (field.field_type.includes("signature") ? 60 : 80)) + "px";
                           imgEl.style.zIndex = "50";
-                          imgEl.style.cursor = "move";
-                          imgEl.style.border = "2px dashed #6366f1";
-                          imgEl.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
+                          imgEl.style.cursor = isReadonly ? "default" : "move";
+                          if (!isReadonly) {
+                              imgEl.style.border = "2px dashed #6366f1";
+                          } else {
+                              imgEl.style.border = "none";
+                          }
+                          imgEl.style.boxShadow = isReadonly ? "none" : "0 4px 12px rgba(0,0,0,0.15)";
                           imgEl.style.borderRadius = "4px";
                           imgEl.style.maxWidth = "none";
 
@@ -546,6 +581,7 @@
                           let currentCellRef = targetCellRef;
 
                           const onMouseDown = (e) => {
+                              if (isReadonly) return;
                               if (e.target !== imgEl) return;
                               e.preventDefault();
                               e.stopPropagation();
@@ -627,11 +663,27 @@
                   td.className = "p-0 ipcrf-cell"; // Set correct class and clear padding
                   
                   let inputEl;
-                  const isReadonly = field.field_type.startsWith("autofill_") || field.field_type === "readonly";
-
-                  if (field.field_type === "textarea") {
+                  
+                  const adjustTextareaHeight = (textarea) => {
+                      textarea.style.height = "auto";
+                      textarea.style.height = textarea.scrollHeight + "px";
+                  };
+                  
+                  if (field.field_type === "textarea" || field.field_type === "text") {
                       inputEl = document.createElement("textarea");
-                      inputEl.rows = 2;
+                      inputEl.rows = field.field_type === "textarea" ? 2 : 1;
+                      inputEl.style.resize = "none";
+                      inputEl.style.overflow = "hidden";
+                      inputEl.style.whiteSpace = "normal";
+                      inputEl.addEventListener("input", function() {
+                          adjustTextareaHeight(this);
+                      });
+                  } else if (field.field_type === "calculated_mean") {
+                      inputEl = document.createElement("input");
+                      inputEl.type = "text";
+                      inputEl.className = "calculated-mean-input";
+                      inputEl.setAttribute("data-field-id", field.id);
+                      inputEl.setAttribute("data-targets", field.field_options?.targets || "");
                   } else if (field.field_type === "dropdown") {
                       inputEl = document.createElement("select");
                       const optDefault = document.createElement("option");
@@ -679,18 +731,92 @@
                   // Handle change events to keep state synced
                   const updateVal = (e) => {
                       this.answers[field.id] = e.target.value;
+                      this.recalculateMeans();
                       this.saveDraft(false); // background save
                   };
                   inputEl.addEventListener("input", updateVal);
                   inputEl.addEventListener("change", updateVal);
 
                   td.appendChild(inputEl);
+
+                  if (field.field_type === "textarea" || field.field_type === "text") {
+                      setTimeout(() => {
+                          adjustTextareaHeight(inputEl);
+                      }, 0);
+                  }
               });
+
+              // Cache mean fields for rapid calculations and calculate initial values
+              this.cacheMeanFields();
+              this.recalculateMeans();
           },
 
           ratingLabel(score) {
               const labels = { 5: "Outstanding", 4: "Very Satisfactory", 3: "Satisfactory", 2: "Unsatisfactory", 1: "Poor" };
               return labels[score] || "";
+          },
+
+          cacheMeanFields() {
+              this.meanFields = [];
+              const meanInputs = document.querySelectorAll(".calculated-mean-input");
+              meanInputs.forEach(meanInput => {
+                  const fieldId = meanInput.getAttribute("data-field-id");
+                  const targetsStr = meanInput.getAttribute("data-targets") || "";
+                  const targets = targetsStr.split(",").map(t => t.trim().toUpperCase()).filter(Boolean);
+                  
+                  const targetElements = [];
+                  targets.forEach(targetRef => {
+                      const td = document.querySelector(`td[data-cell="${targetRef}"]`);
+                      if (td) {
+                          const input = td.querySelector("input, select, textarea");
+                          if (input) {
+                              targetElements.push(input);
+                          }
+                      }
+                  });
+                  
+                  this.meanFields.push({
+                      input: meanInput,
+                      fieldId: fieldId,
+                      targets: targetElements
+                  });
+              });
+          },
+
+          recalculateMeans() {
+              let changed = false;
+              this.meanFields.forEach(field => {
+                  let sum = 0;
+                  let count = 0;
+                  
+                  field.targets.forEach(input => {
+                      const val = parseFloat(input.value);
+                      if (!isNaN(val)) {
+                          sum += val;
+                          count++;
+                      }
+                  });
+                  
+                  if (count > 0) {
+                      const mean = sum / count;
+                      const formatted = mean.toFixed(5);
+                      if (field.input.value !== formatted) {
+                          field.input.value = formatted;
+                          this.answers[field.fieldId] = formatted;
+                          changed = true;
+                      }
+                  } else {
+                      if (field.input.value !== "") {
+                          field.input.value = "";
+                          this.answers[field.fieldId] = "";
+                          changed = true;
+                      }
+                  }
+              });
+              
+              if (changed) {
+                  this.saveDraft(true); // background silent save
+              }
           },
 
           async saveDraft(isSilent = false) {

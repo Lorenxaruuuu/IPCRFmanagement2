@@ -17,6 +17,7 @@
     .ipcrf-grid-wrap table { border-collapse: collapse; font-size: 12px; }
     .ipcrf-grid-wrap td, .ipcrf-grid-wrap th { border: 1px solid #cbd5e1; padding: 4px 8px; min-width: 40px; }
     .status-submitted { background: #dbeafe; color: #1d4ed8; }
+    .status-rpmo_approved { background: #e0f2fe; color: #0369a1; }
     .status-under_review { background: #ffedd5; color: #c2410c; }
     .status-approved { background: #dcfce7; color: #15803d; }
     .status-draft { background: #f1f5f9; color: #475569; }
@@ -119,6 +120,7 @@
                     <div class="flex flex-wrap gap-3 mb-4">
                         <select x-model="queueFilters.status" @change="loadQueue()" class="px-3 py-2 border border-slate-200 rounded-lg text-sm">
                             <option value="">All statuses</option>
+                            <option value="rpmo_approved">Approved by RPMO</option>
                             <option value="submitted">Submitted</option>
                             <option value="under_review">Under review</option>
                             <option value="approved">Approved</option>
@@ -171,14 +173,14 @@
                         <h4 class="font-bold text-slate-800 mb-3">Pending Reviews</h4>
                         <button type="button" @click="loadQueue()" class="text-xs text-sky-600 mb-2 hover:underline">Refresh list</button>
                         <div class="space-y-2 max-h-[70vh] overflow-y-auto">
-                            <template x-for="row in queue.filter(r => ['submitted','under_review'].includes(r.status))" :key="'r'+row.id">
+                            <template x-for="row in queue.filter(r => ['rpmo_approved','under_review'].includes(r.status))" :key="'r'+row.id">
                                 <button type="button" @click="openReview(row.id)" class="w-full text-left p-3 rounded-lg border border-slate-200 hover:border-sky-400 hover:bg-sky-50/50 transition"
                                     :class="selectedId === row.id && 'border-sky-500 bg-sky-50'">
                                     <p class="font-medium text-sm text-slate-800" x-text="row.employee"></p>
                                     <p class="text-xs text-slate-500" x-text="row.template"></p>
                                 </button>
                             </template>
-                            <p x-show="queue.filter(r => ['submitted','under_review'].includes(r.status)).length === 0" class="text-sm text-slate-400 text-center py-4">No pending forms.</p>
+                            <p x-show="queue.filter(r => ['rpmo_approved','under_review'].includes(r.status)).length === 0" class="text-sm text-slate-400 text-center py-4">No pending forms.</p>
                         </div>
                     </div>
                     <div class="lg:col-span-2 space-y-4">
@@ -198,7 +200,7 @@
                                     <h5 class="text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">Read-only Form Grid</h5>
                                     <div class="ipcrf-grid-wrap" x-html="gridHtml"></div>
                                 </div>
-                                <div class="glass-panel p-6" x-show="['submitted','under_review'].includes(inspect.status)">
+                                <div class="glass-panel p-6" x-show="['rpmo_approved','under_review'].includes(inspect.status)">
                                     <h5 class="font-bold text-slate-800 mb-3">Performance Feedback</h5>
                                     <textarea x-model="feedback" rows="5" class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500" placeholder="Corrections, recommendations, or notes for the staff member..."></textarea>
                                     <div class="flex flex-wrap gap-3 mt-4">
@@ -285,11 +287,11 @@
     </main>
 
     <!-- Alert modal -->
-    <div x-show="modal.open" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click.self="modal.open = false">
+    <div x-show="modal.open" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click.self="closeModal()">
         <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
             <h3 class="font-bold text-lg mb-2" :class="modal.type === 'error' ? 'text-red-600' : 'text-slate-800'" x-text="modal.title"></h3>
             <p class="text-sm text-slate-600" x-text="modal.message"></p>
-            <button type="button" @click="modal.open = false" class="mt-4 w-full py-2.5 bg-slate-800 text-white rounded-lg font-semibold text-sm">OK</button>
+            <button type="button" @click="closeModal()" class="mt-4 w-full py-2.5 bg-slate-800 text-white rounded-lg font-semibold text-sm">OK</button>
         </div>
     </div>
 
@@ -325,15 +327,21 @@ function pooDashboard() {
         staffSearch: '',
         archiveSearch: '',
         archiveYear: '',
-        modal: { open: false, title: '', message: '', type: 'info' },
+        modal: { open: false, title: '', message: '', type: 'info', onClose: null },
         logoutModal: { open: false },
 
         init() {
-            this.loadQueue();
+            const savedView = localStorage.getItem('poo_active_view');
+            if (savedView) {
+                this.setView(savedView);
+            } else {
+                this.loadQueue();
+            }
         },
 
         setView(name) {
             this.view = name;
+            localStorage.setItem('poo_active_view', name);
             const titles = {
                 home: 'POO Dashboard',
                 queue: 'Provincial Queue',
@@ -349,8 +357,8 @@ function pooDashboard() {
             return document.querySelector('meta[name="csrf-token"]')?.content || '';
         },
 
-        showModal(title, message, type = 'info') {
-            this.modal = { open: true, title, message, type };
+        showModal(title, message, type = 'info', onClose = null) {
+            this.modal = { open: true, title, message, type, onClose };
         },
 
         showLogoutConfirm() {
@@ -422,8 +430,25 @@ function pooDashboard() {
                     ? `{{ url('admin/poo/submissions') }}/${id}/download` : null;
                 this.gridHtml = data.html_table || '<p class="p-4 text-slate-400">No grid data.</p>';
                 this.feedback = data.submission?.admin_remarks || '';
+                
+                this.$nextTick(() => {
+                    const gridWrap = document.querySelector('.ipcrf-grid-wrap');
+                    if (gridWrap) {
+                        gridWrap.setAttribute('data-submission-id', id);
+                        if (typeof initAdminEditableGrid === 'function') {
+                            initAdminEditableGrid('.ipcrf-grid-wrap');
+                        }
+                    }
+                });
             } catch (e) {
                 this.showModal('Error', e.message || 'Could not load form.', 'error');
+            }
+        },
+
+        closeModal() {
+            this.modal.open = false;
+            if (this.modal.onClose) {
+                this.modal.onClose();
             }
         },
 
@@ -441,7 +466,9 @@ function pooDashboard() {
                 });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.message || 'Request failed');
-                this.showModal('Returned', data.message || 'Form returned for correction.');
+                this.showModal('Returned', data.message || 'Form returned for correction.', 'info', () => {
+                    window.location.reload();
+                });
                 this.selectedId = null;
                 await this.loadQueue();
             } catch (e) {
@@ -460,7 +487,9 @@ function pooDashboard() {
                 });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.message || 'Request failed');
-                this.showModal('Approved', data.message || 'Form approved.');
+                this.showModal('Approved', data.message || 'Form approved.', 'info', () => {
+                    window.location.reload();
+                });
                 if (data.download_url) this.inspect.download_url = data.download_url;
                 await this.loadQueue();
             } catch (e) {
@@ -469,6 +498,176 @@ function pooDashboard() {
             this.actionLoading = false;
         },
     };
+}
+
+function initAdminEditableGrid(containerSelector) {
+    const container = document.querySelector(containerSelector);
+    if (!container) return;
+
+    if (container.dataset.initialized) return;
+    container.dataset.initialized = 'true';
+
+    // Delegate clicks on signature upload container
+    container.addEventListener('click', function(e) {
+        const wrapper = e.target.closest('.admin-sig-wrapper');
+        if (!wrapper) return;
+        
+        if (e.target.classList.contains('admin-sig-file-input')) {
+            return;
+        }
+        
+        const fileInput = wrapper.querySelector('.admin-sig-file-input');
+        if (fileInput) {
+            fileInput.click();
+        }
+    });
+
+    container.addEventListener('change', async function(e) {
+        const target = e.target;
+
+        // Handle file upload for admin reviewer signature
+        if (target.classList.contains('admin-sig-file-input')) {
+            const wrapper = target.closest('.admin-sig-wrapper');
+            if (!wrapper) return;
+            
+            const file = target.files[0];
+            if (!file) return;
+
+            const submissionId = container.getAttribute('data-submission-id');
+            const fieldId = wrapper.getAttribute('data-field-id');
+            const cellRef = wrapper.getAttribute('data-cell-ref');
+            
+            if (!submissionId || !fieldId) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('_token', document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}');
+
+            // Visual feedback - show upload indicator
+            const originalContentHtml = wrapper.innerHTML;
+            wrapper.innerHTML = '<span class="text-[10px] font-semibold text-indigo-600"><i class="fas fa-spinner fa-spin mr-1"></i>Uploading...</span>';
+
+            try {
+                const uploadRes = await fetch(`/my/submissions/${submissionId}/upload-picture/${fieldId}`, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: formData
+                });
+                const uploadResult = await uploadRes.json();
+                if (!uploadResult.success) {
+                    alert('Upload failed: ' + (uploadResult.message || 'Unknown error'));
+                    wrapper.innerHTML = originalContentHtml;
+                    return;
+                }
+
+                // Save the uploaded picture URL and location as a JSON answer
+                const value = JSON.stringify({
+                    url: uploadResult.url,
+                    cell_ref: cellRef,
+                    offsetX: 0,
+                    offsetY: 0,
+                    width: 120,
+                    height: 60
+                });
+
+                const saveRes = await fetch(`/admin/submissions/${submissionId}/save-answers`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({
+                        answers: {
+                            [fieldId]: value
+                        }
+                    })
+                });
+
+                const saveResult = await saveRes.json();
+                if (saveResult.success) {
+                    wrapper.innerHTML = '';
+                    
+                    const img = document.createElement('img');
+                    img.src = uploadResult.url;
+                    img.style.maxHeight = '40px';
+                    img.style.maxWidth = '100%';
+                    img.style.display = 'block';
+                    img.style.margin = '0 auto';
+                    wrapper.appendChild(img);
+
+                    const replaceSpan = document.createElement('span');
+                    replaceSpan.className = 'absolute top-0 right-0 bg-gray-800/80 text-white text-[8px] px-1 rounded hover:bg-black pointer-events-none';
+                    replaceSpan.textContent = 'Replace';
+                    wrapper.appendChild(replaceSpan);
+
+                    const newFileInput = document.createElement('input');
+                    newFileInput.type = 'file';
+                    newFileInput.className = 'admin-sig-file-input hidden';
+                    newFileInput.accept = '.png';
+                    wrapper.appendChild(newFileInput);
+                } else {
+                    alert('Failed to save signature: ' + (saveResult.message || 'Unknown error'));
+                    wrapper.innerHTML = originalContentHtml;
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Upload/Save failed due to network error.');
+                wrapper.innerHTML = originalContentHtml;
+            }
+            return;
+        }
+
+        // Existing logic for standard text / position change
+        if (!target.classList.contains('admin-form-input')) return;
+
+        const submissionId = container.getAttribute('data-submission-id');
+        if (!submissionId) return;
+
+        const fieldId = target.getAttribute('data-field-id');
+        const value = target.value;
+
+        // Visual feedback - saving state
+        target.style.opacity = '0.6';
+        
+        try {
+            const response = await fetch(`/admin/submissions/${submissionId}/save-answers`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    answers: {
+                        [fieldId]: value
+                    }
+                })
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                // Flash green background briefly for success
+                const originalBg = target.style.backgroundColor;
+                target.style.backgroundColor = '#d1fae5';
+                setTimeout(() => {
+                    target.style.backgroundColor = originalBg;
+                    target.style.opacity = '1';
+                }, 500);
+            } else {
+                target.style.backgroundColor = '#fee2e2';
+                alert('Failed to save: ' + (result.message || 'Unknown error'));
+                target.style.opacity = '1';
+            }
+        } catch (err) {
+            console.error(err);
+            target.style.backgroundColor = '#fee2e2';
+            alert('Network error while saving changes.');
+            target.style.opacity = '1';
+        }
+    });
 }
 </script>
 @endsection

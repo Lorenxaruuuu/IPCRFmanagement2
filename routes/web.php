@@ -38,11 +38,11 @@ Route::get('/performance', [PerformanceController::class, 'index'])->name('perfo
 // download a single form; use numeric id since we have no database
 Route::get('/forms/download/{id}', [FormController::class, 'download'])->name('forms.download');
 Route::get('/', function () {
-    if (session()->has('user') || session()->has('employee_id')) {
+    if (session()->has('user')) {
         $user = session('user');
-        if ($user && isset($user['role'])) {
+        if ($user && isset($user['role']) && isset($user['id'])) {
             if ($user['role'] === 'superadmin') {
-                return redirect()->route('superadmin.dashboard');
+                return redirect('/superadmin/dashboard2');
             } elseif ($user['role'] === 'admin') {
                 $admin = \App\Models\User::find($user['id'] ?? 0);
                 if ($admin && \App\Support\AdminPosition::isPooOnly($admin->adminPositionType())) {
@@ -52,8 +52,8 @@ Route::get('/', function () {
             } elseif ($user['role'] === 'encoder') {
                 return redirect('/encoder');
             }
+            return redirect()->route('userDashboard');
         }
-        return redirect()->route('userDashboard');
     }
     return redirect()->route('login');
 });
@@ -78,6 +78,8 @@ Route::get('/upload', [IpcrfController::class, 'create'])->name('upload.create')
 Route::post('/upload', [IpcrfController::class, 'store'])->name('upload.store');
 
 Route::prefix('admin')->name('admin.')->group(function () {
+
+    Route::post('/submissions/{id}/save-answers', [\App\Http\Admin\AdminSubmissionController::class, 'saveAnswers'])->name('submissions.save-answers');
 
     // POO Admin only (provincial quality control)
     Route::middleware('poo.admin')->prefix('poo')->group(function () {
@@ -127,8 +129,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::post('/templates/upload',          [AdminTemplateController::class, 'store'])->name('templates.store');
     Route::get('/templates/{id}/builder',     [AdminTemplateController::class, 'builder'])->name('templates.builder');
     Route::post('/templates/{id}/fields',        [AdminTemplateController::class, 'saveFields'])->name('templates.fields.save');
+    Route::post('/templates/{id}/save-layout',   [AdminTemplateController::class, 'saveLayout'])->name('templates.layout.save');
     Route::post('/templates/{id}/positions',     [AdminTemplateController::class, 'assignPositions'])->name('templates.positions.save');
     Route::post('/templates/{id}/cell-text',     [AdminTemplateController::class, 'updateCellText'])->name('templates.cell.text');
+    Route::post('/templates/{id}/cell-align',    [AdminTemplateController::class, 'updateCellAlign'])->name('templates.cell.align');
     Route::post('/templates/{id}/upload-image',  [AdminTemplateController::class, 'uploadCellImage'])->name('templates.cell.image');
     Route::post('/templates/{id}/merge-cells',   [AdminTemplateController::class, 'saveMergedCells'])->name('templates.merge.cells');
     Route::put('/templates/{id}',                [AdminTemplateController::class, 'update'])->name('templates.update');
@@ -153,6 +157,32 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::post('/positions',         [AdminPositionController::class, 'store'])->name('positions.store');
     Route::put('/positions/{id}',     [AdminPositionController::class, 'update'])->name('positions.update');
     Route::delete('/positions/{id}',  [AdminPositionController::class, 'destroy'])->name('positions.destroy');
+
+    // ─── Dashboard API ────────────────────────────────────────────────────────
+    Route::get('/api/recent-submissions', function () {
+        try {
+            $rows = \App\Models\IpcrfSubmission::with(['user', 'template'])
+                ->latest('submitted_at')
+                ->take(10)
+                ->get()
+                ->map(function ($s) {
+                    return [
+                        'id'            => $s->id,
+                        'employee_name' => $s->user?->name ?? 'Unknown',
+                        'employee_id'   => $s->user?->employee_id ?? '',
+                        'template_name' => $s->template?->name ?? 'N/A',
+                        'province_name' => $s->user?->province ?? 'N/A',
+                        'uploaded_at'   => optional($s->submitted_at)->toIso8601String(),
+                        'status'        => ucfirst(str_replace('_', ' ', $s->status)),
+                        'status_raw'    => $s->status,
+                    ];
+                });
+
+            return response()->json(['success' => true, 'data' => $rows]);
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    })->name('api.recent-submissions');
     });
 });
 
@@ -322,6 +352,8 @@ Route::prefix('superadmin')->name('superadmin.')->group(function () {
     Route::get('/dashboard2', [SuperadminController::class, 'dashboard'])->name('dashboard');
     Route::post('/users/{id}/approve', [SuperadminController::class, 'approve'])->name('users.approve');
     Route::delete('/users/{id}/reject', [SuperadminController::class, 'reject'])->name('users.reject');
+    Route::post('/users/{id}/approve-role', [SuperadminController::class, 'approveRoleChange'])->name('users.approveRole');
+    Route::delete('/users/{id}/reject-role', [SuperadminController::class, 'rejectRoleChange'])->name('users.rejectRole');
     Route::post('/admin/create', [SuperadminController::class, 'createAdmin'])->name('admin.create');
 });
 

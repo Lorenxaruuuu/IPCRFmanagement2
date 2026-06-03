@@ -9,16 +9,44 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use PhpOffice\PhpSpreadsheet\Settings;
 
 class TemplateParserService
 {
     /**
+     * Configure PhpSpreadsheet to use disk-based cell cache to reduce RAM usage.
+     */
+    private function configureCellCache(): void
+    {
+        try {
+            $cacheDir = storage_path('framework/cache/spreadsheet');
+            if (!file_exists($cacheDir)) {
+                mkdir($cacheDir, 0755, true);
+            }
+            $cache = new \Symfony\Component\Cache\Adapter\FilesystemAdapter(
+                'phpspreadsheet',
+                3600,
+                $cacheDir
+            );
+            Settings::setCache($cache);
+        } catch (\Throwable $e) {
+            // Cache not available, fall back to in-memory
+        }
+    }
+
+    /**
      * Parse an uploaded XLSX file and return a structured JSON representation.
      */
-    public function parse(string $filePath): array
+    public function parse(string $filePath, bool $dataOnly = false): array
     {
-        ini_set('memory_limit', '512M');
-        $spreadsheet = IOFactory::load($filePath);
+        ini_set('memory_limit', '2G');
+        $this->configureCellCache();
+
+        $reader = IOFactory::createReaderForFile($filePath);
+        if ($dataOnly) {
+            $reader->setReadDataOnly(true);
+        }
+        $spreadsheet = $reader->load($filePath);
         $worksheet   = $spreadsheet->getActiveSheet();
 
         $highestRow    = $worksheet->getHighestDataRow();
@@ -128,7 +156,7 @@ class TemplateParserService
             $rowHeights[$row] = $height > 0 ? round($height * 1.33) : 20; // px approximation
         }
 
-        return [
+        $result = [
             'rows'         => $rows,
             'merged_cells' => $mergedCellRanges,
             'col_widths'   => $colWidths,
@@ -137,6 +165,12 @@ class TemplateParserService
             'total_cols'   => $highestColIdx,
             'sheet_name'   => $worksheet->getTitle(),
         ];
+
+        // Free memory immediately
+        $spreadsheet->disconnectWorksheets();
+        unset($spreadsheet, $worksheet);
+
+        return $result;
     }
 
     /**
@@ -221,7 +255,7 @@ class TemplateParserService
     /**
      * Generate an HTML table string for preview (used in builder and user form views).
      */
-    public function toHtmlTable(array $parsedData, array $mappedFields = [], bool $editable = false): string
+    public function toHtmlTable(array $parsedData, array $mappedFields = [], bool $editable = false, bool $adminMode = false): string
     {
         $rows       = $parsedData['rows'];
         $colWidths  = $parsedData['col_widths'];
@@ -297,7 +331,93 @@ class TemplateParserService
                 $content = '';
                 if (isset($fieldMap[$cellRef])) {
                     $field   = $fieldMap[$cellRef];
-                    $content = $this->renderFieldBadge($field, $editable);
+                    if (in_array($field['field_type'], ['text', 'textarea', 'autofill_name', 'autofill_position', 'autofill_department', 'autofill_division_chief', 'autofill_approving_authority', 'autofill_division_chief_position', 'autofill_approving_authority_position'], true)) {
+                        $css .= 'white-space:pre-wrap !important;word-wrap:break-word;';
+                    }
+                    if ($editable) {
+                        $content = $this->renderFieldBadge($field, true);
+                    } else {
+                        // Read-only rendering of user values
+                        $val = $field['current_value'] ?? '';
+                        
+                        $isAdminEditable = $adminMode && in_array($field['field_type'], [
+                            'autofill_division_chief',
+                            'autofill_approving_authority',
+                            'autofill_division_chief_position',
+                            'autofill_approving_authority_position',
+                            'autofill_division_chief_signature',
+                            'autofill_approving_authority_signature'
+                        ]);
+                        
+                        if ($isAdminEditable) {
+                            if ($field['field_type'] === 'autofill_division_chief' || $field['field_type'] === 'autofill_approving_authority') {
+                                $content = '<input type="text" class="admin-form-input w-full h-full bg-blue-50/50 hover:bg-blue-50 focus:bg-white px-1 border-none text-center" data-field-id="' . $field['id'] . '" value="' . htmlspecialchars((string)$val) . '" placeholder="Enter Name">';
+                            } elseif ($field['field_type'] === 'autofill_division_chief_position' || $field['field_type'] === 'autofill_approving_authority_position') {
+                                // Position fields
+                                $positionsList = \Illuminate\Support\Facades\DB::table('positions')->where('is_active', true)->orderBy('name')->pluck('name')->toArray();
+                                $content = '<select class="admin-form-input w-full h-full bg-blue-50/50 hover:bg-blue-50 focus:bg-white px-1 border-none text-center" data-field-id="' . $field['id'] . '">';
+                                $content .= '<option value="">-- Select Position --</option>';
+                                foreach ($positionsList as $pos) {
+                                    $selected = ($pos === $val) ? 'selected' : '';
+                                    $content .= '<option value="' . htmlspecialchars($pos) . '" ' . $selected . '>' . htmlspecialchars($pos) . '</option>';
+                                }
+                                $content .= '</select>';
+                            } else {
+                                // Admin signature upload
+                                $imgUrl = '';
+                                if (!empty($val)) {
+                                    $decoded = json_decode($val, true);
+                                    if (is_array($decoded) && isset($decoded['url'])) {
+                                        $imgUrl = $decoded['url'];
+                                    } elseif (str_starts_with($val, 'http') || str_starts_with($val, '/')) {
+                                        $imgUrl = $val;
+                                    }
+                                }
+
+                                $content = '<div class="admin-sig-wrapper w-full h-full flex items-center justify-center relative cursor-pointer min-h-[40px] p-1" data-field-id="' . $field['id'] . '" data-cell-ref="' . $field['cell_ref'] . '">';
+                                if (!empty($imgUrl)) {
+                                    $content .= '<img src="' . htmlspecialchars($imgUrl) . '" style="max-height:40px; max-width:100%; display:block; margin:0 auto;" />';
+                                    $content .= '<span class="absolute top-0 right-0 bg-gray-800/80 text-white text-[8px] px-1 rounded hover:bg-black pointer-events-none">Replace</span>';
+                                } else {
+                                    $content .= '<span class="text-indigo-600 text-[10px] font-semibold hover:text-indigo-800 pointer-events-none"><i class="fas fa-signature mr-1"></i>Upload Sig</span>';
+                                }
+                                $content .= '<input type="file" class="admin-sig-file-input hidden" accept=".png" />';
+                                $content .= '</div>';
+                            }
+                        } else {
+                            $isImageField = in_array($field['field_type'], [
+                                'picture', 'signature', 'autofill_division_chief_signature', 'autofill_approving_authority_signature'
+                            ], true);
+
+                            if ($isImageField) {
+                                $imgUrl = '';
+                                if (!empty($val)) {
+                                    $decoded = json_decode($val, true);
+                                    if (is_array($decoded) && isset($decoded['url'])) {
+                                        $imgUrl = $decoded['url'];
+                                    } elseif (str_starts_with($val, 'http') || str_starts_with($val, '/')) {
+                                        $imgUrl = $val;
+                                    }
+                                }
+                                if (!empty($imgUrl)) {
+                                    $imgStyle = 'max-height:40px; max-width:100%; display:block;';
+                                    $hAlign = $style['h_align'] ?? 'center';
+                                    if ($hAlign === 'right') {
+                                        $imgStyle .= 'margin-left:auto; margin-right:0;';
+                                    } elseif ($hAlign === 'left') {
+                                        $imgStyle .= 'margin-left:0; margin-right:auto;';
+                                    } else {
+                                        $imgStyle .= 'margin:0 auto;';
+                                    }
+                                    $content = '<img src="' . htmlspecialchars($imgUrl) . '" class="user-uploaded-picture" style="' . $imgStyle . '" />';
+                                } else {
+                                    $content = '<span class="text-gray-400 text-xs italic">[No Image]</span>';
+                                }
+                            } else {
+                                $content = htmlspecialchars((string)$val);
+                            }
+                        }
+                    }
                     $css    .= 'position:relative;';
                     $class   = 'ipcrf-cell ipcrf-cell--mapped ipcrf-field-' . $field['field_type'];
                 } else {
@@ -352,22 +472,25 @@ class TemplateParserService
     private function fieldTypeIcon(string $type): string
     {
         return match ($type) {
-            'autofill_name'                => 'fa-user',
-            'autofill_position'            => 'fa-briefcase',
-            'autofill_department'          => 'fa-building',
-            'autofill_date'                => 'fa-calendar-day',
-            'date'                         => 'fa-calendar-alt',
-            'autofill_division_chief'      => 'fa-user-tie',
-            'autofill_approving_authority' => 'fa-stamp',
-            'text'                         => 'fa-font',
-            'number'                       => 'fa-hashtag',
-            'textarea'                     => 'fa-align-left',
-            'rating'                       => 'fa-star',
-            'dropdown'                     => 'fa-chevron-down',
-            'signature'                    => 'fa-signature',
-            'readonly'                     => 'fa-lock',
-            'picture'                      => 'fa-image',
-            default                        => 'fa-square',
+            'autofill_name'                         => 'fa-user',
+            'autofill_position'                     => 'fa-briefcase',
+            'autofill_department'                   => 'fa-building',
+            'autofill_date'                         => 'fa-calendar-day',
+            'date'                                  => 'fa-calendar-alt',
+            'autofill_division_chief'               => 'fa-user-tie',
+            'autofill_approving_authority'          => 'fa-stamp',
+            'autofill_division_chief_position'      => 'fa-briefcase',
+            'autofill_approving_authority_position' => 'fa-briefcase',
+            'calculated_mean'                       => 'fa-calculator',
+            'text'                                  => 'fa-font',
+            'number'                                => 'fa-hashtag',
+            'textarea'                              => 'fa-align-left',
+            'rating'                                => 'fa-star',
+            'dropdown'                              => 'fa-chevron-down',
+            'signature'                             => 'fa-signature',
+            'readonly'                              => 'fa-lock',
+            'picture'                               => 'fa-image',
+            default                                 => 'fa-square',
         };
     }
 }

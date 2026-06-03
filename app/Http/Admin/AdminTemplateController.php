@@ -27,7 +27,8 @@ class AdminTemplateController extends Controller
 
     public function store(Request $request)
     {
-        ini_set('memory_limit', '512M');
+        ini_set('memory_limit', '1G');
+        set_time_limit(300); // Allow up to 5 minutes for large files
         $request->validate([
             'name'               => 'required|string|max:255',
             'file'               => 'required|file|mimes:xlsx|max:102400',
@@ -42,18 +43,20 @@ class AdminTemplateController extends Controller
 
         try {
             $parsed = $this->parser->parse($fullPath);
+            gc_collect_cycles();
         } catch (\Exception $e) {
             Storage::disk('private')->delete($path);
             return response()->json(['success' => false, 'message' => 'Could not parse XLSX: ' . $e->getMessage()], 422);
         }
 
+        // Create the record first (without sheet_data) so we have an ID,
+        // then persist the parsed rows to a compressed file on disk.
         $template = IpcrfTemplate::create([
             'name'               => $request->name,
             'description'        => $request->description,
             'file_path'          => $path,
             'file_name'          => Str::slug($request->name) . '.xlsx',
             'file_original_name' => $file->getClientOriginalName(),
-            'sheet_data'         => $parsed['rows'],
             'merged_cells'       => $parsed['merged_cells'],
             'total_rows'         => $parsed['total_rows'],
             'total_cols'         => $parsed['total_cols'],
@@ -61,6 +64,11 @@ class AdminTemplateController extends Controller
             'semester'           => $request->semester,
             'form_specification' => $request->form_specification,
         ]);
+
+        // Save sheet_data to a gzip-compressed file (avoids MySQL packet limits)
+        $template->saveSheetData($parsed['rows']);
+        unset($parsed); // free memory
+        gc_collect_cycles();
 
         $adminId = session('user')['id'] ?? null;
         AuditService::log('template_uploaded', $adminId, 'IpcrfTemplate', $template->id, [
@@ -91,7 +99,8 @@ class AdminTemplateController extends Controller
 
     public function builder(int $id)
     {
-        ini_set('memory_limit', '512M');
+        ini_set('memory_limit', '1G');
+        set_time_limit(300);
         $template  = IpcrfTemplate::with(['fields', 'positions'])->findOrFail($id);
         $positions = Position::active()->orderBy('name')->get();
         $parsed    = [
@@ -108,6 +117,9 @@ class AdminTemplateController extends Controller
         if (file_exists($fullPath)) {
             try {
                 $parsed = $this->parser->parse($fullPath);
+                if ($template->sheet_data) {
+                    $parsed['rows'] = $template->sheet_data;
+                }
             } catch (\Exception $e) {}
         }
 
@@ -190,7 +202,6 @@ class AdminTemplateController extends Controller
             'value'    => 'nullable|string|max:2000',
         ]);
 
-        ini_set('memory_limit', '512M');
         $template  = IpcrfTemplate::findOrFail($id);
         $sheetData = $template->sheet_data ?? [];
         $target    = strtoupper(trim($request->cell_ref));
@@ -201,6 +212,39 @@ class AdminTemplateController extends Controller
                 if (isset($cell['cell_ref']) && $cell['cell_ref'] === $target) {
                     $cell['value']     = $request->value ?? '';
                     $cell['raw_value'] = $request->value ?? '';
+                    $found = true;
+                    break 2;
+                }
+            }
+        }
+        unset($row, $cell);
+
+        if ($found) {
+            $template->update(['sheet_data' => $sheetData]);
+        }
+
+        return response()->json(['success' => true, 'found' => $found]);
+    }
+
+    public function updateCellAlign(Request $request, int $id)
+    {
+        $request->validate([
+            'cell_ref' => 'required|string|max:20',
+            'align'    => 'required|string|in:left,center,right',
+        ]);
+
+        $template  = IpcrfTemplate::findOrFail($id);
+        $sheetData = $template->sheet_data ?? [];
+        $target    = strtoupper(trim($request->cell_ref));
+        $found     = false;
+
+        foreach ($sheetData as &$row) {
+            foreach ($row as &$cell) {
+                if (isset($cell['cell_ref']) && $cell['cell_ref'] === $target) {
+                    if (!isset($cell['style']) || !is_array($cell['style'])) {
+                        $cell['style'] = [];
+                    }
+                    $cell['style']['h_align'] = $request->align;
                     $found = true;
                     break 2;
                 }
@@ -233,7 +277,6 @@ class AdminTemplateController extends Controller
         $url = asset('storage/ipcrf_images/' . $filename);
 
         // Persist drawing info into sheet_data
-        ini_set('memory_limit', '512M');
         $template  = IpcrfTemplate::findOrFail($id);
         $sheetData = $template->sheet_data ?? [];
         $target    = strtoupper(trim($request->cell_ref));
@@ -270,7 +313,6 @@ class AdminTemplateController extends Controller
             'colspan'     => 'nullable|integer|min:1|max:100',
         ]);
 
-        ini_set('memory_limit', '512M');
         $template    = IpcrfTemplate::findOrFail($id);
         $sheetData   = $template->sheet_data   ?? [];
         $mergedCells = $template->merged_cells ?? [];
@@ -386,6 +428,30 @@ class AdminTemplateController extends Controller
             return response()->json(['success' => true]);
         }
         return redirect()->back()->with('success', 'Template deleted successfully');
+    }
+
+    public function saveLayout(Request $request, int $id)
+    {
+        $request->validate([
+            'rows' => 'required|array',
+        ]);
+
+        $template = IpcrfTemplate::findOrFail($id);
+        $totalRows = count($request->rows);
+        $totalCols = $totalRows > 0 ? count($request->rows[0]) : 0;
+
+        $template->update([
+            'sheet_data' => $request->rows,
+            'total_rows' => $totalRows,
+            'total_cols' => $totalCols,
+        ]);
+
+        AuditService::log('template_layout_saved', null, 'IpcrfTemplate', $id, [
+            'total_rows' => $totalRows,
+            'total_cols' => $totalCols,
+        ]);
+
+        return response()->json(['success' => true, 'message' => 'Layout saved successfully!']);
     }
 
     public function getAll()

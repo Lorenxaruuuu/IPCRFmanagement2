@@ -12,22 +12,22 @@ class AuthController extends Controller
 {
     public function showLoginForm()
     {
-        if (Session::has('employee_id') || Session::has('user')) {
-            $user = Session::get('user');
-            if ($user && isset($user['role'])) {
-                if ($user['role'] === 'superadmin') {
-                    return redirect()->route('superadmin.dashboard');
-                } elseif ($user['role'] === 'admin') {
-                    $admin = User::find($user['id'] ?? 0);
-                    if ($admin && $admin->adminPositionType() === 'poo') {
-                        return redirect()->route('admin.poo.dashboard');
-                    }
-                    return redirect('/admins');
-                } elseif ($user['role'] === 'encoder') {
-                    return redirect('/encoder');
+        $user = Session::get('user');
+        if ($user && isset($user['role']) && isset($user['id'])) {
+            // Only redirect if we have a full valid session
+            if ($user['role'] === 'superadmin') {
+                return redirect('/superadmin/dashboard2');
+            } elseif ($user['role'] === 'admin') {
+                $admin = User::find($user['id'] ?? 0);
+                if ($admin && $admin->adminPositionType() === 'poo') {
+                    return redirect()->route('admin.poo.dashboard');
                 }
+                return redirect('/admins');
+            } elseif ($user['role'] === 'encoder') {
+                return redirect('/encoder');
+            } else {
+                return redirect()->route('userDashboard');
             }
-            return redirect()->route('userDashboard');
         }
         return view('auth.login');
     }
@@ -70,7 +70,7 @@ class AuthController extends Controller
             ]);
 
             if ($user->role === 'superadmin') {
-                return redirect()->route('superadmin.dashboard');
+                return redirect('/superadmin/dashboard2');
             } elseif ($user->role === 'admin') {
                 if ($user->adminPositionType() === 'poo') {
                     return redirect()->route('admin.poo.dashboard');
@@ -209,7 +209,7 @@ public function store(Request $request)
                     ($incomingBirthday && $incomingBirthday !== $dbBirthday) || 
                     $request->gender !== $user->gender || 
                     $request->address !== $user->address || 
-                    $request->region !== $user->region) {
+                    $request->region !== $user->province) {
                     return back()->withErrors(['profile_error' => 'You have already edited your personal information once and it cannot be modified again.']);
                 }
 
@@ -234,7 +234,7 @@ public function store(Request $request)
                     'birthday' => $formattedBirthday,
                     'gender' => $request->gender,
                     'address' => $request->address,
-                    'region' => $request->region,
+                    'province' => $request->region,
                     'profile_edited' => 1,
                 ]);
             }

@@ -34,6 +34,7 @@ class User extends Authenticatable
     'gender',
     'address',
     'region',
+    'province',
     'position_id',
     'department',
     'office',

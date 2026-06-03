@@ -107,6 +107,9 @@ class UserDashboardController extends Controller
         // Parse the template
         $fullPath = Storage::disk('private')->path($template->file_path);
         $parsed   = $this->parser->parse($fullPath);
+        if ($template->sheet_data) {
+            $parsed['rows'] = $template->sheet_data;
+        }
 
         // Resolve autofill values from user profile
         $position = DB::table('positions')->find($userRecord->position_id);
@@ -132,12 +135,15 @@ class UserDashboardController extends Controller
 
         $htmlTable = $this->parser->toHtmlTable($parsed, $fields, false);
 
+        $positionsList = DB::table('positions')->where('is_active', true)->orderBy('name')->pluck('name')->toArray();
+
         return response()->json([
             'template'      => ['id' => $template->id, 'name' => $template->name],
             'submission_id' => $submission->id,
             'html_table'    => $htmlTable,
             'fields'        => $fields,
             'autofill'      => $autofillValues,
+            'positions'     => $positionsList,
         ]);
     }
 
@@ -208,8 +214,12 @@ class UserDashboardController extends Controller
 
         $submission = IpcrfSubmission::findOrFail($submissionId);
         
-        // Verify owner
-        if (($submission->user_id ?? 0) !== (session('user')['id'] ?? 0)) {
+        // Verify owner or admin
+        $sessionUser = session('user');
+        $isAdmin = $sessionUser && ($sessionUser['role'] ?? '') === 'admin';
+        $isOwner = ($submission->user_id ?? 0) === ($sessionUser['id'] ?? 0);
+        
+        if (!$isOwner && !$isAdmin) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 

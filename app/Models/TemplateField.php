@@ -19,18 +19,25 @@ class TemplateField extends Model
     ];
 
     public const FIELD_TYPES = [
-        'autofill_name'       => 'Auto-Fill Employee Name',
-        'autofill_position'   => 'Auto-Fill Position/Designation',
-        'autofill_department' => 'Auto-Fill Office/Department',
-        'autofill_date'       => 'Auto-Fill Date Signed',
-        'text'                => 'Text Input',
-        'number'              => 'Number Input',
-        'textarea'            => 'Text Area',
-        'rating'              => 'Rating Input',
-        'dropdown'            => 'Dropdown',
-        'signature'           => 'Signature Field',
-        'readonly'            => 'Read-Only Label',
-        'picture'             => 'Add Picture',
+        'autofill_name'                         => 'Auto-Fill Employee Name',
+        'autofill_position'                     => 'Auto-Fill Position/Designation',
+        'autofill_department'                   => 'Auto-Fill Office/Department',
+        'autofill_date'                         => 'Auto-Fill Date Signed',
+        'autofill_division_chief'               => 'Div. Chief / Supervisor Name',
+        'autofill_approving_authority'          => 'Approving Authority Name',
+        'autofill_division_chief_position'      => 'Div. Chief / Supervisor Position',
+        'autofill_approving_authority_position' => 'Approving Authority Position',
+        'autofill_division_chief_signature'     => 'Div. Chief / Supervisor Signature',
+        'autofill_approving_authority_signature'=> 'Approving Authority Signature',
+        'calculated_mean'                       => 'Calculated Mean',
+        'text'                                  => 'Text Input',
+        'number'                                => 'Number Input',
+        'textarea'                              => 'Text Area',
+        'rating'                                => 'Rating Input',
+        'dropdown'                              => 'Dropdown',
+        'signature'                             => 'Signature Field',
+        'readonly'                              => 'Read-Only Label',
+        'picture'                               => 'Add Picture',
     ];
 
     public const AUTOFILL_TYPES = [

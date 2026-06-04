@@ -17,7 +17,7 @@
     .ipcrf-grid-wrap table { border-collapse: collapse; font-size: 12px; }
     .ipcrf-grid-wrap td, .ipcrf-grid-wrap th { border: 1px solid #cbd5e1; padding: 4px 8px; min-width: 40px; }
     .status-submitted { background: #dbeafe; color: #1d4ed8; }
-    .status-rpmo_approved { background: #e0f2fe; color: #0369a1; }
+    .status-poo_approved { background: #e0f2fe; color: #0369a1; }
     .status-under_review { background: #ffedd5; color: #c2410c; }
     .status-approved { background: #dcfce7; color: #15803d; }
     .status-draft { background: #f1f5f9; color: #475569; }
@@ -120,7 +120,7 @@
                     <div class="flex flex-wrap gap-3 mb-4">
                         <select x-model="queueFilters.status" @change="loadQueue()" class="px-3 py-2 border border-slate-200 rounded-lg text-sm">
                             <option value="">All statuses</option>
-                            <option value="rpmo_approved">Approved by RPMO</option>
+                            <option value="poo_approved">Approved by POO</option>
                             <option value="submitted">Submitted</option>
                             <option value="under_review">Under review</option>
                             <option value="approved">Approved</option>
@@ -173,14 +173,14 @@
                         <h4 class="font-bold text-slate-800 mb-3">Pending Reviews</h4>
                         <button type="button" @click="loadQueue()" class="text-xs text-sky-600 mb-2 hover:underline">Refresh list</button>
                         <div class="space-y-2 max-h-[70vh] overflow-y-auto">
-                            <template x-for="row in queue.filter(r => ['rpmo_approved','under_review'].includes(r.status))" :key="'r'+row.id">
+                            <template x-for="row in queue.filter(r => ['submitted','under_review'].includes(r.status))" :key="'r'+row.id">
                                 <button type="button" @click="openReview(row.id)" class="w-full text-left p-3 rounded-lg border border-slate-200 hover:border-sky-400 hover:bg-sky-50/50 transition"
                                     :class="selectedId === row.id && 'border-sky-500 bg-sky-50'">
                                     <p class="font-medium text-sm text-slate-800" x-text="row.employee"></p>
                                     <p class="text-xs text-slate-500" x-text="row.template"></p>
                                 </button>
                             </template>
-                            <p x-show="queue.filter(r => ['rpmo_approved','under_review'].includes(r.status)).length === 0" class="text-sm text-slate-400 text-center py-4">No pending forms.</p>
+                            <p x-show="queue.filter(r => ['submitted','under_review'].includes(r.status)).length === 0" class="text-sm text-slate-400 text-center py-4">No pending forms.</p>
                         </div>
                     </div>
                     <div class="lg:col-span-2 space-y-4">
@@ -200,7 +200,7 @@
                                     <h5 class="text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">Read-only Form Grid</h5>
                                     <div class="ipcrf-grid-wrap" x-html="gridHtml"></div>
                                 </div>
-                                <div class="glass-panel p-6" x-show="['rpmo_approved','under_review'].includes(inspect.status)">
+                                <div class="glass-panel p-6" x-show="['submitted','under_review'].includes(inspect.status)">
                                     <h5 class="font-bold text-slate-800 mb-3">Performance Feedback</h5>
                                     <textarea x-model="feedback" rows="5" class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500" placeholder="Corrections, recommendations, or notes for the staff member..."></textarea>
                                     <div class="flex flex-wrap gap-3 mt-4">

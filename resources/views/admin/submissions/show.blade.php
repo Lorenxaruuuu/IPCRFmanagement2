@@ -199,7 +199,7 @@
                                     $statusClasses = [
                                         'draft'        => 'bg-slate-100 text-slate-600',
                                         'submitted'    => 'bg-blue-100 text-blue-700 border border-blue-200',
-                                        'rpmo_approved' => 'bg-sky-100 text-sky-700 border border-sky-200',
+                                        'poo_approved' => 'bg-sky-100 text-sky-700 border border-sky-200',
                                         'under_review' => 'bg-orange-100 text-orange-700 border border-orange-200',
                                         'approved'     => 'bg-green-100 text-green-700 border border-green-200',
                                         'rejected'     => 'bg-red-100 text-red-700 border border-red-200'
@@ -235,7 +235,7 @@
                     </div>
 
                     <!-- Evaluation Actions Panel (Only if Pending/Under Review) -->
-                    @if(in_array($submission->status, ['submitted', 'under_review']))
+                    @if(in_array($submission->status, ['poo_approved', 'under_review']))
                     <div class="glass-panel rounded-2xl p-6 border-t-4 border-blue-500 shadow-md">
                         <h3 class="font-bold text-slate-800 text-sm mb-3">Evaluation Control</h3>
                         

@@ -18,7 +18,7 @@ class User extends Authenticatable
      *
      * @var list<string>
      */
-     protected $fillable = [
+    protected $fillable = [
     'lastname',
     'firstname',
     'name',
@@ -27,14 +27,13 @@ class User extends Authenticatable
     'password',
     'role',
     'position',
-    'requested_role',
+    'requested_position_id',
     'approved',
     'profile_edited',
     'birthday',
     'gender',
     'address',
     'region',
-    'province',
     'position_id',
     'department',
     'office',
@@ -66,6 +65,11 @@ class User extends Authenticatable
     public function position(): BelongsTo
     {
         return $this->belongsTo(Position::class, 'position_id');
+    }
+
+    public function requestedPosition(): BelongsTo
+    {
+        return $this->belongsTo(Position::class, 'requested_position_id');
     }
 
     /** Job title / designation (avoids conflict with admin `position` column: rpmo, poo, etc.) */

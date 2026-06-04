@@ -145,23 +145,11 @@
                     <i class="fas fa-id-badge w-5"></i>
                     Positions
                 </a>
-                <div class="px-4 mt-4 mb-2"><p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Legacy Records</p></div>
-                <a href="#" onclick="showView('upload')" class="nav-item flex items-center gap-3 px-6 py-3 text-sm" id="nav-upload">
-                    <i class="fas fa-upload w-5"></i>
-                    Upload IPCRF File
-                </a>
-                <a href="#" onclick="showView('records')" class="nav-item flex items-center gap-3 px-6 py-3 text-sm" id="nav-records">
-                    <i class="fas fa-list w-5"></i>
-                    Uploaded Records
-                </a>
+
                 <div class="px-4 mt-4 mb-2"><p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">System</p></div>
                 <a href="#" onclick="showView('notices')" class="nav-item flex items-center gap-3 px-6 py-3 text-sm" id="nav-notices">
                     <i class="fas fa-bell w-5"></i>
                     Manage Notices
-                </a>
-                <a href="#" onclick="showView('forms')" class="nav-item flex items-center gap-3 px-6 py-3 text-sm" id="nav-forms">
-                    <i class="fas fa-file-alt w-5"></i>
-                    Manage Forms
                 </a>
                 @if(isset($userPosition) && $userPosition === 'rpmo_poo')
                 <div class="px-4 mt-4 mb-2"><p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Provincial (POO)</p></div>
@@ -371,7 +359,7 @@
                                     <thead>
                                         <tr class="text-left text-xs text-gray-500 border-b">
                                             <th class="pb-3 font-medium">Employee</th>
-                                            <th class="pb-3 font-medium">Region</th>
+                                            <th class="pb-3 font-medium">Assigned Province</th>
                                             <th class="pb-3 font-medium">Date Uploaded</th>
                                             <th class="pb-3 font-medium">Status</th>
                                         </tr>
@@ -700,7 +688,7 @@
                                 <thead>
                                     <tr class="text-left border-b-2 border-gray-200">
                                         <th class="pb-3 font-semibold text-sm text-gray-700">Employee</th>
-                                        <th class="pb-3 font-semibold text-sm text-gray-700">Region</th>
+                                        <th class="pb-3 font-semibold text-sm text-gray-700">Assigned Province</th>
                                         <th class="pb-3 font-semibold text-sm text-gray-700">Date Uploaded</th>
                                         <th class="pb-3 font-semibold text-sm text-gray-700">Status</th>
                                         <th class="pb-3 font-semibold text-sm text-gray-700">Action</th>
@@ -823,108 +811,12 @@
                     </div>
                 </div>
 
-                <!-- MANAGE FORMS VIEW -->
-                <div id="view-forms" class="view-section hidden fade-in">
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <!-- Upload New Form -->
-                        <div class="glass-panel rounded-2xl p-6">
-                            <h3 class="text-xl font-bold mb-1">Upload New Form</h3>
-                            <p class="text-sm text-gray-500 mb-6">Add documents for encoders to download</p>
-                            
-                            <form method="POST" action="{{ route('admin.forms.store') }}" enctype="multipart/form-data" class="space-y-4">
-                                @csrf
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Form Title</label>
-                                    <input type="text" name="title" required class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500" placeholder="e.g., IPCRF Template 2025">
-                                </div>
-                                
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Category</label>
-                                    <select name="category" required class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500">
-                                        <option value="Template">Template</option>
-                                        <option value="Guidelines">Guidelines</option>
-                                        <option value="Reference">Reference</option>
-                                    </select>
-                                </div>
-                                
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase">Description</label>
-                                    <textarea name="description" rows="3" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 resize-none" placeholder="Briefly describe the form..."></textarea>
-                                </div>
-                                
-                                <label class="block cursor-pointer">
-                                    <div class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-blue-500 transition bg-gray-50">
-                                        <i class="fas fa-file-upload text-3xl text-gray-400 mb-2"></i>
-                                        <p class="text-sm text-gray-600 file-name-display">Click to upload or drag and drop</p>
-                                        <p class="text-xs text-gray-400">PDF, DOC, XLS files</p>
-                                        <input type="file" name="file" class="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx" required onchange="this.parentElement.querySelector('.file-name-display').textContent = this.files[0].name">
-                                    </div>
-                                </label>
-                                
-                                <button type="submit" class="w-full bg-blue-900 text-white py-3 rounded-lg hover:bg-blue-800 transition font-medium">
-                                    Publish Form
-                                </button>
-                            </form>
-                        </div>
-
-                        <!-- Published Forms -->
-                        <div class="glass-panel rounded-2xl p-6">
-                            <h3 class="text-xl font-bold mb-6">Published Forms</h3>
-                            
-                            <div class="space-y-4">
-                                @forelse($forms as $form)
-                                <div class="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                                    <div class="flex justify-between items-start mb-3">
-                                        <div class="flex items-center gap-3">
-                                            <div class="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
-                                                <i class="fas {{ str_contains(strtolower($form->file_name ?? ''), 'pdf') ? 'fa-file-pdf' : (str_contains(strtolower($form->file_name ?? ''), 'xl') ? 'fa-file-excel' : 'fa-file-alt') }} text-gray-600 text-xl"></i>
-                                            </div>
-                                            <div>
-                                                @php
-                                                    $bgClass = 'bg-gray-200 text-gray-700';
-                                                    if($form->category == 'Guidelines') $bgClass = 'bg-blue-100 text-blue-700';
-                                                    elseif($form->category == 'Reference') $bgClass = 'bg-green-100 text-green-700';
-                                                @endphp
-                                                <span class="inline-block px-2 py-1 {{ $bgClass }} text-xs rounded mb-1">{{ $form->category }}</span>
-                                                <h4 class="font-bold text-gray-800">{{ $form->title }}</h4>
-                                                <p class="text-xs text-gray-500">{{ Str::limit($form->description, 60) }}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="flex justify-between items-center pt-3 border-t border-gray-200">
-                                        <span class="text-xs text-gray-500">{{ $form->published_at ? $form->published_at->format('d/m/Y') : 'N/A' }}</span>
-                                        <div class="flex gap-4">
-                                            <form action="{{ route('admin.forms.destroy', $form->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this form?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="text-red-500 text-sm font-medium hover:underline flex items-center gap-1">
-                                                    <i class="fas fa-trash"></i> Delete
-                                                </button>
-                                            </form>
-                                            <a href="{{ route('admin.forms.download', $form->id) }}" class="text-blue-600 text-sm font-medium hover:underline flex items-center gap-1">
-                                                <i class="fas fa-download"></i> Download
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                                @empty
-                                <div class="text-center py-6 text-gray-500 text-sm">
-                                    No forms published yet.
-                                </div>
-                                @endforelse
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- ══════════════════════════════════════════════════════ -->
                 <!-- IPCRF TEMPLATES VIEW                                  -->
                 <!-- ══════════════════════════════════════════════════════ -->
                 <div id="view-templates" class="view-section hidden fade-in">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                         <div>
-                            <h3 class="text-2xl font-bold text-gray-800">IPCRF Templates</h3>
-                            <p class="text-sm text-gray-500">Upload Excel templates and configure fillable fields for each position</p>
                         </div>
                         <button onclick="document.getElementById('upload-template-modal').classList.remove('hidden')"
                             class="bg-indigo-600 text-white px-6 py-2.5 rounded-xl hover:bg-indigo-700 transition flex items-center gap-2 shadow">
@@ -1016,8 +908,7 @@
                 <div id="view-submissions" class="view-section hidden fade-in">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                         <div>
-                            <h3 class="text-2xl font-bold text-gray-800">IPCRF Submissions</h3>
-                            <p class="text-sm text-gray-500">Review and approve or reject submitted IPCRF forms</p>
+                           
                         </div>
                         <div class="flex gap-2">
                             <span class="bg-orange-100 text-orange-700 text-sm font-semibold px-3 py-1.5 rounded-lg">
@@ -1051,7 +942,7 @@
                                     <td class="px-6 py-4 text-gray-500">{{ $sub->submitted_at ? $sub->submitted_at->format('M j, Y') : ($sub->updated_at ? $sub->updated_at->format('M j, Y') : '—') }}</td>
                                     <td class="px-6 py-4">
                                         @php
-                                            $statusColors = ['draft'=>'bg-gray-100 text-gray-600','submitted'=>'bg-blue-100 text-blue-700','under_review'=>'bg-orange-100 text-orange-700','approved'=>'bg-green-100 text-green-700','rejected'=>'bg-red-100 text-red-700'];
+                                            $statusColors = ['draft'=>'bg-gray-100 text-gray-600','submitted'=>'bg-blue-100 text-blue-700','poo_approved'=>'bg-sky-100 text-sky-700','under_review'=>'bg-orange-100 text-orange-700','approved'=>'bg-green-100 text-green-700','rejected'=>'bg-red-100 text-red-700'];
                                             $sc = $statusColors[$sub->status] ?? 'bg-gray-100 text-gray-600';
                                         @endphp
                                         <span class="inline-block px-2.5 py-1 rounded-full text-[11px] font-semibold {{ $sc }}">{{ ucfirst(str_replace('_', ' ', $sub->status)) }}</span>
@@ -1061,7 +952,7 @@
                                             <a href="{{ route('admin.submissions.show', $sub->id) }}" class="text-blue-600 hover:text-blue-800 text-xs font-medium" title="View">
                                                 <i class="fas fa-eye"></i> View
                                             </a>
-                                            @if(in_array($sub->status, ['submitted', 'under_review']))
+                                            @if(in_array($sub->status, ['poo_approved', 'under_review']))
                                             <form action="{{ route('admin.submissions.approve', $sub->id) }}" method="POST" class="inline">
                                                 @csrf
                                                 <button type="submit" class="text-green-600 hover:text-green-800 text-xs font-medium">
@@ -1099,8 +990,30 @@
                 <div id="view-users" class="view-section hidden fade-in">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                         <div>
-                            <h3 class="text-2xl font-bold text-gray-800">User Management</h3>
-                            <p class="text-sm text-gray-500">Approve accounts, manage roles and positions</p>
+                        
+                        </div>
+                    </div>
+
+                    <!-- Search and Filter Controls -->
+                    <div class="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-2 uppercase">Search Users</label>
+                            <input type="text" id="user-search" placeholder="Search by name or email..." 
+                                class="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 text-sm"
+                                onkeyup="filterUsers()">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-2 uppercase">Filter by Assigned Province</label>
+                            <select id="province-filter" class="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 text-sm"
+                                onchange="filterUsers()">
+                                <option value="">All Provinces</option>
+                                @php
+                                    $provinces = \App\Models\Province::orderBy('name')->get();
+                                @endphp
+                                @foreach($provinces as $province)
+                                    <option value="{{ $province->name }}">{{ $province->name }}</option>
+                                @endforeach
+                            </select>
                         </div>
                     </div>
 
@@ -1111,6 +1024,7 @@
                                     <th class="px-6 py-4 font-semibold text-gray-700">Employee</th>
                                     <th class="px-6 py-4 font-semibold text-gray-700">Email</th>
                                     <th class="px-6 py-4 font-semibold text-gray-700">Position</th>
+                                    <th class="px-6 py-4 font-semibold text-gray-700">Assigned Province</th>
                                     <th class="px-6 py-4 font-semibold text-gray-700">Role</th>
                                     <th class="px-6 py-4 font-semibold text-gray-700">Status</th>
                                     <th class="px-6 py-4 font-semibold text-gray-700">Actions</th>
@@ -1118,7 +1032,11 @@
                             </thead>
                             <tbody>
                                 @forelse($managed_users as $mu)
-                                <tr class="border-b border-gray-100 hover:bg-gray-50 transition" id="user-row-{{ $mu->id }}">
+                                <tr class="border-b border-gray-100 hover:bg-gray-50 transition user-row" 
+                                    id="user-row-{{ $mu->id }}"
+                                    data-user-name="{{ strtolower($mu->name) }}"
+                                    data-user-email="{{ strtolower($mu->email) }}"
+                                    data-user-province="{{ strtolower($mu->assigned_province ?? '') }}">
                                     <td class="px-6 py-4">
                                         <div class="flex items-center gap-3">
                                             <img src="https://ui-avatars.com/api/?name={{ urlencode($mu->name) }}&size=32&background=ddd6fe&color=5b21b6" class="w-8 h-8 rounded-full">
@@ -1130,6 +1048,7 @@
                                     </td>
                                     <td class="px-6 py-4 text-gray-600">{{ $mu->email }}</td>
                                     <td class="px-6 py-4 text-gray-600">{{ $mu->jobPosition?->name ?? '—' }}</td>
+                                    <td class="px-6 py-4 text-gray-600">{{ $mu->assigned_province ?? '—' }}</td>
                                     <td class="px-6 py-4">
                                         <span class="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold {{ $mu->role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600' }}">
                                             {{ ucfirst($mu->role) }}
@@ -1564,6 +1483,29 @@
             document.getElementById('reject-submission-modal').classList.remove('hidden');
         }
 
+        // Filter users by search term and province
+        function filterUsers() {
+            const searchTerm = document.getElementById('user-search').value.toLowerCase();
+            const provinceFilter = document.getElementById('province-filter').value.toLowerCase();
+            const userRows = document.querySelectorAll('.user-row');
+
+            userRows.forEach(row => {
+                const userName = row.getAttribute('data-user-name');
+                const userEmail = row.getAttribute('data-user-email');
+                const userProvince = row.getAttribute('data-user-province');
+
+                // Check search term match (name or email)
+                const searchMatch = !searchTerm || 
+                    userName.includes(searchTerm) || 
+                    userEmail.includes(searchTerm);
+
+                // Check province filter match
+                const provinceMatch = !provinceFilter || userProvince === provinceFilter;
+
+                // Show row if both conditions are met
+                row.style.display = (searchMatch && provinceMatch) ? '' : 'none';
+            });
+        }
 
         function selectRole(role) {
             selectedRole = role;
@@ -1857,9 +1799,9 @@
                         employee.className = 'py-4 font-medium';
                         employee.textContent = r.employee_name || 'N/A';
 
-                        const region = document.createElement('td');
-                        region.className = 'py-4 text-gray-600';
-                        region.textContent = r.province_name || 'N/A';
+                        const assignedProvince = document.createElement('td');
+                        assignedProvince.className = 'py-4 text-gray-600';
+                        assignedProvince.textContent = r.province_name || 'N/A';
 
                         const date = document.createElement('td');
                         date.className = 'py-4 text-gray-600';
@@ -1894,7 +1836,7 @@
                         }
 
                         tr.appendChild(employee);
-                        tr.appendChild(region);
+                        tr.appendChild(assignedProvince);
                         tr.appendChild(date);
                         tr.appendChild(status);
                         tr.appendChild(action);
@@ -2079,6 +2021,7 @@
                     const statusColors = {
                         'draft':        'bg-gray-100 text-gray-600',
                         'submitted':    'bg-blue-100 text-blue-700',
+                        'poo_approved': 'bg-sky-100 text-sky-700',
                         'under_review': 'bg-yellow-100 text-yellow-700',
                         'approved':     'bg-green-100 text-green-700',
                         'rejected':     'bg-red-100 text-red-700',
@@ -2092,9 +2035,9 @@
                         employee.className = 'py-3 font-medium';
                         employee.innerHTML = `<div class="font-semibold">${r.employee_name || 'N/A'}</div><div class="text-xs text-gray-400">${r.template_name || ''}</div>`;
 
-                        const region = document.createElement('td');
-                        region.className = 'py-3 text-gray-600 text-sm';
-                        region.textContent = r.province_name || 'N/A';
+                        const assignedProvince = document.createElement('td');
+                        assignedProvince.className = 'py-3 text-gray-600 text-sm';
+                        assignedProvince.textContent = r.province_name || 'N/A';
 
                         const date = document.createElement('td');
                         date.className = 'py-3 text-gray-600 text-sm';
@@ -2111,7 +2054,7 @@
                         status.innerHTML = `<span class="status-badge ${colorClass}">${r.status || 'Submitted'}</span>`;
 
                         tr.appendChild(employee);
-                        tr.appendChild(region);
+                        tr.appendChild(assignedProvince);
                         tr.appendChild(date);
                         tr.appendChild(status);
 

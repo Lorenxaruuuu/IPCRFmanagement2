@@ -209,7 +209,7 @@ public function store(Request $request)
                     ($incomingBirthday && $incomingBirthday !== $dbBirthday) || 
                     $request->gender !== $user->gender || 
                     $request->address !== $user->address || 
-                    $request->region !== $user->province) {
+                    $request->region !== $user->assigned_province) {
                     return back()->withErrors(['profile_error' => 'You have already edited your personal information once and it cannot be modified again.']);
                 }
 
@@ -218,11 +218,11 @@ public function store(Request $request)
                     'email' => $primaryEmail,
                 ]);
             } else {
-                // First-time edit: format birthday to human-readable January 15, 1990
+                // First-time edit: store birthday in proper YYYY-MM-DD date format
                 $formattedBirthday = $request->birthday;
                 if ($request->filled('birthday')) {
                     try {
-                        $formattedBirthday = date('F j, Y', strtotime($request->birthday));
+                        $formattedBirthday = date('Y-m-d', strtotime($request->birthday));
                     } catch (\Exception $e) {}
                 }
 
@@ -234,7 +234,7 @@ public function store(Request $request)
                     'birthday' => $formattedBirthday,
                     'gender' => $request->gender,
                     'address' => $request->address,
-                    'province' => $request->region,
+                    'assigned_province' => $request->region,
                     'profile_edited' => 1,
                 ]);
             }
@@ -330,23 +330,23 @@ public function store(Request $request)
         }
 
         $request->validate([
-            'requested_role' => 'required|string|max:255',
+            'requested_position_id' => 'required|exists:positions,id',
         ]);
 
         $user = User::where('employee_id', $sessionUser['employee_id'])->first();
         if (!$user) {
-            return back()->withErrors(['requested_role' => 'User not found.']);
+            return back()->withErrors(['requested_position_id' => 'User not found.']);
         }
 
-        if ($user->role === $request->requested_role) {
-            return back()->withErrors(['requested_role' => 'You already have this role.']);
+        if ($user->position_id == $request->requested_position_id) {
+            return back()->withErrors(['requested_position_id' => 'You already have this position.']);
         }
 
         $user->update([
-            'requested_role' => $request->requested_role
+            'requested_position_id' => $request->requested_position_id
         ]);
 
-        return back()->with('success', 'Role change request submitted successfully. It is pending admin approval.');
+        return back()->with('success', 'Position change request submitted successfully. It is pending admin approval.');
     }
 
     public function logout()

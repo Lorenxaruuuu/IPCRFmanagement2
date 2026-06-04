@@ -45,9 +45,9 @@
     if ($userId || $sessionEmployeeId) {
         try {
             if ($userId) {
-                $dbUser = \App\Models\User::with('position')->find($userId);
+                $dbUser = \App\Models\User::with(['position', 'requestedPosition'])->find($userId);
             } else {
-                $dbUser = \App\Models\User::with('position')->where('employee_id', $sessionEmployeeId)->first();
+                $dbUser = \App\Models\User::with(['position', 'requestedPosition'])->where('employee_id', $sessionEmployeeId)->first();
             }
             
             if ($dbUser) {
@@ -62,22 +62,30 @@
         } catch (\Exception $e) {}
     }
 
+    $allPositions = [];
+    try {
+        $allPositions = \App\Models\Position::active()->orderBy('name')->get();
+    } catch (\Exception $e) {}
+
     // Load custom fields from DB, then fallback to session, then fallback to defaults
-    $birthday = ($dbUser && $dbUser->birthday) ? $dbUser->birthday : session('profile_birthday', 'January 15, 1990');
+    $birthday = ($dbUser && $dbUser->birthday) ? $dbUser->birthday : session('profile_birthday', '1990-01-15');
     $gender = ($dbUser && $dbUser->gender) ? $dbUser->gender : session('profile_gender', 'Male');
     $address = ($dbUser && $dbUser->address) ? $dbUser->address : session('profile_address', '123 Main Street, Davao City');
-    $region = ($dbUser && $dbUser->province) ? $dbUser->province : session('profile_region', 'Region XI (Davao)');
+    $region = ($dbUser && $dbUser->assigned_province) ? $dbUser->assigned_province : session('profile_region', 'Region XI (Davao)');
     
     // Format birthday to YYYY-MM-DD for standard HTML5 date input calendar picker
     $birthdayInputVal = '';
-    if ($birthday && $birthday !== 'January 15, 1990') {
+    if ($birthday) {
         try {
-            $birthdayInputVal = date('Y-m-d', strtotime($birthday));
+            // If it's already in YYYY-MM-DD format, use it as-is; otherwise convert it
+            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $birthday)) {
+                $birthdayInputVal = $birthday;
+            } else {
+                $birthdayInputVal = date('Y-m-d', strtotime($birthday));
+            }
         } catch (\Exception $e) {
             $birthdayInputVal = $birthday;
         }
-    } else if ($birthday === 'January 15, 1990') {
-        $birthdayInputVal = '1990-01-15';
     }
     $emailNotifications = session('pref_email_notifications', true);
     $pushNotifications = session('pref_push_notifications', true);
@@ -300,6 +308,7 @@
           activeTab: "{{ $activeTab }}", 
           showLogoutModal: false, 
           showNotifications: false,
+          showSystemMessages: true,
           showAddEmailModal: false,
           newEmail: "",
           emails: {!! json_encode(array_values(array_filter(array_unique($profileEmails)))) !!},
@@ -919,9 +928,10 @@
           statusLabel(status) {
               const labels = {
                   draft: "Draft",
-                  submitted: "Submitted",
+                  submitted: "Submitted (Pending POO)",
+                  poo_approved: "Approved by POO (Pending RPMO)",
                   under_review: "Under Review",
-                  approved: "Approved",
+                  approved: "Approved & Sealed",
                   rejected: "Rejected"
               };
               return labels[status] || status;
@@ -931,6 +941,7 @@
               const classes = {
                   draft: "bg-slate-100 text-slate-700",
                   submitted: "bg-blue-100 text-blue-700",
+                  poo_approved: "bg-sky-100 text-sky-700",
                   under_review: "bg-amber-100 text-amber-700",
                   approved: "bg-green-100 text-green-700",
                   rejected: "bg-red-100 text-red-700"
@@ -955,12 +966,6 @@
 
         <!-- Navigation Links -->
         <nav class="flex-1 py-6 px-0 space-y-1">
-            <button @click="activeTab = 'home'"
-                    class="w-full flex items-center gap-3 px-6 py-3.5 text-base transition-all text-left cursor-pointer border-l-4 focus:outline-none"
-                    :class="activeTab === 'home' ? 'bg-white/10 border-blue-500 text-white font-semibold shadow-sm' : 'border-transparent text-gray-300 hover:bg-white/5 hover:text-white'">
-                <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
-                Dashboard
-            </button>
             <button @click="activeTab = 'ipcrf'; loadIpcrfData()"
                     class="w-full flex items-center gap-3 px-6 py-3.5 text-base transition-all text-left cursor-pointer border-l-4 focus:outline-none"
                     :class="activeTab === 'ipcrf' ? 'bg-white/10 border-blue-500 text-white font-semibold shadow-sm' : 'border-transparent text-gray-300 hover:bg-white/5 hover:text-white'">
@@ -989,7 +994,7 @@
                 </div>
                 <div class="flex-1 min-w-0">
                     <p class="text-sm font-semibold truncate text-white">{{ $name }}</p>
-                    <p class="text-xs truncate text-blue-300 font-medium">{{ $dbUser?->position?->name ?? 'No Position Assigned' }}</p>
+                    <p class="text-xs truncate text-blue-300 font-medium">{{ $dbUser?->jobPosition?->name ?? 'No Position Assigned' }}</p>
                 </div>
             </div>
 
@@ -1004,7 +1009,7 @@
     <div class="md:ml-64 flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
         
         <!-- Top Navbar -->
-        <header class="glass-panel h-16 flex items-center justify-between px-6 border-b">
+        <header class="glass-panel h-16 flex items-center justify-between px-6 border-b z-20 relative">
             <h2 class="text-xl font-semibold text-slate-800" x-text="
                 activeTab === 'home' ? 'Dashboard' : 
                 activeTab === 'performance' ? 'Performance History' : 
@@ -1013,7 +1018,7 @@
                 activeTab === 'fillForm' ? 'Fill IPCRF Template' : ''
             "></h2>
             <div class="flex items-center gap-4">
-                <div class="relative">
+                <div class="relative z-30">
                     <button @click="showNotifications = !showNotifications" class="relative p-2 text-slate-400 hover:text-blue-600 transition-colors">
                         <i data-lucide="bell" class="w-5 h-5"></i>
                         @if($hasUnreadNotices)
@@ -1036,6 +1041,13 @@
                         </div>
                         <div class="max-h-96 overflow-y-auto">
                             @forelse($dbNotices as $notice)
+                                @php
+                                    $badgeClass = match(strtolower($notice->priority)) {
+                                        'high' => 'bg-red-100 text-red-700',
+                                        'medium' => 'bg-yellow-100 text-yellow-700',
+                                        default => 'bg-green-100 text-green-700',
+                                    };
+                                @endphp
                                 <div class="p-4 border-b border-slate-100 hover:bg-slate-50 transition">
                                     <div class="flex items-start gap-3">
                                         <div class="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
@@ -1046,10 +1058,7 @@
                                             <p class="text-slate-600 text-xs mt-1">{{ Str::limit($notice->content, 100) }}</p>
                                             <p class="text-slate-400 text-[10px] mt-2">{{ $notice->posted_at ? $notice->posted_at->diffForHumans() : '' }}</p>
                                         </div>
-                                        <span class="text-[10px] px-2 py-1 rounded-full font-medium 
-                                            @if($notice->priority === 'High') bg-red-100 text-red-700
-                                            @elseif($notice->priority === 'Medium') bg-yellow-100 text-yellow-700
-                                            @else bg-green-100 text-green-700 @endif">
+                                        <span class="text-[10px] px-2 py-1 rounded-full font-medium {{ $badgeClass }}">
                                             {{ $notice->priority }}
                                         </span>
                                     </div>
@@ -1079,28 +1088,6 @@
 
         <!-- Main Body Content -->
         <main class="flex-1 overflow-y-auto p-6">
-            
-            <!-- Global Session Alerts -->
-            @if(session('success'))
-                <div class="mb-6 p-4 bg-green-50 border border-green-200 text-green-800 rounded-xl flex items-center gap-3 shadow-sm">
-                    <i data-lucide="check-circle" class="w-5 h-5 text-green-600"></i>
-                    <span class="font-medium text-sm">{{ session('success') }}</span>
-                </div>
-            @endif
-
-            @if($errors->any())
-                <div class="mb-6 p-4 bg-red-50 border border-red-200 text-red-800 rounded-xl space-y-1 shadow-sm">
-                    <div class="flex items-center gap-3">
-                        <i data-lucide="alert-circle" class="w-5 h-5 text-red-600"></i>
-                        <span class="font-semibold text-sm">Please correct the following errors:</span>
-                    </div>
-                    <ul class="list-disc pl-8 text-xs space-y-1 font-medium text-red-700">
-                        @foreach($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
 
             <!-- HOME TAB (Dashboard) -->
             <div x-show="activeTab === 'home'" x-transition class="space-y-6 w-full">
@@ -1289,23 +1276,25 @@
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <!-- Profile Card -->
                     <div class="lg:col-span-2 glass-panel rounded-2xl shadow-sm overflow-hidden w-full card-hover h-fit">
-                    <!-- Header Banner -->
-                    <div class="h-36 bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-900"></div>
+                    <!-- Header Banner with User Details -->
+                    <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-900 px-8 py-6 flex items-center gap-6">
+                        <div class="w-24 h-24 rounded-full border-4 border-white shadow-lg overflow-hidden bg-slate-100 flex-shrink-0">
+                            <img src="https://i.pravatar.cc/150?img=5" alt="Profile Picture" class="w-full h-full object-cover">
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <h2 class="text-2xl sm:text-3xl font-bold text-white leading-tight break-words">{{ $name }}</h2>
+                            <p class="text-sm sm:text-base text-blue-100 mt-2 flex items-center gap-2 font-medium break-all">
+                                <i data-lucide="mail" class="w-4 h-4 text-blue-200 flex-shrink-0"></i>
+                                <span class="truncate">{{ $email }}</span>
+                            </p>
+                            <p class="text-xs sm:text-sm text-blue-100 mt-1.5 flex items-center gap-2 font-medium">
+                                <i data-lucide="briefcase" class="w-4 h-4 text-blue-200 flex-shrink-0"></i>
+                                <span class="truncate">{{ $dbUser?->jobPosition?->name ?? 'No Position Assigned' }}</span>
+                            </p>
+                        </div>
+                    </div>
                     
                     <div class="px-8 pb-8 relative">
-                        <!-- Profile Avatar & Info -->
-                        <div class="flex flex-col sm:flex-row items-center gap-6 -mt-16 mb-8 text-center sm:text-left">
-                            <div class="w-28 h-28 rounded-full border-4 border-white shadow-lg overflow-hidden bg-slate-100 flex-shrink-0">
-                                <img src="https://i.pravatar.cc/150?img=5" alt="Profile Picture" class="w-full h-full object-cover">
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <h2 class="text-3xl font-bold text-white leading-tight">{{ $name }}</h2>
-                                <p class="text-base text-slate-500 mt-2 flex items-center justify-center sm:justify-start gap-2 font-medium">
-                                    <i data-lucide="mail" class="w-4 h-4 text-slate-400"></i>
-                                    <span>{{ $email }}</span>
-                                </p>
-                            </div>
-                        </div>
 
                         <!-- Profile Form -->
                         @if($profileEdited)
@@ -1359,7 +1348,7 @@
                                         <label class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2.5">Position / Designation</label>
                                         <div class="relative flex items-center">
                                             <i data-lucide="briefcase" class="w-5 h-5 text-slate-400 absolute left-4"></i>
-                                            <input type="text" readonly value="{{ $dbUser?->position?->name ?? 'None Assigned' }}" 
+                                            <input type="text" readonly value="{{ $dbUser?->jobPosition?->name ?? 'None Assigned' }}" 
                                                    class="w-full pl-12 pr-5 py-3.5 rounded-xl border border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed opacity-75 focus:outline-none font-medium text-base">
                                         </div>
                                     </div>
@@ -1494,84 +1483,36 @@
                             </div>
                         </div>
 
+                        <div class="flex justify-end gap-4 mt-6">
+                            <button type="button" @click="activeTab = 'ipcrf'" class="px-6 py-3 border border-slate-200 text-slate-600 rounded-xl font-semibold text-base hover:bg-slate-50 transition active:scale-95 cursor-pointer">Cancel</button>
+                            <button type="submit" form="profileForm" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-base shadow-sm transition active:scale-95 cursor-pointer">Save Changes</button>
+                        </div>
+
                         <hr class="border-slate-100 my-6">
 
-                        <!-- Role Change Request section -->
+                        <!-- Position Change Request section -->
                         <form method="POST" action="{{ route('profile.requestRoleChange') }}">
                             @csrf
                             <div>
-                                <h4 class="font-bold text-slate-800 text-lg mb-2">Role Change Request</h4>
-                                <p class="text-slate-500 text-base mb-4">Request a change in your account role. This is subject to admin approval.</p>
+                                <h4 class="font-bold text-slate-800 text-lg mb-2">Position Change Request</h4>
+                                <p class="text-slate-500 text-base mb-4">Request a change in your account position/designation. This is subject to admin approval.</p>
                                 
                                 <div class="grid grid-cols-1 gap-6">
                                     <div class="flex flex-col">
-                                        <label class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2.5">Current Role: <span class="text-blue-600">{{ ucfirst($role) }}</span></label>
+                                        <label class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2.5">Current Position: <span class="text-blue-600">{{ $dbUser?->jobPosition?->name ?? 'None Assigned' }}</span></label>
                                         
-                                        @if($dbUser && $dbUser->requested_role)
+                                        @if($dbUser && $dbUser->requested_position_id)
                                             <div class="p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl flex items-center gap-3 shadow-sm mb-2">
                                                 <i data-lucide="clock" class="w-5 h-5 text-amber-600"></i>
-                                                <span class="font-medium text-sm">You have a pending request for role: {{ ucfirst($dbUser->requested_role) }}. Please wait for admin approval.</span>
+                                                <span class="font-medium text-sm">You have a pending request for position: {{ $dbUser->requestedPosition->name ?? 'Unknown' }}. Please wait for admin approval.</span>
                                             </div>
                                         @else
                                             <div class="relative flex items-center mt-2">
-                                                <select name="requested_role" required class="w-full px-5 py-3.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium text-base font-sans cursor-pointer">
-                                                    <option value="" disabled selected>Select new role</option>
-                                                    <optgroup label="CITY/ MUNICIPAL OPERATIONS OFFICE">
-                                                        <option value="City/Municipal Links">City/Municipal Links</option>
-                                                        <option value="City/Municipal Roving Bookkeeper">City/Municipal Roving Bookkeeper</option>
-                                                        <option value="Social Welfare Assistant">Social Welfare Assistant</option>
-                                                    </optgroup>
-                                                    <optgroup label="PROVINCIAL OPERATIONS OFFICE">
-                                                        <option value="Provincial Link">Provincial Link</option>
-                                                        <option value="Social Welfare Officer III">Social Welfare Officer III</option>
-                                                        <option value="Systems Coordinators">Systems Coordinators</option>
-                                                        <option value="Cluster Beneficiary Data Officer">Cluster Beneficiary Data Officer</option>
-                                                        <option value="Cluster Compliance Verification Officer">Cluster Compliance Verification Officer</option>
-                                                        <option value="Provincial Roving Bookkeeper">Provincial Roving Bookkeeper</option>
-                                                        <option value="Provincial Monitoring and Evaluation Officer">Provincial Monitoring and Evaluation Officer</option>
-                                                        <option value="Provincial Grievance Officer">Provincial Grievance Officer</option>
-                                                        <option value="Provincial Family Development Session/Capability Building Focal Person">Provincial Family Development Session/Capability Building Focal Person</option>
-                                                        <option value="Provincial Partnership Officer">Provincial Partnership Officer</option>
-                                                        <option value="Administrative Assistant II">Administrative Assistant II</option>
-                                                        <option value="Admin Aide IV">Admin Aide IV</option>
-                                                        <option value="Systems Support Staff">Systems Support Staff</option>
-                                                    </optgroup>
-                                                    <optgroup label="REGIONAL PROGRAM MANAGEMENT OFFICE">
-                                                        <option value="Regional Information Technology Officer II">Regional Information Technology Officer II</option>
-                                                        <option value="Regional Information Technology Officer I">Regional Information Technology Officer I</option>
-                                                        <option value="Regional Compliance Verification Officer">Regional Compliance Verification Officer</option>
-                                                        <option value="Regional Beneficiary Data Officer">Regional Beneficiary Data Officer</option>
-                                                        <option value="Cash Grants Focal">Cash Grants Focal</option>
-                                                        <option value="System Support Staff">System Support Staff</option>
-                                                        <option value="Regional Grievance Officer">Regional Grievance Officer</option>
-                                                        <option value="Information and Communication Technology Administrator">Information and Communication Technology Administrator</option>
-                                                        <option value="Regional Case Manager">Regional Case Manager</option>
-                                                        <option value="Case Management Technical Officer">Case Management Technical Officer</option>
-                                                        <option value="Case Management Technical Staff">Case Management Technical Staff</option>
-                                                        <option value="Family Development Session Focal Person">Family Development Session Focal Person</option>
-                                                        <option value="Family Development Session Technical Officer">Family Development Session Technical Officer</option>
-                                                        <option value="Family Development Session Technical Staff">Family Development Session Technical Staff</option>
-                                                        <option value="Institutional Partnership Development Officer - National Government Agencies">Institutional Partnership Development Officer - National Government Agencies</option>
-                                                        <option value="Institutional Partnership Development Officer - Civil Society Organizations">Institutional Partnership Development Officer - Civil Society Organizations</option>
-                                                        <option value="Institutional Partnership and Support Services Technical Staff">Institutional Partnership and Support Services Technical Staff</option>
-                                                        <option value="MCCT Focal">MCCT Focal</option>
-                                                        <option value="Social Safeguards and Intervention Development Technical Officer">Social Safeguards and Intervention Development Technical Officer</option>
-                                                        <option value="Social Safeguards and Intervention Development Technical Staff">Social Safeguards and Intervention Development Technical Staff</option>
-                                                        <option value="Indigenous People Focal">Indigenous People Focal</option>
-                                                        <option value="Computer Maintenance Technologist II">Computer Maintenance Technologist II</option>
-                                                        <option value="Administrative Aide IV">Administrative Aide IV</option>
-                                                        <option value="Training Specialist II">Training Specialist II</option>
-                                                        <option value="Training Specialist I">Training Specialist I</option>
-                                                        <option value="Knowledge Management Focal">Knowledge Management Focal</option>
-                                                        <option value="Administrative Officer">Administrative Officer</option>
-                                                        <option value="Administrative Officer II">Administrative Officer II</option>
-                                                        <option value="Financial Analyst II">Financial Analyst II</option>
-                                                        <option value="Administrative Assistant II">Administrative Assistant II</option>
-                                                        <option value="Social Welfare Assistant - Admin">Social Welfare Assistant - Admin</option>
-                                                        <option value="Administrative Assistant I">Administrative Assistant I</option>
-                                                        <option value="Regional Monitoring and Evaluation Officer">Regional Monitoring and Evaluation Officer</option>
-                                                        <option value="Monitoring and Evaluation Technical Staff">Monitoring and Evaluation Technical Staff</option>
-                                                    </optgroup>
+                                                <select name="requested_position_id" required class="w-full px-5 py-3.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium text-base font-sans cursor-pointer">
+                                                    <option value="" disabled selected>Select new position</option>
+                                                    @foreach($allPositions as $pos)
+                                                        <option value="{{ $pos->id }}">{{ $pos->name }}</option>
+                                                    @endforeach
                                                 </select>
                                             </div>
                                             <div class="flex justify-end mt-4">
@@ -1584,13 +1525,6 @@
                                 </div>
                             </div>
                         </form>
-
-                        <hr class="border-slate-100 my-6">
-
-                        <div class="flex justify-end gap-4">
-                            <button type="button" @click="activeTab = 'home'" class="px-6 py-3 border border-slate-200 text-slate-600 rounded-xl font-semibold text-base hover:bg-slate-50 transition active:scale-95 cursor-pointer">Cancel</button>
-                            <button type="submit" form="profileForm" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-base shadow-sm transition active:scale-95 cursor-pointer">Save Changes</button>
-                        </div>
                     </div>
                 </div>
                 </div>
@@ -1602,7 +1536,7 @@
                 <div class="mb-2 flex flex-wrap justify-between items-center gap-3">
                     <div>
                         <h1 class="text-3xl font-bold text-slate-800">My IPCRF Forms</h1>
-                        <p class="text-sm text-slate-500 mt-1">Digitized IPCRF workflow for your position: <span class="font-semibold text-blue-600">{{ $dbUser?->position?->name ?? 'None Assigned' }}</span></p>
+                        <p class="text-sm text-slate-500 mt-1">Digitized IPCRF workflow for your position: <span class="font-semibold text-blue-600">{{ $dbUser?->jobPosition?->name ?? 'None Assigned' }}</span></p>
                     </div>
                 </div>
 
@@ -1733,7 +1667,7 @@
                                                             <i data-lucide="download" class="w-3.5 h-3.5"></i> Download XLSX
                                                         </a>
                                                     </template>
-                                                    <template x-if="['submitted', 'under_review', 'rejected'].includes(sub.status)">
+                                                    <template x-if="['submitted', 'poo_approved', 'under_review', 'rejected'].includes(sub.status)">
                                                         <span class="text-xs text-slate-400 font-medium">Locked (Review)</span>
                                                     </template>
                                                 </div>
@@ -1794,6 +1728,55 @@
             
         </div>
         </main>
+    </div>
+
+    <!-- SYSTEM MESSAGES MODAL -->
+    <div x-show="showSystemMessages && {{ (session('success') || $errors->any()) ? 'true' : 'false' }}"
+         x-transition
+         class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+         style="display: none;">
+
+        <div class="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md border border-slate-100">
+            <!-- Success Message -->
+            @if(session('success'))
+                <div class="flex items-start gap-4">
+                    <div class="w-12 h-12 bg-green-50 text-green-600 rounded-full flex items-center justify-center flex-shrink-0">
+                        <i data-lucide="check-circle" class="w-6 h-6"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-lg font-semibold mb-1 text-slate-800">Success</h3>
+                        <p class="text-sm text-slate-600">{{ session('success') }}</p>
+                    </div>
+                </div>
+            @endif
+
+            <!-- Error Messages -->
+            @if($errors->any())
+                <div class="flex items-start gap-4">
+                    <div class="w-12 h-12 bg-red-50 text-red-600 rounded-full flex items-center justify-center flex-shrink-0">
+                        <i data-lucide="alert-circle" class="w-6 h-6"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-lg font-semibold mb-2 text-slate-800">Please Correct the Following Errors:</h3>
+                        <ul class="space-y-1">
+                            @foreach($errors->all() as $error)
+                                <li class="text-sm text-red-700 flex items-start gap-2">
+                                    <span class="text-red-600 mt-1">•</span>
+                                    <span>{{ $error }}</span>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
+                </div>
+            @endif
+
+            <div class="mt-6 flex justify-end gap-3">
+                <button @click="showSystemMessages = false"
+                        class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-sm transition cursor-pointer shadow-sm">
+                    Got it
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- LOGOUT CONFIRMATION MODAL -->

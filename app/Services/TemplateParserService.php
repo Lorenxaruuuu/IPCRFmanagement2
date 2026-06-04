@@ -445,15 +445,24 @@ class TemplateParserService
         if (!empty($style['bg_color']))  $css .= 'background-color:' . $style['bg_color'] . ';';
         if (!empty($style['font_color']) && $style['font_color'] !== '#000000') $css .= 'color:' . $style['font_color'] . ';';
         if (!empty($style['font_size'])) $css .= 'font-size:' . $style['font_size'] . 'pt;';
-        if ($style['bold'])              $css .= 'font-weight:bold;';
-        if ($style['italic'])            $css .= 'font-style:italic;';
-        if ($style['underline'])         $css .= 'text-decoration:underline;';
+        if (!empty($style['bold']))              $css .= 'font-weight:bold;';
+        if (!empty($style['italic']))            $css .= 'font-style:italic;';
+        if (!empty($style['underline']))         $css .= 'text-decoration:underline;';
         if (!empty($style['h_align']))   $css .= 'text-align:' . $style['h_align'] . ';';
-        if ($style['border_top'] !== 'none')    $css .= 'border-top:' . $style['border_top'] . ';';
-        if ($style['border_bottom'] !== 'none') $css .= 'border-bottom:' . $style['border_bottom'] . ';';
-        if ($style['border_left'] !== 'none')   $css .= 'border-left:' . $style['border_left'] . ';';
-        if ($style['border_right'] !== 'none')  $css .= 'border-right:' . $style['border_right'] . ';';
-        if ($style['wrap_text'])         $css .= 'white-space:pre-wrap;';
+        
+        $borderTop = $style['border_top'] ?? 'none';
+        if ($borderTop !== 'none')    $css .= 'border-top:' . $borderTop . ';';
+        
+        $borderBottom = $style['border_bottom'] ?? 'none';
+        if ($borderBottom !== 'none') $css .= 'border-bottom:' . $borderBottom . ';';
+        
+        $borderLeft = $style['border_left'] ?? 'none';
+        if ($borderLeft !== 'none')   $css .= 'border-left:' . $borderLeft . ';';
+        
+        $borderRight = $style['border_right'] ?? 'none';
+        if ($borderRight !== 'none')  $css .= 'border-right:' . $borderRight . ';';
+        
+        if (!empty($style['wrap_text']))         $css .= 'white-space:pre-wrap;';
         else                             $css .= 'white-space:nowrap;overflow:hidden;';
         $css .= 'padding:2px 4px;vertical-align:middle;';
         return $css;

@@ -68,7 +68,7 @@ class UserDashboardController extends Controller
             'stats' => [
                 'assigned'  => $assignedTemplates->count(),
                 'drafts'    => $submissions->where('status', 'draft')->count(),
-                'submitted' => $submissions->whereIn('status', ['submitted', 'under_review'])->count(),
+                'submitted' => $submissions->whereIn('status', ['submitted', 'poo_approved', 'under_review'])->count(),
                 'approved'  => $submissions->where('status', 'approved')->count(),
             ],
         ]);

@@ -20,7 +20,7 @@ class IpcrfSubmission extends Model
 
     public const STATUS_DRAFT       = 'draft';
     public const STATUS_SUBMITTED   = 'submitted';
-    public const STATUS_RPMO_APPROVED = 'rpmo_approved';
+    public const STATUS_POO_APPROVED = 'poo_approved';
     public const STATUS_UNDER_REVIEW = 'under_review';
     public const STATUS_APPROVED    = 'approved';
     public const STATUS_REJECTED    = 'rejected';
@@ -55,7 +55,7 @@ class IpcrfSubmission extends Model
         return match ($this->status) {
             'draft'        => 'badge-draft',
             'submitted'    => 'badge-submitted',
-            'rpmo_approved' => 'badge-rpmo-approved',
+            'poo_approved' => 'badge-poo-approved',
             'under_review' => 'badge-review',
             'approved'     => 'badge-approved',
             'rejected'     => 'badge-rejected',
@@ -67,8 +67,8 @@ class IpcrfSubmission extends Model
     {
         return match ($this->status) {
             'draft'        => 'Draft',
-            'submitted'    => 'Submitted (Pending RPMO)',
-            'rpmo_approved'=> 'Approved by RPMO (Pending POO)',
+            'submitted'    => 'Submitted (Pending POO)',
+            'poo_approved' => 'Approved by POO (Pending RPMO)',
             'under_review' => 'Under Review',
             'approved'     => 'Approved & Sealed',
             'rejected'     => 'Rejected',

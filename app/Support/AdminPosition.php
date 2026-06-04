@@ -46,7 +46,6 @@ class AdminPosition
         }
 
         return $user->assigned_province
-            ?? $user->province
             ?? $user->office
             ?? null;
     }

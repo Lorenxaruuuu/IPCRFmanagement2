@@ -142,7 +142,7 @@ class AdminSubmissionController extends Controller
     {
         $submission = IpcrfSubmission::findOrFail($id);
         $submission->update([
-            'status'      => 'rpmo_approved', // Transition to RPMO Approved (pending POO review)
+            'status'      => IpcrfSubmission::STATUS_APPROVED, // Transition to Approved (Final stage)
             'admin_remarks' => $request->remarks,
             'reviewed_at' => now(),
             'reviewed_by' => session('user')['id'] ?? null,
@@ -153,10 +153,10 @@ class AdminSubmissionController extends Controller
         ]);
 
         if ($request->ajax() || $request->wantsJson()) {
-            return response()->json(['success' => true, 'message' => 'Submission reviewed and approved by RPMO (transferred to POO)!']);
+            return response()->json(['success' => true, 'message' => 'Submission approved and sealed! Excel download is now available.']);
         }
 
-        return redirect()->back()->with('success', 'Submission reviewed and approved by RPMO (transferred to POO)!');
+        return redirect()->back()->with('success', 'Submission approved and sealed! Excel download is now available.');
     }
 
     public function reject(Request $request, int $id)
@@ -192,7 +192,7 @@ class AdminSubmissionController extends Controller
     {
         return [
             'total'        => IpcrfSubmission::count(),
-            'pending'      => IpcrfSubmission::whereIn('status', ['submitted', 'under_review'])->count(),
+            'pending'      => IpcrfSubmission::whereIn('status', ['poo_approved', 'under_review'])->count(),
             'approved'     => IpcrfSubmission::where('status', 'approved')->count(),
             'rejected'     => IpcrfSubmission::where('status', 'rejected')->count(),
             'drafts'       => IpcrfSubmission::where('status', 'draft')->count(),

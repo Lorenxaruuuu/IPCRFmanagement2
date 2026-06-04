@@ -62,7 +62,7 @@ class IpcrfController extends Controller
             'total_users'        => \App\Models\User::whereNotIn('role', ['superadmin', 'admin'])->count(),
             'total_templates'    => \App\Models\IpcrfTemplate::active()->count(),
             'total_submissions'  => \App\Models\IpcrfSubmission::count(),
-            'pending_reviews'    => \App\Models\IpcrfSubmission::whereIn('status', ['submitted', 'under_review'])->count(),
+            'pending_reviews'    => \App\Models\IpcrfSubmission::whereIn('status', ['poo_approved', 'under_review'])->count(),
             'approved'           => \App\Models\IpcrfSubmission::where('status', 'approved')->count(),
             'rejected'           => \App\Models\IpcrfSubmission::where('status', 'rejected')->count(),
         ];

@@ -63,7 +63,8 @@ class SuperadminController extends Controller
             'viewers' => User::where('role', 'viewer')->count(),
         ];
 
-        $pendingRoleChanges = User::whereNotNull('requested_role')
+        $pendingRoleChanges = User::whereNotNull('requested_position_id')
+            ->with(['position', 'requestedPosition'])
             ->orderBy('updated_at', 'desc')
             ->get();
 
@@ -104,16 +105,17 @@ class SuperadminController extends Controller
         }
 
         $user = User::findOrFail($id);
-        if ($user->requested_role) {
-            $newRole = $user->requested_role;
+        if ($user->requested_position_id) {
+            $newPositionId = $user->requested_position_id;
+            $newPositionName = $user->requestedPosition->name ?? 'Unknown';
             $user->update([
-                'role' => $newRole,
-                'requested_role' => null
+                'position_id' => $newPositionId,
+                'requested_position_id' => null
             ]);
-            return back()->with('success', 'Role change to ' . $newRole . ' for ' . $user->name . ' has been approved.');
+            return back()->with('success', 'Position change to ' . $newPositionName . ' for ' . $user->name . ' has been approved.');
         }
 
-        return back()->with('error', 'No pending role change request for this user.');
+        return back()->with('error', 'No pending position change request for this user.');
     }
 
     public function rejectRoleChange($id)
@@ -123,12 +125,12 @@ class SuperadminController extends Controller
         }
 
         $user = User::findOrFail($id);
-        if ($user->requested_role) {
-            $user->update(['requested_role' => null]);
-            return back()->with('success', 'Role change request for ' . $user->name . ' has been rejected.');
+        if ($user->requested_position_id) {
+            $user->update(['requested_position_id' => null]);
+            return back()->with('success', 'Position change request for ' . $user->name . ' has been rejected.');
         }
 
-        return back()->with('error', 'No pending role change request for this user.');
+        return back()->with('error', 'No pending position change request for this user.');
     }
 
     public function createAdmin(Request $request)

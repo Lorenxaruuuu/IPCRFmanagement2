@@ -55,8 +55,9 @@ Route::get('/', function () {
             return redirect()->route('userDashboard');
         }
     }
-    return redirect()->route('login');
-});
+    // Show landing page for guests
+    return view('welcome');
+})->name('welcome');
 
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
@@ -65,7 +66,7 @@ Route::post('/register', [RegisterController::class, 'store'])->name('register.p
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::get('/home', function () {
-    return view('userDashboard', ['activeTab' => 'home']);
+    return view('userDashboard', ['activeTab' => 'ipcrf']);
 })->name('userDashboard');
 
 Route::get('/settings', function () {
@@ -171,7 +172,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                         'employee_name' => $s->user?->name ?? 'Unknown',
                         'employee_id'   => $s->user?->employee_id ?? '',
                         'template_name' => $s->template?->name ?? 'N/A',
-                        'province_name' => $s->user?->province ?? 'N/A',
+                        'province_name' => $s->user?->assigned_province ?? ($s->employee?->school?->municipality?->province?->name ?? 'N/A'),
                         'uploaded_at'   => optional($s->submitted_at)->toIso8601String(),
                         'status'        => ucfirst(str_replace('_', ' ', $s->status)),
                         'status_raw'    => $s->status,

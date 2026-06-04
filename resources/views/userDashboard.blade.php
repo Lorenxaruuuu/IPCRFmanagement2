@@ -306,6 +306,7 @@
 <body class="bg-slate-50 font-sans text-slate-900 h-screen overflow-hidden flex" 
       x-data='{ 
           activeTab: "{{ $activeTab }}", 
+          userRole: "{{ $dbUser->role ?? $role }}",
           showLogoutModal: false, 
           showNotifications: false,
           showSystemMessages: true,
@@ -358,6 +359,7 @@
           loadingIpcrf: false,
           fillingTemplate: null,
           submissionId: null,
+          submissionStatus: null,
           formHtml: "",
           formFields: [],
           answers: {},
@@ -403,6 +405,7 @@
                   const data = await res.json();
                   this.fillingTemplate = data.template;
                   this.submissionId = data.submission_id;
+                  this.submissionStatus = data.submission_status;
                   this.formHtml = data.html_table;
                   this.formFields = data.fields || [];
                   
@@ -443,7 +446,14 @@
                   const td = document.querySelector(`[data-cell="${field.cell_ref}"]`);
                   if (!td) return;
 
-                  const isReadonly = field.field_type.startsWith("autofill_") || field.field_type === "readonly" || field.field_type === "calculated_mean";
+                  // Check if this is an approving authority field and user is not POO
+                  const isApprovingAuthField = field.field_type.includes("autofill_approving_authority");
+                  const isPooAdmin = this.userRole && (this.userRole.includes("poo"));
+                  const isRestrictedField = isApprovingAuthField && !isPooAdmin;
+                  const isPoOApprovedSubmission = this.submissionStatus === "poo_approved";
+
+                  // Make readonly if: autofill fields, readonly type, calculated_mean, OR (approving auth field AND not POO) OR (approving auth field AND poo_approved status)
+                  const isReadonly = field.field_type.startsWith("autofill_") || field.field_type === "readonly" || field.field_type === "calculated_mean" || isRestrictedField || (isApprovingAuthField && isPoOApprovedSubmission);
 
                   const isImageField = ["picture", "signature", "autofill_division_chief_signature", "autofill_approving_authority_signature"].includes(field.field_type);
                   if (isImageField) {
@@ -462,8 +472,12 @@
                       const wrapper = document.createElement("div");
                       if (isReadonly) {
                           wrapper.className = "flex flex-col items-center justify-center w-full h-full min-h-[40px] text-slate-300 p-2";
+                          let message = "[Pending Sig]";
+                          if (isRestrictedField) {
+                              message = "[POO Only]";
+                          }
                           wrapper.innerHTML = `
-                              <span style="font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color:#94a3b8;">[Pending Sig]</span>
+                              <span style="font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color:#94a3b8;">${message}</span>
                           `;
                       } else {
                           wrapper.className = "flex flex-col items-center justify-center w-full h-full min-h-[40px] text-indigo-400 hover:text-indigo-300 transition-colors p-2";
@@ -732,7 +746,11 @@
                   inputEl.name = `field_${field.id}`;
                   inputEl.value = this.answers[field.id] || "";
                   if (isReadonly) {
-                      inputEl.readOnly = true;
+                      if (inputEl.tagName === "SELECT") {
+                          inputEl.disabled = true;
+                      } else {
+                          inputEl.readOnly = true;
+                      }
                       inputEl.classList.add("cursor-not-allowed", "opacity-75");
                       inputEl.style.background = "rgba(241, 245, 249, 0.6)"; 
                   }

@@ -101,6 +101,17 @@ class AdminSubmissionController extends Controller
         $stats = $this->getStats();
         $totalTemplates = \App\Models\IpcrfTemplate::count();
 
+        // Get current admin user's role/position
+        $sessionUser = session('user');
+        $adminUserPosition = 'rpmo'; // default
+        if ($sessionUser && isset($sessionUser['id'])) {
+            $currentAdmin = \App\Models\User::find($sessionUser['id']);
+            if ($currentAdmin) {
+                $adminUserPosition = $currentAdmin->adminPositionType() ?? 'rpmo';
+            }
+        }
+        $isAdminPooAdmin = $adminUserPosition && (strpos(strtolower($adminUserPosition), 'poo') !== false);
+
         return view('admin.submissions.show', [
             'submission' => $submission,
             'htmlTable'  => $htmlTable,
@@ -109,6 +120,8 @@ class AdminSubmissionController extends Controller
                 'approved'        => $stats['approved'],
                 'total_templates' => $totalTemplates,
             ],
+            'isAdminPooAdmin'   => $isAdminPooAdmin,
+            'adminUserPosition' => $adminUserPosition,
         ]);
     }
 
@@ -119,7 +132,30 @@ class AdminSubmissionController extends Controller
 
         $submission = IpcrfSubmission::findOrFail($id);
 
+        // Check if current admin is POO admin
+        $currentAdmin = \App\Models\User::find($sessionUser['id'] ?? 0);
+        $adminPosition = $currentAdmin ? ($currentAdmin->adminPositionType() ?? 'rpmo') : 'rpmo';
+        $isPooAdmin = strpos(strtolower($adminPosition), 'poo') !== false;
+
         $answers = $request->input('answers', []);
+        
+        // Get all template fields to check field types
+        $allFields = TemplateField::where('template_id', $submission->template_id)->get();
+
+        foreach ($answers as $fieldId => $value) {
+            // Only validate if there's an actual value being set
+            if (empty($value)) continue;
+            
+            $field = $allFields->firstWhere('id', $fieldId);
+            if ($field && strpos($field->field_type, 'autofill_approving_authority') !== false && !$isPooAdmin) {
+                // RPMO admin trying to save approving authority field
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'Unauthorized: Only POO admins can edit approving authority fields.'
+                ], 403);
+            }
+        }
+
         foreach ($answers as $fieldId => $value) {
             \App\Models\SubmissionAnswer::updateOrCreate(
                 ['submission_id' => $submission->id, 'template_field_id' => (int)$fieldId],

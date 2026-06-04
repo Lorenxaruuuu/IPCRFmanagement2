@@ -306,6 +306,9 @@
 </div>
 
 <script>
+    const submissionStatus = '{{ $submission->status }}';
+    const isAdminPooAdmin = {{ $isAdminPooAdmin ? 'true' : 'false' }};
+
     document.addEventListener('DOMContentLoaded', function() {
         initAdminEditableGrid('.ipcrf-grid-wrap');
     });
@@ -325,6 +328,17 @@
             if (e.target.classList.contains('admin-sig-file-input')) {
                 return;
             }
+
+            // Check if RPMO admin trying to edit approving authority field
+            const fieldType = wrapper.getAttribute('data-field-type');
+            if (!isAdminPooAdmin && fieldType && fieldType.includes('autofill_approving_authority')) {
+                return; // Don't allow RPMO admins to click
+            }
+
+            // Check if this is a poo_approved submission and approving authority field
+            if (submissionStatus === 'poo_approved' && fieldType && fieldType.includes('autofill_approving_authority')) {
+                return; // Don't allow editing
+            }
             
             const fileInput = wrapper.querySelector('.admin-sig-file-input');
             if (fileInput) {
@@ -339,6 +353,21 @@
             if (target.classList.contains('admin-sig-file-input')) {
                 const wrapper = target.closest('.admin-sig-wrapper');
                 if (!wrapper) return;
+
+                // Check if RPMO admin trying to edit approving authority field
+                const fieldType = wrapper.getAttribute('data-field-type');
+                if (!isAdminPooAdmin && fieldType && fieldType.includes('autofill_approving_authority')) {
+                    alert('Only POO admins can edit approving authority fields');
+                    target.value = '';
+                    return;
+                }
+
+                // Check if submission is poo_approved and this is an approving authority field
+                if (submissionStatus === 'poo_approved' && fieldType && fieldType.includes('autofill_approving_authority')) {
+                    alert('Cannot edit approving authority fields when submission is already approved by POO');
+                    target.value = '';
+                    return;
+                }
                 
                 const file = target.files[0];
                 if (!file) return;
@@ -437,7 +466,24 @@
             if (!submissionId) return;
 
             const fieldId = target.getAttribute('data-field-id');
+            const fieldType = target.getAttribute('data-field-type');
             const value = target.value;
+
+            // Check if RPMO admin trying to edit approving authority field
+            if (!isAdminPooAdmin && fieldType && fieldType.includes('autofill_approving_authority')) {
+                alert('Only POO admins can edit approving authority fields');
+                target.style.opacity = '1';
+                location.reload(); // Reload to restore original state
+                return;
+            }
+
+            // Check if submission is poo_approved and this is an approving authority field
+            if (submissionStatus === 'poo_approved' && fieldType && fieldType.includes('autofill_approving_authority')) {
+                alert('Cannot edit approving authority fields when submission is already approved by POO');
+                target.style.opacity = '1';
+                location.reload(); // Reload to restore original state
+                return;
+            }
 
             // Visual feedback - saving state
             target.style.opacity = '0.6';

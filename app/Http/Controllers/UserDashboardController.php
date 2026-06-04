@@ -140,6 +140,7 @@ class UserDashboardController extends Controller
         return response()->json([
             'template'      => ['id' => $template->id, 'name' => $template->name],
             'submission_id' => $submission->id,
+            'submission_status' => $submission->status,
             'html_table'    => $htmlTable,
             'fields'        => $fields,
             'autofill'      => $autofillValues,
@@ -161,6 +162,29 @@ class UserDashboardController extends Controller
             ->firstOrFail();
 
         $answers = $request->input('answers', []);
+        
+        // Check if user is POO admin (case-insensitive)
+        $dbUser = \App\Models\User::find($userId);
+        $isPooAdmin = $dbUser && (strpos(strtolower($dbUser->role), 'poo') !== false);
+        
+        // Get all template fields to check field types
+        $allFields = TemplateField::where('template_id', $templateId)->get();
+        
+        // Validate that non-POO users cannot save approving authority fields
+        foreach ($answers as $fieldId => $value) {
+            // Only validate if there's an actual value being set
+            if (empty($value)) continue;
+            
+            $field = $allFields->firstWhere('id', $fieldId);
+            if ($field && strpos($field->field_type, 'autofill_approving_authority') !== false && !$isPooAdmin) {
+                // Non-POO user trying to save approving authority field
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'Unauthorized: Only POO admins can fill approving authority fields.'
+                ], 403);
+            }
+        }
+        
         foreach ($answers as $fieldId => $value) {
             SubmissionAnswer::updateOrCreate(
                 ['submission_id' => $submission->id, 'template_field_id' => (int)$fieldId],
@@ -186,6 +210,29 @@ class UserDashboardController extends Controller
 
         // Save any last answers
         $answers = $request->input('answers', []);
+        
+        // Check if user is POO admin (case-insensitive)
+        $dbUser = \App\Models\User::find($userId);
+        $isPooAdmin = $dbUser && (strpos(strtolower($dbUser->role), 'poo') !== false);
+        
+        // Get all template fields to check field types
+        $allFields = TemplateField::where('template_id', $templateId)->get();
+        
+        // Validate that non-POO users cannot submit approving authority fields
+        foreach ($answers as $fieldId => $value) {
+            // Only validate if there's an actual value being set
+            if (empty($value)) continue;
+            
+            $field = $allFields->firstWhere('id', $fieldId);
+            if ($field && strpos($field->field_type, 'autofill_approving_authority') !== false && !$isPooAdmin) {
+                // Non-POO user trying to submit approving authority field
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'Unauthorized: Only POO admins can fill approving authority fields.'
+                ], 403);
+            }
+        }
+        
         foreach ($answers as $fieldId => $value) {
             SubmissionAnswer::updateOrCreate(
                 ['submission_id' => $submission->id, 'template_field_id' => (int)$fieldId],

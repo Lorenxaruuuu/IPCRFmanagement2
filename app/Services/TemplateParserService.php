@@ -255,7 +255,7 @@ class TemplateParserService
     /**
      * Generate an HTML table string for preview (used in builder and user form views).
      */
-    public function toHtmlTable(array $parsedData, array $mappedFields = [], bool $editable = false, bool $adminMode = false): string
+    public function toHtmlTable(array $parsedData, array $mappedFields = [], bool $editable = false, bool $adminMode = false, bool $isPooAdmin = false): string
     {
         $rows       = $parsedData['rows'];
         $colWidths  = $parsedData['col_widths'];
@@ -267,7 +267,7 @@ class TemplateParserService
             $fieldMap[$field['cell_ref']] = $field;
         }
 
-        $html = '<table class="ipcrf-preview-table" cellspacing="0" cellpadding="0"><colgroup>';
+        $html = '<table class="ipcrf-preview-table" style="table-layout: fixed; width: max-content;" cellspacing="0" cellpadding="0"><colgroup>';
 
         // Add row header col (1, 2, 3... row numbers col)
         $html .= '<col style="width:40px">';
@@ -340,14 +340,24 @@ class TemplateParserService
                         // Read-only rendering of user values
                         $val = $field['current_value'] ?? '';
                         
-                        $isAdminEditable = $adminMode && in_array($field['field_type'], [
-                            'autofill_division_chief',
-                            'autofill_approving_authority',
-                            'autofill_division_chief_position',
-                            'autofill_approving_authority_position',
-                            'autofill_division_chief_signature',
-                            'autofill_approving_authority_signature'
-                        ]);
+                        $isAdminEditable = false;
+                        if ($adminMode) {
+                            $editableFields = [];
+                            if ($isPooAdmin) {
+                                $editableFields = [
+                                    'autofill_approving_authority',
+                                    'autofill_approving_authority_position',
+                                    'autofill_approving_authority_signature'
+                                ];
+                            } else {
+                                $editableFields = [
+                                    'autofill_division_chief',
+                                    'autofill_division_chief_position',
+                                    'autofill_division_chief_signature'
+                                ];
+                            }
+                            $isAdminEditable = in_array($field['field_type'], $editableFields);
+                        }
                         
                         if ($isAdminEditable) {
                             if ($field['field_type'] === 'autofill_division_chief' || $field['field_type'] === 'autofill_approving_authority') {
@@ -462,7 +472,7 @@ class TemplateParserService
         $borderRight = $style['border_right'] ?? 'none';
         if ($borderRight !== 'none')  $css .= 'border-right:' . $borderRight . ';';
         
-        if (!empty($style['wrap_text']))         $css .= 'white-space:pre-wrap;';
+        if (!empty($style['wrap_text']))         $css .= 'white-space:pre-wrap;word-wrap:break-word;';
         else                             $css .= 'white-space:nowrap;overflow:hidden;';
         $css .= 'padding:2px 4px;vertical-align:middle;';
         return $css;

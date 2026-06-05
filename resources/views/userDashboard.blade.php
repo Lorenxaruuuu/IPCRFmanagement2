@@ -117,6 +117,9 @@
 
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
     <!-- Google Font: Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -315,7 +318,7 @@
           emails: {!! json_encode(array_values(array_filter(array_unique($profileEmails)))) !!},
           removeEmail(index) {
               if (this.emails.length <= 1) {
-                  alert("Requirement Error: You cannot remove this email address because it is your only email address. Please add another email address first before removing this one.");
+                  Swal.fire("Requirement Error", "You cannot remove this email address because it is your only email address. Please add another email address first before removing this one.", "error");
                   return;
               }
               this.emails.splice(index, 1);
@@ -324,11 +327,11 @@
               if (!email || !email.trim()) return;
               email = email.trim();
               if (!email.includes("@")) {
-                  alert("Validation Error: Please enter a valid email address.");
+                  Swal.fire("Validation Error", "Please enter a valid email address.", "error");
                   return;
               }
               if (this.emails.includes(email)) {
-                  alert("Validation Error: This email address is already added.");
+                  Swal.fire("Validation Error", "This email address is already added.", "error");
                   return;
               }
               this.emails.push(email);
@@ -338,18 +341,38 @@
           },
           // Performance tab filters
           semesterFilter: "all",
-          yearFilter: "2026",
-          // Performance sample data
-          performances: [
-              { id: 1, date: "02/25/2026", semester: "First", year: "2026" },
-              { id: 2, date: "11/25/2026", semester: "Second", year: "2026" }
-          ],
+          yearFilter: "all",
           get filteredPerformances() {
-              return this.performances.filter(p => {
-                  let semMatch = this.semesterFilter === "all" || p.semester.toLowerCase() === this.semesterFilter.toLowerCase();
-                  let yearMatch = p.year === this.yearFilter;
-                  return semMatch && yearMatch;
-              });
+              return this.submissions
+                  .filter(s => s.status === "approved")
+                  .map(s => {
+                      let dateStr = s.updated_at || s.submitted_at;
+                      let year = "";
+                      if (dateStr) {
+                          let d = new Date(dateStr);
+                          if (!isNaN(d)) year = d.getFullYear().toString();
+                      }
+                      
+                      let sem = "N/A";
+                      if (s.template_name) {
+                          let nameLower = s.template_name.toLowerCase();
+                          if (nameLower.includes("first") || nameLower.includes("1st")) sem = "First";
+                          else if (nameLower.includes("second") || nameLower.includes("2nd")) sem = "Second";
+                      }
+
+                      return {
+                          id: s.id,
+                          name: s.template_name || "IPCRF Template",
+                          date: dateStr || "N/A",
+                          semester: sem,
+                          year: year || "N/A"
+                      };
+                  })
+                  .filter(p => {
+                      let semMatch = this.semesterFilter === "all" || p.semester.toLowerCase() === this.semesterFilter.toLowerCase();
+                      let yearMatch = this.yearFilter === "all" || p.year === this.yearFilter;
+                      return semMatch && yearMatch;
+                  });
           },
 
           // ─── IPCRF Template & Form filling states ──────────────────────
@@ -360,6 +383,7 @@
           fillingTemplate: null,
           submissionId: null,
           submissionStatus: null,
+          isViewingOnly: false,
           formHtml: "",
           formFields: [],
           answers: {},
@@ -390,6 +414,7 @@
 
           async startFillForm(templateId) {
               this.loadingIpcrf = true;
+              this.isViewingOnly = false;
               if (this.autoSaveInterval) {
                   clearInterval(this.autoSaveInterval);
                   this.autoSaveInterval = null;
@@ -398,7 +423,7 @@
                   const res = await fetch(`/my/templates/${templateId}/fill`);
                   if (!res.ok) {
                       const err = await res.json();
-                      alert(err.error || "Access Denied.");
+                      Swal.fire("Error", err.error || "Access Denied.", "error");
                       this.loadingIpcrf = false;
                       return;
                   }
@@ -434,7 +459,54 @@
 
               } catch (e) {
                   console.error("Error fetching form:", e);
-                  alert("Could not load form. Please try again.");
+                  Swal.fire("Error", "Could not load form. Please try again.", "error");
+              }
+              this.loadingIpcrf = false;
+          },
+
+          async viewPastSubmission(submissionId) {
+              this.loadingIpcrf = true;
+              if (this.autoSaveInterval) {
+                  clearInterval(this.autoSaveInterval);
+                  this.autoSaveInterval = null;
+              }
+              try {
+                  const res = await fetch(`/my/submissions/${submissionId}/view`);
+                  if (!res.ok) {
+                      const err = await res.json();
+                      Swal.fire("Error", err.error || "Access Denied.", "error");
+                      this.loadingIpcrf = false;
+                      return;
+                  }
+                  const data = await res.json();
+                  this.fillingTemplate = data.template;
+                  this.submissionId = data.submission_id;
+                  this.submissionStatus = data.submission_status;
+                  this.formHtml = data.html_table;
+                  this.formFields = data.fields || [];
+                  this.isViewingOnly = true;
+                  
+                  // Initialize answers
+                  this.answers = {};
+                  this.formFields.forEach(f => {
+                      this.answers[f.id] = f.current_value || "";
+                  });
+
+                  this.activeTab = "fillForm";
+                  
+                  // Render inputs into table cells
+                  this.$nextTick(() => {
+                      this.renderFormInputs();
+                      setTimeout(() => {
+                          if (typeof initSpreadsheetResizers === "function") {
+                              initSpreadsheetResizers();
+                          }
+                      }, 50);
+                  });
+
+              } catch (e) {
+                  console.error("Error fetching submission:", e);
+                  Swal.fire("Error", "Could not load submission. Please try again.", "error");
               }
               this.loadingIpcrf = false;
           },
@@ -453,7 +525,7 @@
                   const isPoOApprovedSubmission = this.submissionStatus === "poo_approved";
 
                   // Make readonly if: autofill fields, readonly type, calculated_mean, OR (approving auth field AND not POO) OR (approving auth field AND poo_approved status)
-                  const isReadonly = field.field_type.startsWith("autofill_") || field.field_type === "readonly" || field.field_type === "calculated_mean" || isRestrictedField || (isApprovingAuthField && isPoOApprovedSubmission);
+                  const isReadonly = this.isViewingOnly || field.field_type.startsWith("autofill_") || field.field_type === "readonly" || field.field_type === "calculated_mean" || isRestrictedField || (isApprovingAuthField && isPoOApprovedSubmission);
 
                   const isImageField = ["picture", "signature", "autofill_division_chief_signature", "autofill_approving_authority_signature"].includes(field.field_type);
                   if (isImageField) {
@@ -539,12 +611,12 @@
                                   this.saveDraft(true);
                                   this.renderFormInputs();
                               } else {
-                                  alert(data.message || "Upload failed");
+                                  Swal.fire("Error", data.message || "Upload failed", "error");
                                   this.renderFormInputs();
                               }
                           } catch (err) {
                               console.error(err);
-                              alert("Upload failed due to connection error");
+                              Swal.fire("Error", "Upload failed due to connection error", "error");
                               this.renderFormInputs();
                           }
                       });
@@ -886,13 +958,24 @@
               });
 
               if (missingRequired.length > 0) {
-                  alert("Requirement Error: Please fill in the following required fields before submitting:\n• " + missingRequired.join("\n• "));
+                  Swal.fire({
+                      title: "Requirement Error",
+                      html: "Please fill in the following required fields before submitting:<br>&bull; " + missingRequired.join("<br>&bull; "),
+                      icon: "error"
+                  });
                   return;
               }
 
-              if (!confirm("Are you sure you want to submit your IPCRF? Once submitted, it will be locked and sent to the Administrator for review and approval.")) {
-                  return;
-              }
+              const result = await Swal.fire({
+                  title: "Submit IPCRF?",
+                  text: "Are you sure you want to submit your IPCRF? Once submitted, it will be locked and sent to the Administrator for review and approval.",
+                  icon: "warning",
+                  showCancelButton: true,
+                  confirmButtonColor: "#3085d6",
+                  cancelButtonColor: "#d33",
+                  confirmButtonText: "Yes, submit it!"
+              });
+              if (!result.isConfirmed) return;
 
               this.loadingIpcrf = true;
               try {
@@ -907,13 +990,13 @@
                   });
                   const data = await res.json();
                   if (data.success) {
-                      alert("Your IPCRF has been submitted successfully for administrator review!");
+                      Swal.fire("Success", "Your IPCRF has been submitted successfully for administrator review!", "success");
                       this.exitForm();
                   } else {
-                      alert("Error submitting: " + data.message);
+                      Swal.fire("Error", "Error submitting: " + data.message, "error");
                   }
               } catch (e) {
-                  alert("Connection error during submission.");
+                  Swal.fire("Error", "Connection error during submission.", "error");
               }
               this.loadingIpcrf = false;
           },
@@ -968,6 +1051,23 @@
           }
       }'
       x-init="$nextTick(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); loadIpcrfData(); });">
+
+    <!-- Global Page Loader -->
+    <div id="global-loader" style="position: fixed; inset: 0; background-color: #f8fafc; z-index: 99999; display: flex; align-items: center; justify-content: center; transition: opacity 0.5s ease; flex-direction: column; gap: 1rem;">
+        <div style="width: 4rem; height: 4rem; border: 4px solid #bfdbfe; border-top-color: #2563eb; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        <style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>
+        <p style="color: #475569; font-weight: 500; font-family: sans-serif; animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;">Loading Dashboard...</p>
+        <style>@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }</style>
+    </div>
+    <script>
+        window.addEventListener('load', () => {
+            const loader = document.getElementById('global-loader');
+            if(loader) {
+                loader.style.opacity = '0';
+                setTimeout(() => loader.remove(), 500);
+            }
+        });
+    </script>
 
     <!-- SIDEBAR -->
     <aside class="fixed left-0 top-0 h-full w-64 sidebar-gradient text-white hidden md:flex flex-col shadow-xl z-20">
@@ -1233,6 +1333,7 @@
                             <div class="flex flex-col">
                                 <label class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2.5">Year</label>
                                 <select x-model="yearFilter" class="px-5 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 font-medium text-base focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer">
+                                    <option value="all">All Years</option>
                                     <option value="2026">2026</option>
                                     <option value="2025">2025</option>
                                     <option value="2024">2024</option>
@@ -1252,7 +1353,8 @@
                         <table class="w-full text-left border-collapse text-base">
                             <thead>
                                 <tr class="bg-slate-50 text-slate-500 border-b border-slate-200 text-sm font-semibold tracking-wider uppercase">
-                                    <th class="px-8 py-5">Evaluation Date</th>
+                                    <th class="px-8 py-5">Template Name</th>
+                                    <th class="px-8 py-5">Approval Date</th>
                                     <th class="px-8 py-5">Semester</th>
                                     <th class="px-8 py-5">Year</th>
                                     <th class="px-8 py-5 text-right">Actions</th>
@@ -1261,14 +1363,15 @@
                             <tbody>
                                 <template x-for="p in filteredPerformances" :key="p.id">
                                     <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                                        <td class="px-8 py-5 font-medium text-slate-800" x-text="p.date"></td>
+                                        <td class="px-8 py-5 font-medium text-slate-800" x-text="p.name"></td>
+                                        <td class="px-8 py-5 text-slate-600" x-text="p.date"></td>
                                         <td class="px-8 py-5 text-slate-600" x-text="p.semester"></td>
                                         <td class="px-8 py-5 text-slate-600" x-text="p.year"></td>
                                         <td class="px-8 py-5 text-right">
-                                            <a :href="'{{ url('/performance') }}/' + p.id + '/view'" 
-                                               class="text-blue-600 hover:text-blue-800 font-semibold hover:underline">
+                                            <button @click.prevent="viewPastSubmission(p.id)" 
+                                               class="text-blue-600 hover:text-blue-800 font-semibold hover:underline cursor-pointer">
                                                 View Details
-                                            </a>
+                                            </button>
                                         </td>
                                     </tr>
                                 </template>
@@ -1722,7 +1825,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-3" x-show="!isViewingOnly">
                         <button @click="saveDraft(false)" class="px-5 py-2.5 border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 transition active:scale-95 cursor-pointer flex items-center gap-2">
                             <i data-lucide="save" class="w-4 h-4"></i> Save Draft
                         </button>
@@ -1866,11 +1969,21 @@
 
         function confirmProfileUpdate(event) {
             @if(!$profileEdited)
-                const confirmed = confirm("Please check your information because you can only edit it one time. Are you sure you want to save changes?");
-                if (!confirmed) {
-                    event.preventDefault();
-                    return false;
-                }
+                event.preventDefault();
+                Swal.fire({
+                    title: 'Confirm Profile',
+                    text: 'Please check your information because you can only edit it one time. Are you sure you want to save changes?',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Yes, save it!'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        event.target.submit();
+                    }
+                });
+                return false;
             @endif
             return true;
         }

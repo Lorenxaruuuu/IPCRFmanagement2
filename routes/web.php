@@ -194,6 +194,7 @@ Route::prefix('my')->name('user.')->group(function () {
     Route::post('/templates/{id}/draft',        [UserDashboardController::class, 'saveDraft'])->name('templates.draft');
     Route::post('/templates/{id}/submit',       [UserDashboardController::class, 'submit'])->name('templates.submit');
     Route::get('/submissions/{id}/download',    [UserDashboardController::class, 'download'])->name('submissions.download');
+    Route::get('/submissions/{id}/view',        [UserDashboardController::class, 'viewSubmission'])->name('submissions.view');
     Route::post('/submissions/{id}/upload-picture/{fieldId}', [UserDashboardController::class, 'uploadPicture'])->name('submissions.upload-picture');
     Route::get('/history',                      [UserDashboardController::class, 'submissionHistory'])->name('history');
 });

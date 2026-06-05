@@ -107,9 +107,9 @@ class UserDashboardController extends Controller
         // Parse the template
         $fullPath = Storage::disk('private')->path($template->file_path);
         $parsed   = $this->parser->parse($fullPath);
-        if ($template->sheet_data) {
-            $parsed['rows'] = $template->sheet_data;
-        }
+        // if ($template->sheet_data) {
+        //     $parsed['rows'] = $template->sheet_data;
+        // }
 
         // Resolve autofill values from user profile
         $position = DB::table('positions')->find($userRecord->position_id);
@@ -145,6 +145,54 @@ class UserDashboardController extends Controller
             'fields'        => $fields,
             'autofill'      => $autofillValues,
             'positions'     => $positionsList,
+        ]);
+    }
+
+    /**
+     * View an existing submission (Read-only mode).
+     */
+    public function viewSubmission(Request $request, int $submissionId)
+    {
+        $sessionUser = session('user');
+        $userRecord  = DB::table('users')->where('id', $sessionUser['id'] ?? 0)->first();
+
+        $submission = IpcrfSubmission::with(['template.fields', 'template.positions'])->findOrFail($submissionId);
+
+        if ($submission->user_id !== $userRecord->id) {
+            return response()->json(['error' => 'Access denied.'], 403);
+        }
+
+        $template = $submission->template;
+
+        // Load existing answers
+        $answers = SubmissionAnswer::where('submission_id', $submission->id)
+            ->get()
+            ->keyBy('template_field_id');
+
+        // Parse the template
+        $fullPath = Storage::disk('private')->path($template->file_path);
+        $parsed   = $this->parser->parse($fullPath);
+
+        // Build field definitions for the form
+        $fields = $template->fields->map(fn($f) => [
+            'id'           => $f->id,
+            'cell_ref'     => $f->cell_ref,
+            'field_type'   => $f->field_type,
+            'field_label'  => $f->field_label,
+            'field_options' => $f->field_options,
+            'is_required'  => $f->is_required,
+            'current_value' => $answers[$f->id]?->value ?? '',
+        ])->toArray();
+
+        $htmlTable = $this->parser->toHtmlTable($parsed, $fields, false);
+
+        return response()->json([
+            'template'          => $template,
+            'submission_id'     => $submission->id,
+            'submission_status' => $submission->status,
+            'html_table'        => $htmlTable,
+            'fields'            => $fields,
+            'positions_list'    => [],
         ]);
     }
 

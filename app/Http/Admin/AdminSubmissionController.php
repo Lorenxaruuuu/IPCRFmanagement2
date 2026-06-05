@@ -7,6 +7,7 @@ use App\Models\IpcrfSubmission;
 use App\Services\XlsxGeneratorService;
 use App\Services\TemplateParserService;
 use App\Services\AuditService;
+use App\Models\TemplateField;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -93,14 +94,9 @@ class AdminSubmissionController extends Controller
 
         $fullPath = Storage::disk('private')->path($template->file_path);
         $parsed = $this->parser->parse($fullPath);
-        if ($template->sheet_data) {
-            $parsed['rows'] = $template->sheet_data;
-        }
-        $htmlTable = $this->parser->toHtmlTable($parsed, $fields, false, true);
-
-        $stats = $this->getStats();
-        $totalTemplates = \App\Models\IpcrfTemplate::count();
-
+        // if ($template->sheet_data) {
+        //     $parsed['rows'] = $template->sheet_data;
+        // }
         // Get current admin user's role/position
         $sessionUser = session('user');
         $adminUserPosition = 'rpmo'; // default
@@ -111,6 +107,11 @@ class AdminSubmissionController extends Controller
             }
         }
         $isAdminPooAdmin = $adminUserPosition && (strpos(strtolower($adminUserPosition), 'poo') !== false);
+
+        $htmlTable = $this->parser->toHtmlTable($parsed, $fields, false, true, $isAdminPooAdmin);
+
+        $stats = $this->getStats();
+        $totalTemplates = \App\Models\IpcrfTemplate::count();
 
         return view('admin.submissions.show', [
             'submission' => $submission,
@@ -147,11 +148,20 @@ class AdminSubmissionController extends Controller
             if (empty($value)) continue;
             
             $field = $allFields->firstWhere('id', $fieldId);
+            
+            // RPMO admins cannot edit approving authority
             if ($field && strpos($field->field_type, 'autofill_approving_authority') !== false && !$isPooAdmin) {
-                // RPMO admin trying to save approving authority field
                 return response()->json([
                     'success' => false, 
                     'message' => 'Unauthorized: Only POO admins can edit approving authority fields.'
+                ], 403);
+            }
+
+            // POO admins cannot edit division chief
+            if ($field && strpos($field->field_type, 'autofill_division_chief') !== false && $isPooAdmin) {
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'Unauthorized: Only RPMO admins can edit division chief fields.'
                 ], 403);
             }
         }

@@ -19,6 +19,9 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <style>
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
@@ -26,6 +29,22 @@
     </style>
 </head>
 <body class="bg-slate-50 font-sans text-slate-900 antialiased">
+    <!-- Global Page Loader -->
+    <div id="global-loader" style="position: fixed; inset: 0; background-color: #f8fafc; z-index: 99999; display: flex; align-items: center; justify-content: center; transition: opacity 0.5s ease; flex-direction: column; gap: 1rem;">
+        <div style="width: 4rem; height: 4rem; border: 4px solid #bfdbfe; border-top-color: #2563eb; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        <style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>
+        <p style="color: #475569; font-weight: 500; font-family: sans-serif; animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;">Loading Dashboard...</p>
+        <style>@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }</style>
+    </div>
+    <script>
+        window.addEventListener('load', () => {
+            const loader = document.getElementById('global-loader');
+            if(loader) {
+                loader.style.opacity = '0';
+                setTimeout(() => loader.remove(), 500);
+            }
+        });
+    </script>
 
 <div class="min-h-screen flex" x-data="{ showLogoutModal: false, showCreateAdminModal: false, activeSection: 'approvals', roleFilter: 'all' }">
 
@@ -130,24 +149,48 @@
 
             <!-- ALERTS / NOTIFICATIONS -->
             @if(session('success'))
-                <div class="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl shadow-sm animate-fade-in">
-                    <i data-lucide="check-circle" class="w-5 h-5 text-emerald-600 flex-shrink-0"></i>
-                    <p class="text-sm font-medium">{{ session('success') }}</p>
-                </div>
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success',
+                            text: "{!! addslashes(session('success')) !!}",
+                            timer: 3000,
+                            showConfirmButton: false
+                        });
+                    });
+                </script>
             @endif
 
             @if($errors->any())
-                <div class="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl shadow-sm space-y-1">
-                    <div class="flex items-center gap-3">
-                        <i data-lucide="alert-circle" class="w-5 h-5 text-rose-600 flex-shrink-0"></i>
-                        <p class="text-sm font-bold">Please correct the following errors:</p>
-                    </div>
-                    <ul class="list-disc pl-8 text-xs font-medium space-y-1">
-                        @foreach($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </div>
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            html: `
+                                <ul style="text-align: left; list-style-type: disc; padding-left: 20px;">
+                                    @foreach($errors->all() as $error)
+                                        <li>{{ $error }}</li>
+                                    @endforeach
+                                </ul>
+                            `
+                        });
+                    });
+                </script>
+            @endif
+
+            @if(session('error'))
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: "{!! addslashes(session('error')) !!}",
+                            showConfirmButton: true
+                        });
+                    });
+                </script>
             @endif
 
             <!-- ACCOUNT APPROVALS SECTION -->
@@ -260,7 +303,7 @@ $user->role !== 'encoder') bg-blue-100 text-blue-800 border border-blue-200
                                                             </button>
                                                         </form>
                                                         <!-- Reject -->
-                                                        <form action="{{ route('superadmin.users.reject', $user->id) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to reject this request? It will be deleted permanently.')">
+                                                        <form action="{{ route('superadmin.users.reject', $user->id) }}" method="POST" class="inline" onsubmit="confirmAction(event, 'Are you sure you want to reject this request? It will be deleted permanently.')">
                                                             @csrf
                                                             @method('DELETE')
                                                             <button type="submit" class="inline-flex items-center justify-center p-2 rounded-xl text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-all" title="Reject Account">
@@ -473,14 +516,14 @@ $user->role !== 'encoder') bg-blue-100 text-blue-800 border border-blue-200
                                             <td class="py-4 px-6 text-right">
                                                 <div class="flex items-center justify-end gap-2">
                                                     <!-- Approve -->
-                                                    <form action="{{ route('superadmin.users.approveRole', $user->id) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to approve this position change?')">
+                                                    <form action="{{ route('superadmin.users.approveRole', $user->id) }}" method="POST" class="inline" onsubmit="confirmAction(event, 'Are you sure you want to approve this position change?')">
                                                         @csrf
                                                         <button type="submit" class="inline-flex items-center justify-center p-2 rounded-xl text-emerald-600 hover:bg-emerald-50 border border-transparent hover:border-emerald-200 transition-all" title="Approve Position Change">
                                                             <i data-lucide="check" class="w-5 h-5"></i>
                                                         </button>
                                                     </form>
                                                     <!-- Reject -->
-                                                    <form action="{{ route('superadmin.users.rejectRole', $user->id) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to reject this position change request?')">
+                                                    <form action="{{ route('superadmin.users.rejectRole', $user->id) }}" method="POST" class="inline" onsubmit="confirmAction(event, 'Are you sure you want to reject this position change request?')">
                                                         @csrf
                                                         @method('DELETE')
                                                         <button type="submit" class="inline-flex items-center justify-center p-2 rounded-xl text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-all" title="Reject Position Change">
@@ -766,6 +809,24 @@ $user->role !== 'encoder') bg-blue-100 text-blue-800 border border-blue-200
     document.addEventListener("DOMContentLoaded", () => {
         lucide.createIcons();
     });
+
+    function confirmAction(event, message) {
+        event.preventDefault();
+        const form = event.target.closest('form');
+        Swal.fire({
+            title: 'Are you sure?',
+            text: message,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3b82f6',
+            cancelButtonColor: '#ef4444',
+            confirmButtonText: 'Yes, proceed!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                form.submit();
+            }
+        });
+    }
 </script>
 </body>
 </html>

@@ -32,12 +32,47 @@ class XlsxGeneratorService
         $answers = $submission->answers()->with('field')->get()->keyBy('template_field_id');
         $sheetData = $template->sheet_data ?? [];
 
-        // Build a map of cell_ref to style alignment
-        $alignmentMap = [];
+        // 1. Sync merged cells from DB
+        $dbMerges = $template->merged_cells ?? [];
+        if (!empty($dbMerges)) {
+            $currentMerges = $worksheet->getMergeCells();
+            foreach ($currentMerges as $mergeRange) {
+                $worksheet->unmergeCells($mergeRange);
+            }
+            foreach ($dbMerges as $mergeRange => $val) {
+                try {
+                    $worksheet->mergeCells($mergeRange);
+                } catch (\Exception $e) {}
+            }
+        }
+
+        // 2. Sync sheet data text, alignment, and wrap text
         foreach ($sheetData as $row) {
             foreach ($row as $cell) {
-                if (isset($cell['cell_ref']) && isset($cell['style']['h_align'])) {
-                    $alignmentMap[$cell['cell_ref']] = $cell['style']['h_align'];
+                if (!isset($cell['cell_ref'])) continue;
+                $cellRef = $cell['cell_ref'];
+
+                // Apply text modifications made in the Builder
+                if (isset($cell['value']) && $cell['value'] !== '') {
+                    $worksheet->setCellValue($cellRef, $cell['value']);
+                }
+
+                // Apply alignment
+                if (isset($cell['style']['h_align'])) {
+                    $alignValue = match ($cell['style']['h_align']) {
+                        'left' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT,
+                        'right' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT,
+                        'center' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                        default => null,
+                    };
+                    if ($alignValue) {
+                        $worksheet->getStyle($cellRef)->getAlignment()->setHorizontal($alignValue);
+                    }
+                }
+
+                // Enable wrap text for any cell that has text to prevent cropping
+                if (!empty($cell['value']) || !empty($cell['raw_value'])) {
+                    $worksheet->getStyle($cellRef)->getAlignment()->setWrapText(true);
                 }
             }
         }
@@ -45,20 +80,6 @@ class XlsxGeneratorService
         foreach ($fields as $field) {
             $cellRef = $field->cell_ref;
             $value   = '';
-
-            // Handle horizontal alignment
-            if (isset($alignmentMap[$cellRef])) {
-                $align = $alignmentMap[$cellRef];
-                $alignValue = match ($align) {
-                    'left' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT,
-                    'right' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT,
-                    'center' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-                    default => null,
-                };
-                if ($alignValue) {
-                    $worksheet->getStyle($cellRef)->getAlignment()->setHorizontal($alignValue);
-                }
-            }
 
             // Handle picture and signature fields (draggable image overlays)
             if (in_array($field->field_type, ['picture', 'signature', 'autofill_division_chief_signature', 'autofill_approving_authority_signature'], true)) {
@@ -78,7 +99,16 @@ class XlsxGeneratorService
                                 $drawing->setOffsetX($data['offsetX'] ?? 0);
                                 $drawing->setOffsetY($data['offsetY'] ?? 0);
                                 if (!empty($data['width']))  $drawing->setWidth($data['width']);
-                                if (!empty($data['height'])) $drawing->setHeight($data['height']);
+                                if (!empty($data['height'])) {
+                                    $drawing->setHeight($data['height']);
+                                    // Make sure row is tall enough for the image
+                                    $rowNum = Coordinate::coordinateFromString($data['cell_ref'])[1];
+                                    $currentHeight = $worksheet->getRowDimension($rowNum)->getRowHeight();
+                                    $neededHeight = $data['height'] * 0.75 + 5;
+                                    if ($currentHeight == -1 || $currentHeight < $neededHeight) {
+                                        $worksheet->getRowDimension($rowNum)->setRowHeight($neededHeight);
+                                    }
+                                }
                                 $drawing->setWorksheet($worksheet);
                             } catch (\Exception $e) {
                                 \Log::error('Failed to inject user image: ' . $e->getMessage());

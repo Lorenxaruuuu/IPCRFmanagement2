@@ -224,7 +224,7 @@ class PooAdminController extends Controller
 
         $fullPath = Storage::disk('private')->path($template->file_path);
         $parsed = $this->parser->parse($fullPath);
-        $htmlTable = $this->parser->toHtmlTable($parsed, $fields, false, true);
+        $htmlTable = $this->parser->toHtmlTable($parsed, $fields, false, true, true);
 
         return response()->json([
             'submission' => array_merge($this->formatSubmissionRow($submission), [

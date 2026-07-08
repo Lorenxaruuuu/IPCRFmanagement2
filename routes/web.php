@@ -264,6 +264,7 @@ Route::post('/login.php', function () {
     
     $email = $data['email'] ?? '';
     $password = $data['password'] ?? '';
+    $otp = $data['otp'] ?? '';
     
     if (empty($email) || empty($password)) {
         return response()->json(['success' => false, 'message' => 'Please enter both Email and Password']);
@@ -273,7 +274,7 @@ Route::post('/login.php', function () {
     if (!str_contains($email, '@')) {
         $email .= '@dswd.gov.ph';
     }
-    
+    /*
     // Verify Google reCAPTCHA
     $recaptchaResponse = $data['g_recaptcha_response'] ?? '';
     $recaptchaSecret = env('RECAPTCHA_SECRET_KEY');
@@ -285,7 +286,8 @@ Route::post('/login.php', function () {
     if (!$captchaResult->success) {
         return response()->json(['success' => false, 'message' => 'reCAPTCHA verification failed.']);
     }
-    
+    */
+
     $user = \App\Models\User::where('email', $email)
         ->orWhere('email', $raw_input)
         ->orWhere('employee_id', $email)
@@ -299,7 +301,7 @@ Route::post('/login.php', function () {
     if ($user->role !== 'superadmin' && !$user->approved) {
         return response()->json(['success' => false, 'message' => 'Your account is pending superadmin approval.']);
     }
-    
+
     Session::put('user', [
         'id' => $user->id,
         'employee_id' => $user->employee_id,

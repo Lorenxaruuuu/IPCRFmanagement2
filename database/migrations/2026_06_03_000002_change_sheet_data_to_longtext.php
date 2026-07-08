@@ -11,13 +11,27 @@ return new class extends Migration
     {
         // Change sheet_data and merged_cells from JSON to LONGTEXT
         // to support very large spreadsheet data without MySQL packet issues
-        DB::statement('ALTER TABLE ipcrf_templates MODIFY sheet_data LONGTEXT NULL');
-        DB::statement('ALTER TABLE ipcrf_templates MODIFY merged_cells LONGTEXT NULL');
+        if (DB::getDriverName() === 'sqlite') {
+            Schema::table('ipcrf_templates', function (Blueprint $table) {
+                $table->longText('sheet_data')->nullable()->change();
+                $table->longText('merged_cells')->nullable()->change();
+            });
+        } else {
+            DB::statement('ALTER TABLE ipcrf_templates MODIFY sheet_data LONGTEXT NULL');
+            DB::statement('ALTER TABLE ipcrf_templates MODIFY merged_cells LONGTEXT NULL');
+        }
     }
 
     public function down(): void
     {
-        DB::statement('ALTER TABLE ipcrf_templates MODIFY sheet_data JSON NULL');
-        DB::statement('ALTER TABLE ipcrf_templates MODIFY merged_cells JSON NULL');
+        if (DB::getDriverName() === 'sqlite') {
+            Schema::table('ipcrf_templates', function (Blueprint $table) {
+                $table->json('sheet_data')->nullable()->change();
+                $table->json('merged_cells')->nullable()->change();
+            });
+        } else {
+            DB::statement('ALTER TABLE ipcrf_templates MODIFY sheet_data JSON NULL');
+            DB::statement('ALTER TABLE ipcrf_templates MODIFY merged_cells JSON NULL');
+        }
     }
 };

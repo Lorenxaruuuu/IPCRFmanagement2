@@ -563,10 +563,13 @@
                         <input type="password" id="password" name="password" required>
                     </div>
 
-                    <!-- reCAPTCHA widget -->
+
+                    <!-- reCAPTCHA widget (Commented out) -->
+                    <!--
                     <div class="g-recaptcha" data-sitekey="{{ env('RECAPTCHA_SITE_KEY') }}" style="margin-bottom: 25px; display: flex; justify-content: center;"></div>
                     <input type="hidden" name="g-recaptcha-response" id="g-recaptcha-response">
                     <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+                    -->
 
                     <div class="form-options">
                         <div class="remember-me">
@@ -694,8 +697,12 @@
             const publicKey = '{{ env("EMAILJS_PUBLIC_KEY") }}';
 
             if (!serviceId || !templateId || !publicKey) {
-                showModal('error', 'Email Service Unavailable', 'The verification email service is not configured. Please contact IT support at itsupport@dswd.gov.ph.');
-                return false;
+                console.log("=== DEVELOPMENT OTP CODE ===");
+                console.log("Email:", email);
+                console.log("Code:", code);
+                console.log("=============================");
+                showModal('warning', 'Development Mode', `Email service not configured in .env. [DEBUG ONLY] Your verification code is: ${code}`);
+                return true;
             }
 
             const payload = {
@@ -746,18 +753,22 @@
         const password = document.getElementById('password').value;
         const verificationCode = document.getElementById('verificationCode').value.trim();
         const remember = document.getElementById('remember').checked;
-        const recaptchaResponse = grecaptcha.getResponse();
+        
+        // Commented out: reCAPTCHA verification from frontend
+        // const recaptchaResponse = grecaptcha.getResponse();
 
-        // Check if this is a superadmin account (skip verification)
-        const isSuperadmin = email.toLowerCase().includes('superadmin') || email.toLowerCase() === 'superadmin@deped.gov.ph' || email.toLowerCase() === 'superadmin@dswd.gov.ph';
+        // Commented out: Check if this is a superadmin account (originally bypassed OTP code)
+        // const isSuperadmin = email.toLowerCase().includes('superadmin') || email.toLowerCase() === 'superadmin@deped.gov.ph' || email.toLowerCase() === 'superadmin@dswd.gov.ph';
 
-        // STEP 1: Send verification code (skip for superadmin)
-        if (!verificationCodeSent && !isSuperadmin) {
-            // Validate reCAPTCHA
+        // STEP 1: Send verification code via EmailJS
+        if (!verificationCodeSent) {
+            // Commented out: Validate reCAPTCHA in Step 1
+            /*
             if (!recaptchaResponse) {
                 showModal('error', 'reCAPTCHA Required', 'Please complete the reCAPTCHA verification before continuing.');
                 return;
             }
+            */
 
             // Show loading spinner
             document.getElementById('loadingOverlay').classList.add('active');
@@ -791,26 +802,30 @@
             return;
         }
 
-        // STEP 2: Verify code (skip for superadmin) and login
-        if (!isSuperadmin && !verificationCode) {
+        // STEP 2: Verify code and perform login
+        if (!verificationCode) {
             showModal('error', 'Verification Code Required', 'Please enter the 6-digit code sent to your email.');
             return;
         }
 
-        if (!isSuperadmin && verificationCode !== storedVerificationCode) {
+        if (verificationCode !== storedVerificationCode) {
             showModal('error', 'Invalid Code', 'The verification code you entered is incorrect. Please try again.');
             document.getElementById('verificationCode').value = '';
             document.getElementById('verificationCode').focus();
             return;
         }
 
+        // Commented out: Validate reCAPTCHA for superadmin in Step 2
+        /*
         if (isSuperadmin && !recaptchaResponse) {
             showModal('error', 'reCAPTCHA Required', 'Please complete the reCAPTCHA verification before continuing.');
             return;
         }
+        */
 
         // Show loading spinner
         document.getElementById('loadingOverlay').classList.add('active');
+        document.getElementById('loadingOverlay').querySelector('.loading-text').textContent = 'Signing in...';
 
         try {
             const response = await fetch('{{ url("login.php") }}', {
@@ -821,8 +836,9 @@
                 },
                 body: JSON.stringify({
                     email: email,
-                    password: password,
-                    g_recaptcha_response: recaptchaResponse
+                    password: password
+                    // Commented out:
+                    // g_recaptcha_response: recaptchaResponse
                 })
             });
 
@@ -890,7 +906,8 @@
         document.querySelector('.forgot-password').style.opacity = '1';
         document.getElementById('submitBtn').textContent = 'Sign In to System';
         document.getElementById('verificationCode').value = '';
-        grecaptcha.reset();
+        // Commented out:
+        // grecaptcha.reset();
     }
 
     // Function to get stored user data

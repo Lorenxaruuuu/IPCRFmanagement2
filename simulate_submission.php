@@ -1,8 +1,8 @@
 <?php
 define('LARAVEL_START', microtime(true));
 
-require 'c:\Users\visma\IPCRFmanagement2\vendor\autoload.php';
-$app = require_once 'c:\Users\visma\IPCRFmanagement2\bootstrap\app.php';
+require __DIR__ . '/vendor/autoload.php';
+$app = require_once __DIR__ . '/bootstrap/app.php';
 
 $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
@@ -26,7 +26,21 @@ try {
 
     $template = IpcrfTemplate::first();
     if (!$template) {
-        throw new \Exception("No IPCRF Template found. Please run template creation first or seed data.");
+        echo "No IPCRF Template found. Creating a dummy one for simulation...\n";
+        $template = IpcrfTemplate::create([
+            'name'               => 'Simulation Template',
+            'description'        => 'Template created dynamically for simulation',
+            'file_path'          => 'templates/simulation.xlsx',
+            'file_name'          => 'simulation.xlsx',
+            'file_original_name' => 'simulation.xlsx',
+            'merged_cells'       => [],
+            'total_rows'         => 10,
+            'total_cols'         => 10,
+            'uploaded_by'        => $user->id,
+            'semester'           => '1st',
+            'form_specification' => 'teacher',
+        ]);
+        $template->saveSheetData([]);
     }
 
     echo "--- SIMULATION START ---\n";
